@@ -18,6 +18,7 @@ alwaysApply: true
 
 ## 2) Architectural Foundation: DDD for Domain Clarity
 
+- For domain feature design, explicitly invoke the project skill at `.cursor/skills/domain-driven-design/SKILL.md`.
 - Model domain concepts explicitly (entities, value objects, domain services) in TypeScript names and module boundaries.
 - Identify bounded contexts by:
   - distinct vocabulary used by users/stakeholders,
