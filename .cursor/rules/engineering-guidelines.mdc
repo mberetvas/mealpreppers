@@ -1,0 +1,112 @@
+---
+description: Enforce pragmatic TDD, DDD boundaries, documentation quality, changelog discipline, and Bun-first workflows
+alwaysApply: true
+---
+
+# Engineering Guidelines
+
+## 1) Development Paradigm: TDD with Business Value
+
+- Follow Red -> Green -> Refactor for all net-new behavior and bug fixes.
+- Before writing the first test, define:
+  - business outcome (who benefits and how success is measured),
+  - acceptance criteria (observable behavior, not implementation),
+  - test seam (unit, component, integration, or e2e) where value is proven.
+- Reject tests that only assert internals, implementation details, or trivial getters/setters.
+- Prefer a small number of high-signal tests over broad, low-value test volume.
+- Every bug fix must include a failing test that reproduces the bug first.
+
+## 2) Architectural Foundation: DDD for Domain Clarity
+
+- Model domain concepts explicitly (entities, value objects, domain services) in TypeScript names and module boundaries.
+- Identify bounded contexts by:
+  - distinct vocabulary used by users/stakeholders,
+  - separate lifecycle rules,
+  - ownership of invariants.
+- Keep context boundaries explicit in folders/modules and API contracts.
+- Cross-context communication must happen through clear interfaces (DTOs/events), not shared mutable models.
+- When domain rules evolve, update glossary terms, boundary definitions, and impacted contracts in the same change.
+
+## 3) Documentation Culture: Clear, Minimal, Useful
+
+- Require docstrings for:
+  - public APIs,
+  - exported composables/services/utilities,
+  - complex functions with domain decisions or non-obvious constraints.
+- Require inline comments only for non-obvious logic, invariants, tradeoffs, or domain rules.
+- Do not write comments that restate code.
+
+### Documentation quality examples
+
+```ts
+// BAD: adds no information
+// Increment i by 1
+i++
+
+// IDEAL: explains domain rule not obvious in code
+// Billing cycles are inclusive of the start date by contract;
+// changing this breaks proration calculations in downstream invoices.
+cycleDays = differenceInDays(endDate, startDate) + 1
+```
+
+```ts
+/**
+ * BAD: vague and non-actionable.
+ * Gets user data.
+ */
+export async function loadUserProfile(id: string) {}
+
+/**
+ * IDEAL: describes behavior, constraints, and failure mode.
+ * Loads profile data for an active account.
+ * Throws NotFoundError if the account does not exist or is soft-deleted.
+ * Never returns payment metadata (handled in Billing context).
+ */
+export async function loadUserProfile(id: string) {}
+```
+
+## 4) Change Management: Keep a Changelog
+
+- Maintain `CHANGELOG.md` using Keep a Changelog sections: Added, Changed, Fixed, Removed, Security.
+- A change is significant (must be logged) if it affects:
+  - user-visible behavior,
+  - API contracts,
+  - data model/migrations,
+  - security posture,
+  - operational workflows (deploy, backup, config).
+- Pure refactors/chore work may be omitted unless they alter developer workflow materially.
+- PR workflow: every feature/fix PR must include either:
+  - a changelog entry, or
+  - an explicit note: "No significant changelog impact" with reason.
+
+### PR changelog template
+
+```md
+## Changelog Impact
+- [ ] Added entry to `CHANGELOG.md`
+- [ ] No significant changelog impact
+
+### Entry (if applicable)
+## [Unreleased]
+### Added
+- ...
+### Changed
+- ...
+### Fixed
+- ...
+```
+
+## 5) Tooling Standardization: Bun-First
+
+- Bun is the default runtime/package manager for install, scripts, test, and local execution.
+- Required defaults:
+  - use `bun install`,
+  - run scripts with `bun run`,
+  - execute tests with Bun-compatible commands.
+- If ecosystem incompatibility appears (plugin/toolchain conflict), use this fallback sequence:
+  1. validate latest Bun-compatible version/config,
+  2. isolate the incompatible step (single script/tool only),
+  3. allow targeted fallback to npm/pnpm/node for that step,
+  4. document rationale and command in `README` or `docs/tooling.md`,
+  5. keep Bun as primary for all remaining workflows.
+- Do not migrate the whole project away from Bun due to one incompatible tool.
