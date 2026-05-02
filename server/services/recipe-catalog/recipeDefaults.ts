@@ -1,6 +1,6 @@
 /**
  * Predefined recipe categories and tags that seed the selection dropdowns.
- * These are merged with any user-created values already present in the database.
+ * English and Dutch labels (merged for dropdowns; no duplicate spellings in this file).
  */
 
 export const DEFAULT_RECIPE_CATEGORIES: readonly string[] = [
@@ -42,6 +42,33 @@ export const DEFAULT_RECIPE_CATEGORIES: readonly string[] = [
   'Spanish',
   'Thai',
   'Vietnamese',
+  // Dutch
+  'Ontbijt',
+  'Diner',
+  'Voorgerecht',
+  'Bijgerecht',
+  'Drank',
+  'Salade',
+  'Soep',
+  'Roerbak',
+  'Gebakken',
+  'Gegrild',
+  'Amerikaans',
+  'Aziatisch',
+  'Belgisch',
+  'Chinees',
+  'Frans',
+  'Grieks',
+  'Indiaas',
+  'Italiaans',
+  'Japans',
+  'Koreaans',
+  'Mexicaans',
+  'Midden-Oosters',
+  'Mediterraan',
+  'Spaans',
+  'Thais',
+  'Vietnamees',
 ]
 
 export const DEFAULT_RECIPE_TAGS: readonly string[] = [
@@ -82,4 +109,33 @@ export const DEFAULT_RECIPE_TAGS: readonly string[] = [
   'Spicy',
   'Sweet',
   'Hearty',
+  // Dutch
+  'Lactosevrij',
+  'Glutenvrij',
+  'Laagcalorisch',
+  'Koolhydraatarm',
+  'Laag in vet',
+  'Plantaardig',
+  'Veganistisch',
+  'Vegetarisch',
+  'Eenvoudig',
+  'Snel',
+  '5 ingrediënten',
+  'Eén-pan',
+  'Zonder koken',
+  'Grote porties koken',
+  'Budgetvriendelijk',
+  'Diepvriesvriendelijk',
+  'Voor te bereiden',
+  'Maaltijdbereiding',
+  'Troosteten',
+  'Romantisch',
+  'Kindvriendelijk',
+  'Feest',
+  'Rijk aan eiwit',
+  'Gezond',
+  'Licht',
+  'Pittig',
+  'Zoet',
+  'Hartig',
 ]
