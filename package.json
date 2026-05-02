@@ -7,7 +7,12 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:unit": "vitest --project unit",
+    "test:nuxt": "vitest --project nuxt"
   },
   "dependencies": {
     "@nuxt/eslint": "1.15.2",
@@ -21,5 +26,10 @@
   "trustedDependencies": [
     "@parcel/watcher",
     "unrs-resolver"
-  ]
+  ],
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vue/test-utils": "^2.4.10",
+    "vitest": "^4.1.5"
+  }
 }
