@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Unit tests for `filterRecipes` and `emptyStateType` utility functions.
 
 ### Fixed
+- Recipe detail and edit pages: resolve the recipe id from `route.path` when `route.params.id` is not yet populated on client navigation, so `useFetch` no longer calls `/api/v1/recipes/undefined` (Postgres uuid error).
 - Recipe URL import: preview fetch now uses **browser-like headers** (Chromium-style `User-Agent`, `Accept-Language`, `Sec-Fetch-*`) so publishers that bot-filter minimal clients are more likely to return public recipe HTML.
 - Libelle / Roularta: when the server follows SSO and returns a **login wall** instead of recipe markup, the preview API responds with **422** and a clear message instead of importing an empty “Inloggen” draft and only warning about missing steps.
 - JSON-LD import: `recipeInstructions` shaped as schema.org **`HowTo` with `step`** (not only `itemListElement` / `steps`) now yields preparation steps.

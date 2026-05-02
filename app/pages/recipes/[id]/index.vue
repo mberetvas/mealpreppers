@@ -4,11 +4,24 @@ import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 const route = useRoute()
 const { formatTime, primaryMeta } = useRecipeTimeFormat()
 
+/** Params can lag route.path on client navigation (Vue Router / Nuxt timing); path is authoritative. */
+const recipeId = computed(() => {
+  const raw = route.params.id
+  if (typeof raw === 'string' && raw.length > 0)
+    return raw
+  if (Array.isArray(raw) && raw[0])
+    return String(raw[0])
+  const parts = route.path.split('/').filter(Boolean)
+  if (parts[0] === 'recipes' && parts[1])
+    return parts[1]
+  return ''
+})
+
 const { data, error, pending } = await useFetch<RecipeCatalogItem>(
-  () => `/api/v1/recipes/${String(route.params.id)}`,
+  () => (recipeId.value ? `/api/v1/recipes/${recipeId.value}` : null),
   {
-    key: () => `recipe-detail-${String(route.params.id)}`,
-    watch: [() => route.params.id],
+    key: () => `recipe-detail-${recipeId.value || 'pending'}`,
+    watch: [recipeId],
   },
 )
 
@@ -66,7 +79,7 @@ useSeoMeta({
               </h1>
             </div>
             <NuxtLink
-              :to="`/recipes/${route.params.id}/edit`"
+              :to="`/recipes/${recipeId}/edit`"
               class="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#f0e4d2] px-5 py-2 text-sm font-bold text-[#0f5238] transition hover:bg-[#e6d6bd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
             >
               <span class="material-symbols-outlined text-[20px]">edit</span>

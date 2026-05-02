@@ -17,14 +17,26 @@ interface StepFormRow {
 
 const route = useRoute()
 const router = useRouter()
-const recipeId = computed(() => String(route.params.id))
+
+/** Params can lag route.path on client navigation; path is authoritative. */
+const recipeId = computed(() => {
+  const raw = route.params.id
+  if (typeof raw === 'string' && raw.length > 0)
+    return raw
+  if (Array.isArray(raw) && raw[0])
+    return String(raw[0])
+  const parts = route.path.split('/').filter(Boolean)
+  if (parts[0] === 'recipes' && parts[1])
+    return parts[1]
+  return ''
+})
 
 const isSaving = ref(false)
 const errorMessage = ref('')
 
 const { data: existingRecipe, error: loadError, pending } = await useFetch<RecipeCatalogItem>(
-  () => `/api/v1/recipes/${recipeId.value}`,
-  { key: () => `recipe-edit-${recipeId.value}` },
+  () => (recipeId.value ? `/api/v1/recipes/${recipeId.value}` : null),
+  { key: () => `recipe-edit-${recipeId.value || 'pending'}`, watch: [recipeId] },
 )
 
 const { data: recipeOptions } = await useFetch<{ categories: string[], tags: string[] }>('/api/v1/recipes/options', {
