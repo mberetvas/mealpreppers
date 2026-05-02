@@ -161,3 +161,11 @@ export async function loadUserProfile(id: string) {}
   4. document rationale and command in `README` or `docs/tooling.md`,
   5. keep Bun as primary for all remaining workflows.
 - Do not migrate the whole project away from Bun due to one incompatible tool.
+
+## 6) UI Design: DESIGN.md Is the Law
+
+- Before writing, generating, or reviewing any UI code, **always read `DESIGN.md` first.**
+- `DESIGN.md` is the single source of truth for colors, typography, elevation, spacing, and component rules. No exceptions.
+- If a UI decision is not covered by `DESIGN.md`, flag it as a gap and propose an addition before proceeding — don't freelance a design token out of thin air.
+- Violations of `DESIGN.md` rules (e.g., using 1px solid borders, sharp corners, 100% black text) must be called out and corrected, not silently accepted.
+- When `DESIGN.md` conflicts with a framework default (e.g., Tailwind base styles, browser UA stylesheet), `DESIGN.md` wins. Override the framework; do not override the design spec.

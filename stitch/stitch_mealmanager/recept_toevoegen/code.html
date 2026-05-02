@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Recipe | Culinary Atelier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-primary": "#95d4b3",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#95d4b3",
+                        "on-tertiary-fixed-variant": "#4c4733",
+                        "secondary-fixed-dim": "#ffb783",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed": "#301400",
+                        "outline-variant": "#bfc9c1",
+                        "secondary": "#944a00",
+                        "primary-container": "#2d6a4f",
+                        "on-tertiary-fixed": "#1f1c0b",
+                        "tertiary-fixed-dim": "#cec6ad",
+                        "primary": "#0f5238",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "tertiary-container": "#655f4a",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#e4e2e2",
+                        "on-background": "#1b1c1c",
+                        "surface-variant": "#e4e2e2",
+                        "tertiary-fixed": "#ebe2c8",
+                        "on-primary-fixed": "#002114",
+                        "on-tertiary-container": "#e2d9bf",
+                        "on-surface-variant": "#404943",
+                        "outline": "#707973",
+                        "on-secondary-fixed-variant": "#713700",
+                        "surface-container-high": "#eae8e7",
+                        "surface": "#fbf9f8",
+                        "inverse-on-surface": "#f2f0f0",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#efeded",
+                        "on-surface": "#1b1c1c",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#663100",
+                        "surface-dim": "#dbd9d9",
+                        "background": "#fbf9f8",
+                        "secondary-container": "#fc8f34",
+                        "surface-container-low": "#f5f3f3",
+                        "primary-fixed": "#b1f0ce",
+                        "surface-bright": "#fbf9f8",
+                        "surface-tint": "#2c694e",
+                        "secondary-fixed": "#ffdcc5",
+                        "inverse-surface": "#303030",
+                        "on-primary-container": "#a8e7c5",
+                        "tertiary": "#4c4734",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .font-newsreader { font-family: 'Newsreader', serif; }
+        .font-plus-jakarta-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-stone-50/80 dark:bg-stone-900/80 backdrop-blur-md shadow-sm dark:shadow-none flex justify-between items-center px-8 h-20 w-full mx-auto">
+<div class="font-newsreader italic text-2xl font-bold text-emerald-900 dark:text-emerald-400">
+            Culinary Atelier
+        </div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors" href="#">Recipes</a>
+<a class="text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors" href="#">Weekly Plan</a>
+<a class="text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors" href="#">Shopping List</a>
+<a class="text-emerald-800 dark:text-emerald-400 font-bold border-b-2 border-emerald-800 dark:border-emerald-400 pb-1" href="#">Add Recipe</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-stone-600 dark:text-stone-400 hover:text-emerald-700 transition-all" data-icon="account_circle">account_circle</button>
+</div>
+</nav>
+<main class="pt-32 pb-20 px-6 max-w-5xl mx-auto">
+<header class="mb-12">
+<h1 class="font-headline text-5xl md:text-6xl font-bold text-on-surface tracking-tight mb-4">Create New Creation</h1>
+<p class="font-body text-on-surface-variant text-lg max-w-2xl">Capture your culinary inspirations. Import from the web or document your family secrets with our editorial-grade atelier.</p>
+</header>
+<!-- Entry Mode Switcher -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+<div class="bg-surface-container-lowest p-8 rounded-xl border-b-2 border-transparent hover:border-primary-container transition-all cursor-pointer group shadow-sm">
+<div class="flex items-center gap-4 mb-4">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="link">link</span>
+<h3 class="font-headline text-2xl font-semibold">Paste a URL</h3>
+</div>
+<p class="text-on-surface-variant mb-6">Automatically extract ingredients and steps from any food blog or website.</p>
+<div class="flex gap-2">
+<input class="w-full bg-surface-container-low border-none border-b border-outline-variant focus:ring-0 focus:border-primary px-4 py-3 rounded-lg text-sm transition-all" placeholder="https://..." type="text"/>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-transform active:scale-95">Import</button>
+</div>
+</div>
+<div class="bg-primary-container text-on-primary-container p-8 rounded-xl shadow-sm border-b-2 border-primary transition-all">
+<div class="flex items-center gap-4 mb-4">
+<span class="material-symbols-outlined text-on-primary-container text-3xl" data-icon="edit_note">edit_note</span>
+<h3 class="font-headline text-2xl font-semibold text-on-primary-container">Enter Manually</h3>
+</div>
+<p class="text-on-primary-container/80 mb-6">Create a bespoke editorial recipe page from scratch using our curated form.</p>
+<div class="flex items-center text-sm font-semibold gap-2">
+                    Selected <span class="material-symbols-outlined text-base" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+</div>
+<!-- Manual Entry Form -->
+<section class="bg-surface-container-low rounded-xl p-8 md:p-12 shadow-sm">
+<form class="space-y-12">
+<!-- Media Upload Section -->
+<div class="relative group h-80 w-full bg-surface-container-highest rounded-xl overflow-hidden flex flex-col items-center justify-center border-2 border-dashed border-outline-variant/50 hover:border-primary transition-colors">
+<div class="text-center">
+<span class="material-symbols-outlined text-5xl text-outline mb-3" data-icon="add_a_photo">add_a_photo</span>
+<p class="font-headline text-xl font-medium text-on-surface-variant">Drop your masterpiece here</p>
+<p class="text-sm text-outline mt-1 font-plus-jakarta-sans">or click to browse gallery</p>
+</div>
+<img class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-10 transition-opacity" data-alt="Abstract background of fresh culinary ingredients and herbs" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtLUBcXiY74bEPGTRg3v5k5cETuJ_z-hotklCs3O83beBPi-rL3IoZb8aUTIslfw_5q-HfUFfFmqdi8LjnanoaidgyyuuQ4LVCur_CRpIYisRV-LK5XxWUOHVDArzMXkeH4UR3ypdMGq4MN0GD3mPmoL0p3AgpakTjeiEaZYmpdgh_z0mUGQMeRnK23elWmbjkTC9I39F78dMnK2sFj3WUzYMQ86a5bZRdEC1L6MDGthnXUZLEIc9bYfhyQFAF3WibY4N06VSkPe4"/>
+</div>
+<!-- Basic Info Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+<div class="md:col-span-2 space-y-2">
+<label class="text-xs uppercase tracking-widest font-bold text-primary">Recipe Title</label>
+<input class="w-full text-3xl font-headline bg-transparent border-none border-b border-outline-variant/40 focus:ring-0 focus:border-primary pb-2 transition-all placeholder:text-stone-300" placeholder="e.g. Heirloom Tomato &amp; Burrata Tart" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs uppercase tracking-widest font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-base" data-icon="schedule">schedule</span> Prep Time
+                        </label>
+<input class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 focus:ring-0 focus:border-primary p-3 rounded-lg transition-all" placeholder="15 mins" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs uppercase tracking-widest font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-base" data-icon="cooking">cooking</span> Cook Time
+                        </label>
+<input class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 focus:ring-0 focus:border-primary p-3 rounded-lg transition-all" placeholder="45 mins" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs uppercase tracking-widest font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-base" data-icon="group">group</span> Servings
+                        </label>
+<input class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 focus:ring-0 focus:border-primary p-3 rounded-lg transition-all" placeholder="4" type="number"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs uppercase tracking-widest font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-base" data-icon="restaurant">restaurant</span> Difficulty
+                        </label>
+<select class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 focus:ring-0 focus:border-primary p-3 rounded-lg transition-all appearance-none">
+<option>Easy</option>
+<option>Intermediate</option>
+<option>Advanced</option>
+</select>
+</div>
+</div>
+<!-- Ingredients & Instructions -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
+<div class="lg:col-span-2 space-y-6">
+<div class="flex items-center justify-between border-b border-outline-variant/20 pb-4">
+<h3 class="font-headline text-2xl font-bold">Ingredients</h3>
+<button class="text-primary hover:bg-primary-fixed p-1 rounded-full transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+</button>
+</div>
+<div class="space-y-3">
+<div class="flex gap-2 items-center group">
+<span class="material-symbols-outlined text-stone-300 group-hover:text-primary transition-colors" data-icon="drag_indicator">drag_indicator</span>
+<input class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/20 focus:ring-0 focus:border-primary p-2 text-sm rounded-md" placeholder="2 cups All-purpose flour" type="text"/>
+</div>
+<div class="flex gap-2 items-center group">
+<span class="material-symbols-outlined text-stone-300 group-hover:text-primary transition-colors" data-icon="drag_indicator">drag_indicator</span>
+<input class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/20 focus:ring-0 focus:border-primary p-2 text-sm rounded-md" placeholder="1 tsp Sea salt" type="text"/>
+</div>
+<div class="flex gap-2 items-center group">
+<span class="material-symbols-outlined text-stone-300 group-hover:text-primary transition-colors" data-icon="drag_indicator">drag_indicator</span>
+<input class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/20 focus:ring-0 focus:border-primary p-2 text-sm rounded-md" placeholder="Freshly ground black pepper" type="text"/>
+</div>
+<button class="text-xs font-bold text-primary/60 hover:text-primary transition-colors px-2 py-1" type="button">+ Add Another Ingredient</button>
+</div>
+</div>
+<div class="lg:col-span-3 space-y-6">
+<div class="flex items-center justify-between border-b border-outline-variant/20 pb-4">
+<h3 class="font-headline text-2xl font-bold">Instructions</h3>
+<span class="text-xs text-outline font-medium">Auto-saving...</span>
+</div>
+<div class="space-y-8">
+<div class="relative pl-12 group">
+<span class="absolute left-0 top-0 font-newsreader text-4xl text-stone-200 group-hover:text-primary transition-colors">01</span>
+<textarea class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/20 focus:ring-0 focus:border-primary p-4 text-sm rounded-lg resize-none" placeholder="Preheat your oven to 400°F (200°C). Prepare a large baking sheet with parchment paper." rows="3"></textarea>
+</div>
+<div class="relative pl-12 group">
+<span class="absolute left-0 top-0 font-newsreader text-4xl text-stone-200 group-hover:text-primary transition-colors">02</span>
+<textarea class="w-full bg-surface-container-lowest border-none border-b border-outline-variant/20 focus:ring-0 focus:border-primary p-4 text-sm rounded-lg resize-none" placeholder="Whisk together the dry ingredients in a large bowl. Gradually incorporate the chilled butter..." rows="3"></textarea>
+</div>
+<button class="flex items-center gap-2 text-primary font-bold hover:translate-x-1 transition-transform" type="button">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                                Add Next Step
+                            </button>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="pt-12 border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center gap-6">
+<button class="text-on-surface-variant font-semibold hover:text-on-surface transition-colors" type="button">Cancel &amp; Discard</button>
+<div class="flex gap-4 w-full md:w-auto">
+<button class="flex-1 md:flex-none px-8 py-3 bg-surface-container-high text-primary font-bold rounded-xl hover:bg-surface-container-highest transition-colors" type="button">Save Draft</button>
+<button class="flex-1 md:flex-none px-12 py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-xl shadow-lg hover:opacity-90 transition-transform active:scale-95" type="submit">Publish Recipe</button>
+</div>
+</div>
+</form>
+</section>
+</main>
+<!-- SideNav (Mobile Only Overlay Control) -->
+<div class="fixed bottom-0 w-full md:hidden bg-surface-container-lowest border-t border-outline-variant/10 px-6 py-4 flex justify-around items-center z-50">
+<button class="flex flex-col items-center text-stone-400">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="text-[10px] font-bold mt-1">Recipes</span>
+</button>
+<button class="flex flex-col items-center text-stone-400">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+<span class="text-[10px] font-bold mt-1">Quick</span>
+</button>
+<div class="bg-primary text-on-primary p-4 rounded-full -translate-y-8 shadow-xl">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</div>
+<button class="flex flex-col items-center text-stone-400">
+<span class="material-symbols-outlined" data-icon="shopping_basket">shopping_basket</span>
+<span class="text-[10px] font-bold mt-1">Shop</span>
+</button>
+<button class="flex flex-col items-center text-stone-400">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="text-[10px] font-bold mt-1">Profile</span>
+</button>
+</div>
+</body></html>

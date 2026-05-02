@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shopping List - Culinary Atelier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Plus+Jakarta+Sans:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-primary": "#95d4b3",
+              "on-secondary": "#ffffff",
+              "primary-fixed-dim": "#95d4b3",
+              "on-tertiary-fixed-variant": "#4c4733",
+              "secondary-fixed-dim": "#ffb783",
+              "on-error-container": "#93000a",
+              "on-secondary-fixed": "#301400",
+              "outline-variant": "#bfc9c1",
+              "secondary": "#944a00",
+              "primary-container": "#2d6a4f",
+              "on-tertiary-fixed": "#1f1c0b",
+              "tertiary-fixed-dim": "#cec6ad",
+              "primary": "#0f5238",
+              "on-primary-fixed-variant": "#0e5138",
+              "tertiary-container": "#655f4a",
+              "on-primary": "#ffffff",
+              "surface-container-highest": "#e4e2e2",
+              "on-background": "#1b1c1c",
+              "surface-variant": "#e4e2e2",
+              "tertiary-fixed": "#ebe2c8",
+              "on-primary-fixed": "#002114",
+              "on-tertiary-container": "#e2d9bf",
+              "on-surface-variant": "#404943",
+              "outline": "#707973",
+              "on-secondary-fixed-variant": "#713700",
+              "surface-container-high": "#eae8e7",
+              "surface": "#fbf9f8",
+              "inverse-on-surface": "#f2f0f0",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              "surface-container": "#efeded",
+              "on-surface": "#1b1c1c",
+              "on-tertiary": "#ffffff",
+              "on-secondary-container": "#663100",
+              "surface-dim": "#dbd9d9",
+              "background": "#fbf9f8",
+              "secondary-container": "#fc8f34",
+              "surface-container-low": "#f5f3f3",
+              "primary-fixed": "#b1f0ce",
+              "surface-bright": "#fbf9f8",
+              "surface-tint": "#2c694e",
+              "secondary-fixed": "#ffdcc5",
+              "inverse-surface": "#303030",
+              "on-primary-container": "#a8e7c5",
+              "tertiary": "#4c4734",
+              "error": "#ba1a1a",
+              "surface-container-lowest": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Plus Jakarta Sans"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .font-newsreader { font-family: 'Newsreader', serif; }
+        .font-plus-jakarta-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-stone-50/80 dark:bg-stone-900/80 backdrop-blur-md shadow-sm dark:shadow-none h-20 flex justify-between items-center px-8">
+<div class="font-newsreader italic text-2xl font-bold text-emerald-900 dark:text-emerald-400">Culinary Atelier</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors" href="#">Recipes</a>
+<a class="text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors" href="#">Weekly Plan</a>
+<a class="text-emerald-800 dark:text-emerald-400 font-bold border-b-2 border-emerald-800 dark:border-emerald-400 pb-1" href="#">Shopping List</a>
+<a class="text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors" href="#">Add Recipe</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-emerald-900 dark:text-emerald-400">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</nav>
+<div class="flex pt-20 min-h-screen">
+<!-- SideNavBar (Hidden on small screens) -->
+<aside class="hidden md:flex flex-col gap-2 p-6 h-screen w-64 bg-stone-50 dark:bg-stone-950 sticky top-20">
+<div class="mb-6 px-4">
+<h2 class="font-newsreader font-bold text-xl text-emerald-900 dark:text-emerald-500">Categories</h2>
+<p class="text-xs text-stone-500 dark:text-stone-400 tracking-wide uppercase">Filter your atelier</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 rounded-xl px-4 py-3 font-semibold hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span>All Recipes</span>
+</a>
+<a class="flex items-center gap-3 text-stone-500 dark:text-stone-400 px-4 py-3 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="eco">eco</span>
+<span>Seasonal</span>
+</a>
+<a class="flex items-center gap-3 text-stone-500 dark:text-stone-400 px-4 py-3 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+<span>Quick &amp; Easy</span>
+</a>
+<a class="flex items-center gap-3 text-stone-500 dark:text-stone-400 px-4 py-3 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="leafy_green">energy_savings_leaf</span>
+<span>Vegetarian</span>
+</a>
+<a class="flex items-center gap-3 text-stone-500 dark:text-stone-400 px-4 py-3 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="bakery_dining">bakery_dining</span>
+<span>Gluten-Free</span>
+</a>
+</nav>
+<div class="mt-auto p-4 bg-primary-container rounded-2xl text-on-primary-container">
+<p class="text-xs font-bold mb-2 uppercase tracking-tighter">Premium Access</p>
+<p class="text-sm mb-4 leading-snug">Unlock nutritional data and smart meal scaling.</p>
+<button class="w-full py-2 bg-on-primary-container text-primary-container font-bold rounded-lg text-sm">Upgrade to Premium</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 bg-surface-container-low p-6 md:p-12">
+<header class="max-w-5xl mx-auto mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="font-newsreader text-5xl font-bold tracking-tight text-on-surface mb-2">Shopping List</h1>
+<p class="text-on-surface-variant font-medium">Items needed for your upcoming culinary creations.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-6 py-3 bg-surface-container-high text-primary font-bold rounded-xl hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined" data-icon="print">print</span>
+                            Print List
+                        </button>
+<button class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/10 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+                            Export to Shopping List
+                        </button>
+</div>
+</div>
+<!-- Toggles & Filters -->
+<div class="mt-10 flex items-center justify-between border-b border-outline-variant/20 pb-4">
+<div class="flex p-1 bg-surface-container rounded-full">
+<button class="px-6 py-2 rounded-full text-sm font-bold bg-surface-container-lowest text-primary shadow-sm">Specific Weekly Plan</button>
+<button class="px-6 py-2 rounded-full text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors">All Ingredients</button>
+</div>
+<div class="text-sm font-medium text-on-surface-variant">
+                        Showing <span class="text-secondary font-bold">24 items</span> for "Autumn Warmth Week"
+                    </div>
+</div>
+</header>
+<div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Shopping Categories Bento -->
+<div class="lg:col-span-8 space-y-8">
+<!-- Category: Produce -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" data-icon="eco">eco</span>
+<h3 class="font-newsreader text-2xl font-bold">Produce</h3>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden">
+<div class="divide-y divide-outline-variant/10">
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="relative flex items-center justify-center w-6 h-6 border-2 border-outline-variant rounded-md group-hover:border-primary cursor-pointer transition-colors">
+<input class="absolute inset-0 opacity-0 cursor-pointer" type="checkbox"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Organic Heirloom Carrots</p>
+<p class="text-sm text-on-surface-variant">1 bunch (approx 6-8)</p>
+</div>
+</div>
+<span class="text-xs font-bold px-2 py-1 bg-primary-fixed text-on-primary-fixed rounded">Weekly Plan</span>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="relative flex items-center justify-center w-6 h-6 border-2 border-outline-variant rounded-md group-hover:border-primary cursor-pointer transition-colors">
+<input class="absolute inset-0 opacity-0 cursor-pointer" type="checkbox"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Fresh Rosemary</p>
+<p class="text-sm text-on-surface-variant">2 sprigs</p>
+</div>
+</div>
+<span class="text-xs font-bold px-2 py-1 bg-primary-fixed text-on-primary-fixed rounded">Weekly Plan</span>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="relative flex items-center justify-center w-6 h-6 border-2 border-outline-variant rounded-md group-hover:border-primary cursor-pointer transition-colors">
+<input class="absolute inset-0 opacity-0 cursor-pointer" type="checkbox"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Shallots</p>
+<p class="text-sm text-on-surface-variant">3 large</p>
+</div>
+</div>
+<span class="text-xs font-bold px-2 py-1 bg-primary-fixed text-on-primary-fixed rounded">Weekly Plan</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Category: Dairy & Refrigerated -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" data-icon="egg_alt">egg_alt</span>
+<h3 class="font-newsreader text-2xl font-bold">Dairy &amp; Refrigerated</h3>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden">
+<div class="divide-y divide-outline-variant/10">
+<div class="flex items-center justify-between p-5 bg-surface-container-low/50">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-6 h-6 bg-primary rounded-md">
+<span class="material-symbols-outlined text-on-primary text-sm" data-icon="check">check</span>
+</div>
+<div>
+<p class="font-bold text-on-surface-variant line-through opacity-60">Unsalted Grass-fed Butter</p>
+<p class="text-sm text-on-surface-variant line-through opacity-60">250g</p>
+</div>
+</div>
+<span class="text-xs font-medium text-on-surface-variant italic">Already owned</span>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="relative flex items-center justify-center w-6 h-6 border-2 border-outline-variant rounded-md group-hover:border-primary cursor-pointer transition-colors">
+<input class="absolute inset-0 opacity-0 cursor-pointer" type="checkbox"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Aged Gruyère</p>
+<p class="text-sm text-on-surface-variant">150g, freshly grated</p>
+</div>
+</div>
+<span class="text-xs font-bold px-2 py-1 bg-primary-fixed text-on-primary-fixed rounded">Weekly Plan</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Category: Pantry -->
+<section>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" data-icon="kitchen">kitchen</span>
+<h3 class="font-newsreader text-2xl font-bold">Pantry</h3>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden">
+<div class="divide-y divide-outline-variant/10">
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="relative flex items-center justify-center w-6 h-6 border-2 border-outline-variant rounded-md group-hover:border-primary cursor-pointer transition-colors">
+<input class="absolute inset-0 opacity-0 cursor-pointer" type="checkbox"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Extra Virgin Olive Oil</p>
+<p class="text-sm text-on-surface-variant">Check supply - need at least 1/2 cup</p>
+</div>
+</div>
+<span class="text-xs font-bold px-2 py-1 bg-secondary-fixed text-on-secondary-fixed rounded">Stock Alert</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Summary Sidebar -->
+<div class="lg:col-span-4 space-y-6">
+<div class="bg-surface-container-highest/30 rounded-3xl p-8 backdrop-blur-sm sticky top-32">
+<h4 class="font-newsreader text-2xl font-bold mb-6">Plan Summary</h4>
+<div class="space-y-6">
+<div class="flex gap-4 items-start">
+<div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+<img alt="" class="w-full h-full object-cover" data-alt="Roasted carrots with green garnish" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDny3Z_eqSUenh9s2XaUz_AqJpKIMXqBe2ctRoePsaAJsNOTLK-CEUbdaxxjZXd5MTfo0q2NQ70M5V-VlcVz8S5S-96dBf4cnkBAMQE33PjIGfCHTvc1yOS2pynPWU1rM1XKpdkdu5_M4JbrMSttBJXhpW33lF3MqmyIJ2pn6ecBodWLyX2KS2www78NyDtgRfW5kNK7GfMT508EW94EqVxdaCFTBV5bjlniS59VMtlBr65fCThxnm1alAE6KSb2_b-5C8p0SyGtM0"/>
+</div>
+<div>
+<p class="text-sm font-bold leading-tight">Glazed Heirloom Carrots with Thyme</p>
+<p class="text-xs text-on-surface-variant mt-1">Mon • Dinner</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+<img alt="" class="w-full h-full object-cover" data-alt="Warm autumn soup in bowl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwqhAE9nijnxl1MQlfZw3TSM-FyCXZoVJe1AO84aB9YRhrotOEN5ygXtGnDXlZUZbj_dqP933M3HXmcsYbgGM2hxgco9J0CtpXabGFEAjLl8EFxI_qYTL5iXVCOqG4MYGl8Y_wSO0ShW4gDKqnNAioAieg1VG7yExRJ5WObdDCBh7-ae-bPc9Ff3rz4xZB8nWFd3lbV4QciFrwlTxUYVUd9Y-oZ387oGgmIYzkYCX0InHO94NoJB9axEiM5SeuRmsx_F0YguWIcyQ"/>
+</div>
+<div>
+<p class="text-sm font-bold leading-tight">Gruyère &amp; Onion Autumn Velouté</p>
+<p class="text-xs text-on-surface-variant mt-1">Tue • Lunch</p>
+</div>
+</div>
+</div>
+<div class="mt-10 pt-8 border-t border-outline-variant/20">
+<div class="flex justify-between items-center mb-4">
+<span class="text-sm font-semibold text-on-surface-variant">Progress</span>
+<span class="text-sm font-bold text-primary">12/24 items</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-full w-1/2 rounded-full"></div>
+</div>
+</div>
+<button class="w-full mt-8 py-4 bg-secondary text-on-secondary font-bold rounded-xl flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="shopping_basket">shopping_basket</span>
+                            Order Ingredients Online
+                        </button>
+</div>
+<!-- Editorial Tip Card -->
+<div class="relative bg-primary-container rounded-3xl p-8 overflow-hidden text-on-primary-container">
+<div class="absolute -top-4 -right-4 opacity-10">
+<span class="material-symbols-outlined text-9xl" data-icon="restaurant">restaurant</span>
+</div>
+<h5 class="font-newsreader italic text-xl font-bold mb-3">Atelier Tip</h5>
+<p class="text-sm leading-relaxed opacity-90">Always source your Gruyère from the Alpine regions if possible. The floral notes of the summer pastures translate beautifully into the cheese, perfectly complementing shallots.</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile Navigation (Visible on small screens) -->
+<div class="md:hidden fixed bottom-0 left-0 w-full bg-stone-100/90 backdrop-blur-md z-50 flex justify-around py-4">
+<button class="flex flex-col items-center gap-1 text-stone-500">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="text-[10px] font-bold">Recipes</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-stone-500">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="text-[10px] font-bold">Plan</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-emerald-800">
+<span class="material-symbols-outlined" data-icon="shopping_cart" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span class="text-[10px] font-bold">List</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-stone-500">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="text-[10px] font-bold">Profile</span>
+</button>
+</div>
+</body></html>
