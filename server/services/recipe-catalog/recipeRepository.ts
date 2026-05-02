@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import type { RecipeCreatePayload } from './recipeSchemas'
 
 interface RecipeRow {
@@ -36,36 +37,7 @@ interface StepRow {
   text: string
 }
 
-export interface RecipeCatalogItem {
-  id: string
-  title: string
-  description?: string
-  sourceUrl?: string
-  sourceHost?: string
-  imageUrl?: string
-  servings?: number
-  prepTimeMinutes?: number
-  cookTimeMinutes?: number
-  totalTimeMinutes?: number
-  difficulty?: string
-  categories: string[]
-  tags: string[]
-  ingredients: Array<{
-    id: string
-    position: number
-    rawText: string
-    name: string
-    quantity?: number
-    unit?: string
-  }>
-  steps: Array<{
-    id: string
-    position: number
-    text: string
-  }>
-  createdAt: string
-  updatedAt: string
-}
+export type { RecipeCatalogItem }
 
 export async function createRecipe(client: SupabaseClient, payload: RecipeCreatePayload): Promise<RecipeCatalogItem> {
   const recipeInsert = {
@@ -175,6 +147,53 @@ export async function listRecipes(client: SupabaseClient): Promise<RecipeCatalog
     ingredientsByRecipe.get(recipe.id) ?? [],
     stepsByRecipe.get(recipe.id) ?? [],
   ))
+}
+
+/**
+ * Loads a single recipe with ingredients and steps, or `null` if the id does not exist.
+ */
+export async function getRecipeById(client: SupabaseClient, id: string): Promise<RecipeCatalogItem | null> {
+  const { data: recipe, error: recipeError } = await client
+    .from('recipes')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (recipeError) {
+    throw createError({ statusCode: 500, statusMessage: recipeError.message ?? 'Recipe could not be loaded.' })
+  }
+
+  if (!recipe) {
+    return null
+  }
+
+  const recipeRow = recipe as RecipeRow
+  const [ingredientsRes, stepsRes] = await Promise.all([
+    client
+      .from('recipe_ingredients')
+      .select('*')
+      .eq('recipe_id', id)
+      .order('position', { ascending: true }),
+    client
+      .from('recipe_steps')
+      .select('*')
+      .eq('recipe_id', id)
+      .order('position', { ascending: true }),
+  ])
+
+  if (ingredientsRes.error || !ingredientsRes.data) {
+    throw createError({ statusCode: 500, statusMessage: ingredientsRes.error?.message ?? 'Recipe ingredients could not be loaded.' })
+  }
+
+  if (stepsRes.error) {
+    throw createError({ statusCode: 500, statusMessage: stepsRes.error.message ?? 'Recipe steps could not be loaded.' })
+  }
+
+  return mapRecipe(
+    recipeRow,
+    ingredientsRes.data as IngredientRow[],
+    (stepsRes.data ?? []) as StepRow[],
+  )
 }
 
 function groupByRecipeId<Row extends { recipe_id: string }>(rows: Row[]): Map<string, Row[]> {

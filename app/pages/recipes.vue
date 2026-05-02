@@ -1,25 +1,12 @@
 <script setup lang="ts">
-interface RecipeCatalogItem {
-  id: string
-  title: string
-  description?: string
-  imageUrl?: string
-  servings?: number
-  prepTimeMinutes?: number
-  cookTimeMinutes?: number
-  totalTimeMinutes?: number
-  difficulty?: string
-  categories: string[]
-  tags: string[]
-  ingredients: Array<{ id: string, rawText: string }>
-  steps: Array<{ id: string, text: string }>
-  createdAt: string
-}
+import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 
 const searchQuery = ref('')
 const { data: recipes, pending, error, refresh } = await useFetch<RecipeCatalogItem[]>('/api/v1/recipes', {
   default: () => [],
 })
+
+const { formatTime, primaryMeta } = useRecipeTimeFormat()
 
 const filteredRecipes = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -41,27 +28,6 @@ const filteredRecipes = computed(() => {
     return searchableText.includes(query)
   })
 })
-
-function formatTime(recipe: RecipeCatalogItem): string | undefined {
-  const minutes = recipe.totalTimeMinutes ?? sumOptional(recipe.prepTimeMinutes, recipe.cookTimeMinutes)
-  return minutes === undefined ? undefined : `${minutes} min`
-}
-
-function sumOptional(first: number | undefined, second: number | undefined): number | undefined {
-  if (first === undefined && second === undefined) {
-    return undefined
-  }
-
-  return (first ?? 0) + (second ?? 0)
-}
-
-function primaryMeta(recipe: RecipeCatalogItem): string[] {
-  return [
-    formatTime(recipe),
-    recipe.servings ? `${recipe.servings} servings` : undefined,
-    recipe.difficulty,
-  ].filter((item): item is string => Boolean(item))
-}
 </script>
 
 <template>
@@ -120,39 +86,51 @@ function primaryMeta(recipe: RecipeCatalogItem): string[] {
       </section>
 
       <section v-else class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        <article v-for="recipe in filteredRecipes" :key="recipe.id" class="overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.10)] transition hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(15,82,56,0.14)]">
-          <div class="relative aspect-[4/3] bg-[#e6d6bd]">
-            <img v-if="recipe.imageUrl" :src="recipe.imageUrl" :alt="recipe.title" class="h-full w-full object-cover">
-            <div v-else class="flex h-full items-center justify-center text-[#0f5238]">
-              <span class="material-symbols-outlined text-[54px]">restaurant</span>
-            </div>
-            <div v-if="recipe.categories.length > 0" class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-[#0f5238] shadow-[0_8px_22px_rgba(15,82,56,0.12)]">
-              {{ recipe.categories[0] }}
-            </div>
-          </div>
-
-          <div class="grid gap-4 p-5">
-            <div>
-              <h2 class="font-['Newsreader'] text-2xl font-semibold leading-tight text-[#123628]">
-                {{ recipe.title }}
-              </h2>
-              <p v-if="recipe.description" class="mt-2 line-clamp-2 text-sm leading-6 text-[#5d6c60]">
-                {{ recipe.description }}
-              </p>
-            </div>
-
-            <div v-if="primaryMeta(recipe).length > 0" class="flex flex-wrap gap-2">
-              <span v-for="item in primaryMeta(recipe)" :key="item" class="rounded-full bg-[#f0e4d2] px-3 py-1 text-xs font-bold text-[#485746]">
-                {{ item }}
-              </span>
+        <NuxtLink
+          v-for="recipe in filteredRecipes"
+          :key="recipe.id"
+          :to="`/recipes/${recipe.id}`"
+          class="group block overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.10)] transition hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(15,82,56,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+        >
+          <article class="grid h-full grid-rows-[auto_1fr]">
+            <div class="relative aspect-[4/3] bg-[#e6d6bd]">
+              <img
+                v-if="recipe.imageUrl"
+                :src="recipe.imageUrl"
+                :alt="`Photo of ${recipe.title}`"
+                class="h-full w-full object-cover"
+              >
+              <div v-else class="flex h-full items-center justify-center text-[#0f5238]">
+                <span class="material-symbols-outlined text-[54px]" aria-hidden="true">restaurant</span>
+              </div>
+              <div v-if="recipe.categories.length > 0" class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-[#0f5238] shadow-[0_8px_22px_rgba(15,82,56,0.12)]">
+                {{ recipe.categories[0] }}
+              </div>
             </div>
 
-            <div class="flex items-center justify-between gap-4 text-sm font-semibold text-[#6a786b]">
-              <span>{{ recipe.ingredients.length }} ingredients</span>
-              <span>{{ recipe.steps.length }} steps</span>
+            <div class="grid gap-4 p-5">
+              <div>
+                <h2 class="font-['Newsreader'] text-2xl font-semibold leading-tight text-[#123628] group-hover:underline group-hover:decoration-[#0f5238]/30 group-hover:underline-offset-4">
+                  {{ recipe.title }}
+                </h2>
+                <p v-if="recipe.description" class="mt-2 line-clamp-2 text-sm leading-6 text-[#5d6c60]">
+                  {{ recipe.description }}
+                </p>
+              </div>
+
+              <div v-if="primaryMeta(recipe).length > 0" class="flex flex-wrap gap-2">
+                <span v-for="item in primaryMeta(recipe)" :key="item" class="rounded-full bg-[#f0e4d2] px-3 py-1 text-xs font-bold text-[#485746]">
+                  {{ item }}
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between gap-4 text-sm font-semibold text-[#6a786b]">
+                <span>{{ recipe.ingredients.length }} ingredients</span>
+                <span>{{ recipe.steps.length }} steps</span>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
+        </NuxtLink>
       </section>
     </div>
   </div>
