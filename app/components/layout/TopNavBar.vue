@@ -35,5 +35,7 @@ function isActive(to: string): boolean {
         {{ item.label }}
       </NuxtLink>
     </div>
+
+    <div class="w-10" />
   </nav>
 </template>
