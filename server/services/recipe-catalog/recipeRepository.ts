@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
-import type { RecipeCreatePayload } from './recipeSchemas'
+import type { RecipeCreatePayload, RecipeUpdatePayload } from './recipeSchemas'
 
 interface RecipeRow {
   id: string
@@ -194,6 +194,89 @@ export async function getRecipeById(client: SupabaseClient, id: string): Promise
     ingredientsRes.data as IngredientRow[],
     (stepsRes.data ?? []) as StepRow[],
   )
+}
+
+/**
+ * Replaces all recipe fields, ingredients, and steps for the given recipe ID.
+ * Throws 404 if the recipe does not exist.
+ */
+export async function updateRecipe(client: SupabaseClient, id: string, payload: RecipeUpdatePayload): Promise<RecipeCatalogItem> {
+  const recipeUpdate = {
+    title: payload.title,
+    description: payload.description ?? null,
+    source_url: payload.sourceUrl ?? null,
+    source_host: payload.sourceHost ?? null,
+    image_url: payload.imageUrl ?? null,
+    servings: payload.servings ?? null,
+    prep_time_minutes: payload.prepTimeMinutes ?? null,
+    cook_time_minutes: payload.cookTimeMinutes ?? null,
+    total_time_minutes: payload.totalTimeMinutes ?? null,
+    difficulty: payload.difficulty ?? null,
+    categories: payload.categories,
+    tags: payload.tags,
+  }
+
+  const { data: recipe, error: recipeError } = await client
+    .from('recipes')
+    .update(recipeUpdate)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (recipeError || !recipe) {
+    if (recipeError?.code === 'PGRST116') {
+      throw createError({ statusCode: 404, statusMessage: 'Recipe not found.' })
+    }
+    throw createError({ statusCode: 500, statusMessage: recipeError?.message ?? 'Recipe could not be updated.' })
+  }
+
+  const recipeRow = recipe as RecipeRow
+
+  // Replace ingredients: delete existing, insert new
+  await client.from('recipe_ingredients').delete().eq('recipe_id', id)
+
+  const ingredientRows = payload.ingredients.map((ingredient, index) => ({
+    recipe_id: id,
+    position: index + 1,
+    raw_text: ingredient.rawText,
+    name: ingredient.name,
+    quantity: ingredient.quantity,
+    unit: ingredient.unit,
+  }))
+
+  const { data: ingredients, error: ingredientsError } = await client
+    .from('recipe_ingredients')
+    .insert(ingredientRows)
+    .select('*')
+
+  if (ingredientsError || !ingredients) {
+    throw createError({ statusCode: 500, statusMessage: ingredientsError?.message ?? 'Recipe ingredients could not be saved.' })
+  }
+
+  // Replace steps: delete existing, insert new
+  await client.from('recipe_steps').delete().eq('recipe_id', id)
+
+  let steps: unknown[] = []
+  const stepRows = payload.steps.map((step, index) => ({
+    recipe_id: id,
+    position: step.position ?? index + 1,
+    text: step.text,
+  }))
+
+  if (stepRows.length > 0) {
+    const { data: savedSteps, error: stepsError } = await client
+      .from('recipe_steps')
+      .insert(stepRows)
+      .select('*')
+
+    if (stepsError || !savedSteps) {
+      throw createError({ statusCode: 500, statusMessage: stepsError?.message ?? 'Recipe steps could not be saved.' })
+    }
+
+    steps = savedSteps
+  }
+
+  return mapRecipe(recipeRow, ingredients as IngredientRow[], steps as StepRow[])
 }
 
 function groupByRecipeId<Row extends { recipe_id: string }>(rows: Row[]): Map<string, Row[]> {

@@ -56,12 +56,23 @@ useSeoMeta({
 
       <article v-else-if="data" class="grid gap-8">
         <header class="grid gap-3">
-          <p v-if="data.categories[0]" class="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7662f]">
-            {{ data.categories[0] }}
-          </p>
-          <h1 class="font-['Newsreader'] text-4xl font-semibold leading-tight text-[#123628] sm:text-5xl">
-            {{ data.title }}
-          </h1>
+          <div class="flex items-start justify-between gap-4">
+            <div class="grid gap-3">
+              <p v-if="data.categories[0]" class="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7662f]">
+                {{ data.categories[0] }}
+              </p>
+              <h1 class="font-['Newsreader'] text-4xl font-semibold leading-tight text-[#123628] sm:text-5xl">
+                {{ data.title }}
+              </h1>
+            </div>
+            <NuxtLink
+              :to="`/recipes/${route.params.id}/edit`"
+              class="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#f0e4d2] px-5 py-2 text-sm font-bold text-[#0f5238] transition hover:bg-[#e6d6bd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+            >
+              <span class="material-symbols-outlined text-[20px]">edit</span>
+              Edit
+            </NuxtLink>
+          </div>
           <p v-if="data.description" class="text-base font-medium leading-relaxed text-[#5d6c60]">
             {{ data.description }}
           </p>

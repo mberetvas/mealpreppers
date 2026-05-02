@@ -36,6 +36,9 @@ export const recipePreviewRequestSchema = z.object({
   url: z.string().url(),
 })
 
+export const recipeUpdatePayloadSchema = recipeCreatePayloadSchema
+
 export type RecipeCreatePayload = z.infer<typeof recipeCreatePayloadSchema>
+export type RecipeUpdatePayload = z.infer<typeof recipeUpdatePayloadSchema>
 export type RecipeIngredientInput = z.infer<typeof recipeIngredientInputSchema>
 export type RecipeStepInput = z.infer<typeof recipeStepInputSchema>
