@@ -27,7 +27,7 @@ describe('Dagelijkse Kost scraper', () => {
     const result = parseRecipeHtml(await fixture('dagelijkse_kost_recipe.html'), 'https://dagelijksekost.vrt.be/gerechten/kotelet-jonge-wortelen-puree-tuinkers-tijmsaus')
 
     expect(result.draft.source.host).toBe('dagelijksekost.vrt.be')
-    expect(result.draft.title).toContain('Jeroen Meus maakt een goudbruin gebakken varkenskotelet')
+    expect(result.draft.title).toBe('Kotelet met jonge wortelen, puree met tuinkers en tijmsaus')
     expect(result.draft.servings).toBe(4)
     expect(result.draft.prepTimeMinutes).toBe(20)
     expect(result.draft.cookTimeMinutes).toBe(40)
