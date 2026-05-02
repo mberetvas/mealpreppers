@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Supabase-backed recipe catalog tables, RLS policies, explicit service-role grants, and Nuxt server APIs for previewing, creating, and listing recipes.
 
 ### Fixed
+- Mobile bottom nav: the full-width `fixed` bar no longer intercepts touches outside the tab and FAB controls (`pointer-events-none` on the bar, `auto` on links), so taps on recipe content behind the bar area (and gaps) reach the page.
+- Recipe catalog: `useRecipeTimeFormat` is resolved from `app/composables` so Nuxt 4 auto-imports it (root `composables/` is outside the app source root).
 - Add Recipe page: sidebar and ingredient rows no longer overflow their cards (grid `min-w-0` and full-width inputs).
 
 ### Changed

@@ -31,7 +31,7 @@ const filteredRecipes = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f7f2e8] px-4 pb-24 pt-8 text-[#1e261f] sm:px-6 lg:px-10">
+  <div class="min-h-screen bg-[#f7f2e8] px-4 pb-32 pt-8 text-[#1e261f] sm:px-6 md:pb-12 lg:px-10">
     <div class="mx-auto grid max-w-7xl gap-8">
       <header class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>

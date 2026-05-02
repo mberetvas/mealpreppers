@@ -14,19 +14,29 @@ function isActive(to: string): boolean {
 </script>
 
 <template>
-  <div class="fixed bottom-0 w-full md:hidden bg-surface-container-lowest border-t border-outline-variant/10 px-6 py-4 flex justify-around items-center z-50">
+  <!--
+    pointer-events: bar is decorative width-wise; only tab/FAB hit targets receive clicks.
+    Otherwise the full-width layer steals taps meant for main content (e.g. recipe cards)
+    in the same vertical band and clicks on flex gaps do nothing.
+  -->
+  <div
+    class="pointer-events-none fixed bottom-0 z-50 flex w-full items-center justify-around border-t border-outline-variant/10 bg-surface-container-lowest px-6 py-4 md:hidden"
+  >
     <NuxtLink
       v-for="tab in tabs.slice(0, 2)"
       :key="tab.to"
       :to="tab.to"
-      class="flex flex-col items-center"
+      class="pointer-events-auto flex min-h-11 min-w-11 flex-col items-center justify-end"
       :class="isActive(tab.to) ? 'text-primary' : 'text-stone-400'"
     >
       <span class="material-symbols-outlined">{{ tab.icon }}</span>
-      <span class="text-[10px] font-bold mt-1">{{ tab.label }}</span>
+      <span class="mt-1 text-[10px] font-bold">{{ tab.label }}</span>
     </NuxtLink>
 
-    <NuxtLink to="/add-recipe" class="bg-primary text-on-primary p-4 rounded-full -translate-y-4 shadow-xl">
+    <NuxtLink
+      to="/add-recipe"
+      class="pointer-events-auto -translate-y-4 rounded-full bg-primary p-4 text-on-primary shadow-xl"
+    >
       <span class="material-symbols-outlined">add</span>
     </NuxtLink>
 
@@ -34,11 +44,11 @@ function isActive(to: string): boolean {
       v-for="tab in tabs.slice(2)"
       :key="tab.to"
       :to="tab.to"
-      class="flex flex-col items-center"
+      class="pointer-events-auto flex min-h-11 min-w-11 flex-col items-center justify-end"
       :class="isActive(tab.to) ? 'text-primary' : 'text-stone-400'"
     >
       <span class="material-symbols-outlined">{{ tab.icon }}</span>
-      <span class="text-[10px] font-bold mt-1">{{ tab.label }}</span>
+      <span class="mt-1 text-[10px] font-bold">{{ tab.label }}</span>
     </NuxtLink>
   </div>
 </template>
