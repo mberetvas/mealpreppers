@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="nl_BE">
+
+<head>
+    <script type='text/javascript'>
+        function loadBlueconicScripts() {
+
+            (function () {
+                var bcScript = document.createElement('script');
+                bcScript.async = true;
+                bcScript.src = 'https://u299.libelle-lekker.be/script.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(bcScript);
+            })();
+        }
+
+        window.addEventListener('rmgOnLoggedIn', (event) => {
+            if (typeof event.detail === 'undefined') {
+                return false;
+            }
+
+            const profile = event.detail.profile;
+
+            try {
+                let dap_data = JSON.parse(rmg_bc_pl_data.DAP_DATA);
+                dap_data.CONTEXT.dl_ctx_timestamp_pageview = new Date().getTime();
+                dap_data.CONTEXT.dl_ctx_user = "REGISTERED";
+
+                rmg_bc_pl_data.DAP_DATA = JSON.stringify(dap_data);
+            } catch (e) {
+                console.log('Error in setting correct dap_data.CONTEXT');
+            }
+
+            try {
+                rmg_bc_pl_data.CIAM_ID = profile.sub;
+                rmg_bc_pl_data.PROFILE_LOGGED_IN = 1;
+                rmg_bc_pl_data.PROFILE_AUDIENCE = -1 !== ['DM', 'ABO', 'SINGLE'].indexOf(rmgAuth.getCookie('rmg_abs')) ? ('DM' === rmgAuth.getCookie('rmg_abs') ? 'TRIAL' : rmgAuth.getCookie('rmg_abs')) : 'REGISTERED';
+                rmg_bc_pl_data.PROFILE_LEVEL = profile.profile_level;
+                rmg_bc_pl_data.CIAM_CREATED = profile.created;
+                rmg_bc_pl_data.EMAIL_REGISTRATION_CONFIRMED_ACCESSTOKEN = profile.email_verified ? 1 : 0;
+                rmg_bc_pl_data.GUEST_GUID = '';
+            } catch (e) {
+                console.log('Error in setting rmg_bc_pl_data. CIAM...');
+            }
+
+            loadBlueconicScripts();
+        });
+
+        window.addEventListener('rmgOnNotLoggedIn', () => {
+            try {
+                let dap_data = JSON.parse(rmg_bc_pl_data.DAP_DATA);
+                dap_data.CONTEXT.dl_ctx_timestamp_pageview = new Date().getTime();
+                dap_data.CONTEXT.dl_ctx_user = "ANONYMOUS";
+
+                rmg_bc_pl_data.GUEST_GUID = rmgAuth.getCookie('rmg_guest') || "";
+
+                rmg_bc_pl_data.DAP_DATA = JSON.stringify(dap_data);
+            } catch (e) {
+                console.log('Error in setting correct dap_data.CONTEXT');
+            }
+
+            loadBlueconicScripts();
+        });
+    </script>
+    <script type="text/javascript">
+        window.gdprAppliesGlobally = true; (function () {
+            function a(e) {
+                if (!window.frames[e]) {
+                    if (document.body && document.body.firstChild) { var t = document.body; var n = document.createElement("iframe"); n.style.display = "none"; n.name = e; n.title = e; t.insertBefore(n, t.firstChild) }
+                    else { setTimeout(function () { a(e) }, 5) }
+                }
+            } function e(n, r, o, c, s) {
+                function e(e, t, n, a) { if (typeof n !== "function") { return } if (!window[r]) { window[r] = [] } var i = false; if (s) { i = s(e, t, n) } if (!i) { window[r].push({ command: e, parameter: t, callback: n, version: a }) } } e.stub = true; function t(a) {
+                    if (!window[n] || window[n].stub !== true) { return } if (!a.data) { return }
+                    var i = typeof a.data === "string"; var e; try { e = i ? JSON.parse(a.data) : a.data } catch (t) { return } if (e[o]) { var r = e[o]; window[n](r.command, r.parameter, function (e, t) { var n = {}; n[c] = { returnValue: e, success: t, callId: r.callId }; a.source.postMessage(i ? JSON.stringify(n) : n, "*") }, r.version) }
+                }
+                if (typeof window[n] !== "function") { window[n] = e; if (window.addEventListener) { window.addEventListener("message", t, false) } else { window.attachEvent("onmessage", t) } }
+            } e("__tcfapi", "__tcfapiBuffer", "__tcfapiCall", "__tcfapiReturn"); a("__tcfapiLocator"); (function (e) {
+                var t = document.createElement("script"); t.id = "spcloader"; t.type = "text/javascript"; t.async = true; t.src = "https://sdk.privacy-center.org/" + e + "/loader.js?target=" + document.location.hostname; t.charset = "utf-8"; var n = document.getElementsByTagName("script")[0];
+                n.parentNode.insertBefore(t, n)
+            })("0c7f196f\u002D0b85\u002D4850\u002Dbfd5\u002Df5512ebf3f5d")
+        })();
+    </script>
+    <script>
+        window.didomiConfig = {
+            cookies: {
+                group: {
+                    enabled: true,
+                    customDomain: 'myprivacy.roularta.net'
+                }
+            },
+        };
+
+        window.didomiConfig.sync = {
+            enabled: true,
+            delayNotice: true,
+        };
+
+        window.didomiConfig.user = {
+            organizationUserIdAuthSid: 'sitelibel\u002DWcbMxrtp',
+            organizationUserIdAuthAlgorithm: 'hash-sha256'
+        }
+
+        function consentGetCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return parts.pop().split(';').shift();
+            }
+        }
+
+        let user_id = consentGetCookie('rmg_profile');
+        if (undefined === user_id || 'notLoggedIn' === user_id || 'error' === user_id) {
+            user_id = consentGetCookie('rmg_guest') ?? null;
+        }
+
+        if (user_id) {
+            async function consentHash(str) {
+                const buf = await crypto.subtle.digest("SHA-256", new TextEncoder("utf-8").encode(str));
+                return Array.prototype.map.call(new Uint8Array(buf), x => (('00' + x.toString(16)).slice(-2))).join('');
+            }
+
+            consentHash(user_id + 'ZxisQTU82ZfPPnYMONm3tPbh3vjP0exe').then((digest) => {
+                window.didomiConfig.user.organizationUserId = user_id;
+                window.didomiConfig.user.organizationUserIdAuthDigest = digest;
+            });
+        }
+
+        window.didomiEventListeners = window.didomiEventListeners || [];
+        window.didomiOnReady = window.didomiOnReady || [];
+    </script>
+
+
+    <script>
+        LUX = (function () { var a = ("undefined" !== typeof (LUX) && "undefined" !== typeof (LUX.gaMarks) ? LUX.gaMarks : []); var d = ("undefined" !== typeof (LUX) && "undefined" !== typeof (LUX.gaMeasures) ? LUX.gaMeasures : []); var j = "LUX_start"; var k = window.performance; var l = ("undefined" !== typeof (LUX) && LUX.ns ? LUX.ns : (Date.now ? Date.now() : +(new Date()))); if (k && k.timing && k.timing.navigationStart) { l = k.timing.navigationStart } function f() { if (k && k.now) { return k.now() } var o = Date.now ? Date.now() : +(new Date()); return o - l } function b(n) { if (k) { if (k.mark) { return k.mark(n) } else { if (k.webkitMark) { return k.webkitMark(n) } } } a.push({ name: n, entryType: "mark", startTime: f(), duration: 0 }); return } function m(p, t, n) { if ("undefined" === typeof (t) && h(j)) { t = j } if (k) { if (k.measure) { if (t) { if (n) { return k.measure(p, t, n) } else { return k.measure(p, t) } } else { return k.measure(p) } } else { if (k.webkitMeasure) { return k.webkitMeasure(p, t, n) } } } var r = 0, o = f(); if (t) { var s = h(t); if (s) { r = s.startTime } else { if (k && k.timing && k.timing[t]) { r = k.timing[t] - k.timing.navigationStart } else { return } } } if (n) { var q = h(n); if (q) { o = q.startTime } else { if (k && k.timing && k.timing[n]) { o = k.timing[n] - k.timing.navigationStart } else { return } } } d.push({ name: p, entryType: "measure", startTime: r, duration: (o - r) }); return } function h(n) { return c(n, g()) } function c(p, o) { for (i = o.length - 1; i >= 0; i--) { var n = o[i]; if (p === n.name) { return n } } return undefined } function g() { if (k) { if (k.getEntriesByType) { return k.getEntriesByType("mark") } else { if (k.webkitGetEntriesByType) { return k.webkitGetEntriesByType("mark") } } } return a } return { mark: b, measure: m, gaMarks: a, gaMeasures: d } })(); LUX.ns = (Date.now ? Date.now() : +(new Date())); LUX.ac = []; LUX.cmd = function (a) { LUX.ac.push(a) }; LUX.init = function () { LUX.cmd(["init"]) }; LUX.send = function () { LUX.cmd(["send"]) }; LUX.addData = function (a, b) { LUX.cmd(["addData", a, b]) }; LUX_ae = []; window.addEventListener("error", function (a) { LUX_ae.push(a) }); LUX_al = []; if ("function" === typeof (PerformanceObserver) && "function" === typeof (PerformanceLongTaskTiming)) { var LongTaskObserver = new PerformanceObserver(function (c) { var b = c.getEntries(); for (var a = 0; a < b.length; a++) { var d = b[a]; LUX_al.push(d) } }); try { LongTaskObserver.observe({ type: ["longtask"] }) } catch (e) { } };
+        LUX = window.LUX || {};
+        LUX.label = 'Recipe';
+    </script>
+    <script src="https://cdn.speedcurve.com/js/lux.js?id=445145667" async defer crossorigin="anonymous"></script>
+
+
+    <script>
+        var rmg_bc_pl_data = { "DAP_DATA": "{\"ARTICLE\":{\"dl_art_content_guid\":\"92b1e939-79fd-4011-ac1c-6f743f255efa\",\"dl_art_pluscontent\":false,\"dl_art_paywall\":false,\"dl_art_full_content_available\":true,\"dl_art_content_id\":\"\"},\"CONTEXT\":{\"dl_ctx_timestamp_pageview\":1777722768,\"dl_ctx_sitecode\":\"Site-LibelleLekker-NL\",\"dl_ctx_user\":\"ANONYMOUS\",\"dl_ctx_pw_dialog\":\"NONE\",\"dl_ctx_page_type\":\"recipe\",\"dl_ctx_page_category\":\"content\"}}", "CIAM_ID": "", "PROFILE_LOGGED_IN": 0, "PROFILE_AUDIENCE": "ANONYMOUS", "PROFILE_LEVEL": "", "CIAM_CREATED": 0, "EMAIL_REGISTRATION_CONFIRMED_ACCESSTOKEN": 0, "PAGE_PUBLICATION_TIMESTAMP": 1777121280000, "FULL_CONTENT_AVAILABLE": 1, "PLUSCONTENT": 0, "PAGE_ACCESS_LEVEL": "LOW", "PAGE_TYPE": "detail", "PAGE_SUB_TYPE": "default", "PAGE_POST_FORMAT": "recipe" }
+    </script>
+
+    <link rel="preconnect" href="//cdn.blueconic.net/" crossorigin>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>
+        Gevulde wraps met gehakt, maïs en champignons -
+        Libelle Lekker </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name='robots' content='max-image-preview:large' />
+    <meta name="author" content="Libelle Lekker">
+    <meta property="site_code" content="Site-LibelleLekker-NL" />
+    <link rel="canonical"
+        href="https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons">
+
+    <meta name="description"
+        content="&lt;p&gt;Met dit gerecht maak je vrienden.&lt;/p&gt;
+
+&lt;p&gt;Helemaal TikTok-proof met gebakken wraps. Vul de wraps zoals hier beschreven of met een vulling naar keuze en rol ze strak op. Verhit een beetje olijfolie en bak de wraps rondom krokant. Smullen maar!&lt;/p&gt;">
+    <meta property="article:contentguid" content="92b1e939-79fd-4011-ac1c-6f743f255efa">
+
+    <meta property="og:url"
+        content="https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons">
+    <meta property="og:site_name" content="Libelle Lekker">
+    <meta name="twitter:card" content="summery_large_image">
+    <meta name="twitter:site" content="@libellelekker">
+    <meta name="twitter:creator" content="@libellelekker">
+
+
+    <meta property="og:title" content="Gevulde wraps met gehakt, maïs en champignons">
+    <meta name="twitter:title" content="Gevulde wraps met gehakt, maïs en champignons">
+
+    <meta property="og:image"
+        content="https://img.static-rmg.be/a/food/image/q100/w480/h360/1105121/gevulde-wraps-met-gehakt-mais-en-champignons.jpg">
+    <meta name="twitter:image"
+        content="https://img.static-rmg.be/a/food/image/q100/w480/h360/1105121/gevulde-wraps-met-gehakt-mais-en-champignons.jpg">
+
+    <meta property="og:description"
+        content="Met dit gerecht maak je vrienden.
+
+Helemaal TikTok-proof met gebakken wraps. Vul de wraps zoals hier beschreven of met een vulling naar keuze en rol ze strak op. Verhit een beetje olijfolie en bak de wraps rondom krokant. Smullen maar!">
+    <meta name="twitter:description"
+        content="Met dit gerecht maak je vrienden.
+
+Helemaal TikTok-proof met gebakken wraps. Vul de wraps zoals hier beschreven of met een vulling naar keuze en rol ze strak op. Verhit een beetje olijfolie en bak de wraps rondom krokant. Smullen maar!">
+    <meta property="fb:app_id" content="139298022845293">
+    <link rel="shortcut icon" type="image/png" href="/build/Site-LibelleLekker-NL/img/favicon.png" />
+    <link rel='preconnect' href='//fonts.gstatic.com' crossorigin />
+    <link rel='preconnect' href='//cdn.speedcurve.com' crossorigin />
+    <link rel='preconnect' href='//img.static-rmg.be' crossorigin />
+    <link rel="preconnect" href="//securepubads.g.doubleclick.net" crossorigin>
+    <link rel="preconnect" href="//mb.moatads.com" crossorigin>
+    <link rel='dns-prefetch' href='//securepubads.g.doubleclick.net' />
+    <link rel='dns-prefetch' href='//mb.moatads.com' />
+    <link rel='dns-prefetch' href='//myprivacy.roularta.net' />
+    <link rel='dns-prefetch' href='//sdk.privacy-center.org' />
+
+    <script type="didomi/javascript" data-vendor="iab:772" async
+        src="https://z.moatads.com/roulartaheader380117297998/moatheader.js"></script>
+    <script src="https://cdn.adshim.com/02037b9d-bf1d-4319-80d0-a84fb9fbf946/adshim.js" async
+        id="adshim-script-js"></script>
+    <script>
+        var adshim = adshim || [];
+        var rmgAdshim = rmgAdshim || {
+            targeting: {}
+        };
+        var sectionCodes = {};
+        sectionCodes['frontpage'] = '8340_I019';
+        sectionCodes['recipe'] = '8340_I039';
+        sectionCodes['weekmenu'] = '8340_I0267';
+        sectionCodes['chef'] = '8340_I0268';
+        sectionCodes['saved_recipes'] = '8340_I0271';
+        sectionCodes['videos'] = '8340_I030';
+
+        rmgAdshim.targeting.site_code = '8340_I000';
+        if (sectionCodes['recipe']) {
+            rmgAdshim.targeting.section_code = sectionCodes['recipe'];
+        }
+
+
+        rmgAdshim.targeting.env = 'production';
+        rmgAdshim.targeting.dossier = '';
+
+        var utmSource = undefined;
+        if ("URLSearchParams" in window && window.location.search) {
+            utmSource = (new URLSearchParams(location.search)).get("utm_source");
+        }
+
+
+        if (!rmgAdshim.targeting.no_pub) {
+            adshim.push(function () {
+                adshim.init({
+                    adUnit: rmgAdshim.targeting.section_code ? rmgAdshim.targeting.section_code : '',
+                    targeting: {
+                        platform: window.matchMedia('(max-width: 979px)').matches ? 'mobile' : 'desktop',
+                        dossier: '',
+                        env: 'production',
+                        utm_source: utmSource,
+                    }
+                });
+
+                adshim.subscribe('load', function (e) {
+                    rmgAdshim.slotRenderedLogic(e);
+                });
+            });
+        }
+    </script>
+    <script src="/build/Site-LibelleLekker-NL/adshim/rmgAdshim.js?2.0.32" async id="adshim-rmg-script-js"></script>
+    <script type="text/javascript" async
+        src="https://distribution-cdn.askmiso.com/miso-roularta-script/latest/miso-roularta.min.js"></script>
+    <link rel="stylesheet" href="/build/Site-LibelleLekker-NL/873.8c46f9d5.css">
+    <link rel="stylesheet" href="/build/Site-LibelleLekker-NL/app.d8c6b4af.css">
+    <script src="/build/Site-LibelleLekker-NL/bazingajstranslation/translator.min.js?2.0.32"></script>
+    <script src="/build/Site-LibelleLekker-NL/jsrouting/router.js?2.0.32"></script>
+    <script src="/translations?2.0.32"></script>
+    <script src="/js/routing?callback=fos.Router.setData&2.0.32"></script>
+    <script>
+        Translator.locale = "nl_BE";
+        window.site = {
+            locale: "nl_BE",
+            siteUrl: "https://www.libelle-lekker.be",
+            imgHeart: "/build/Site-LibelleLekker-NL/img/heart-white.svg",
+            imgHeartRed: "/build/Site-LibelleLekker-NL/img/heart-orange.svg",
+            imgHeartFilled: "/build/Site-LibelleLekker-NL/img/heart-filled.svg",
+            imgHeartRedFilled: "/build/Site-LibelleLekker-NL/img/heart-full-orange.svg",
+            mijnMagazinesUrl: "https://api.mijnmagazines.be",
+            channel: "Site-LibelleLekker-NL",
+            language: 'nl',
+            myAccountUrl: 'https://account.mijnmagazines.be',
+            csrfCookie: 'csrf-token'
+        }
+
+        function isMobile() {
+            if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|ipad|iris|kindle|Android|Silk|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i.test(navigator.userAgent)
+                || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(navigator.userAgent.substr(0, 4))) {
+                return true;
+            }
+            return false;
+        }
+    </script>
+    <script
+        type="text/javascript"> var utag_data = { "site_name": "libelle-lekker.be", "site_country": "BE", "site_location": "prod", "site_cts_slug": "LibelleLekker-NL-nl", "object_type": "default", "video_id": "", "page_type": "recipe", "page_category": "", "page_category_full": "", "page_zone": "", "dc_params": "", "dc_keywords": "", "article_id": 93161, "article_name": "Gevulde wraps met gehakt, ma\u00efs en champignons", "article_author": "", "article_description": "<p>Met dit gerecht maak je vrienden.<\/p>\r\n\r\n<p>Helemaal TikTok-proof met gebakken wraps. Vul de wraps zoals hier beschreven of met een vulling naar keuze en rol ze strak op. Verhit een beetje olijfolie en bak de wraps rondom krokant. Smullen maar!<\/p>", "article_image_url": "\/\/img.static-rmg.be\/a\/food\/image\/q75\/w\/h\/1105121\/gevulde-wraps-met-gehakt-mais-en-champignons.jpg", "article_keywords": "Minder dan 30 minuten, Goedkoop, Erg makkelijk, Hoofdgerecht, Lunch, Belgisch, Europees, Mexicaans, Vlees, Kinderfavoriet, Comfort food, Met vrienden, Familietopper", "article_publish_time": "", "article_section": "" } </script>
+    <script
+        type="text/javascript">(function (w, d, s, l, i) { w[l] = w[l] || []; w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' }); var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f); })(window, document, 'script', 'dataLayer', 'GTM-W54BBJQ');</script>
+
+</head>
+
+<body class="body-normal">
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W54BBJQ" height="0" width="0"
+            style="display:none;visibility:hidden"></iframe></noscript>
+
+
+
+    <div data-adshim data-adshim-format="Interstitial" data-adshim-slot=""
+        data-adshim-targeting='{"AdType":"INTERSTITIAL"}' id="gpt-ad-INTERSTITIAL" class="rmgAd js-ad "
+        data-type="INTERSTITIAL" data-device="mobile">
+    </div>
+    <div class="toast-box"></div>
+    <div class="wrapper wrapper--page">
+        <div id="notification-bar-above-recipe"></div>
+
+
+
+        <header id="mainHeader" class="header header--nl">
+            <div class="rmg-mma-navigation-wrapper">
+                <div id="rmg-mma-navigation"></div>
+            </div>
+            <div class="header__primary-navigation--wrapper">
+                <div class="header__mob">
+                    <button id="mobile-menu-btn" class="toggle-btn-menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 17">
+                            <path fill="#EC7023" d="M0 0h26v3H0zM0 7h26v3H0zM0 14h26v3H0z" />
+                        </svg>
+                    </button>
+                    <script>
+                        if (navigator.userAgent.indexOf("Libelle-Lekker-iOS") > -1 || navigator.userAgent.indexOf("Libelle-Lekker iOS") > -1) {
+                            let goBack = document.createElement('button');
+                            goBack.onclick = () => window.history.back();
+                            goBack.classList.add("back-button");
+                            goBack.innerHTML = '<i class="fa fa-chevron-circle-left"></i>';
+                            document.querySelector('.header__mob').parentElement.prepend(goBack);
+                            document.querySelector('#mainHeader').classList.add('has-goback');
+                        }
+                    </script>
+                </div>
+                <div class="header-bar__logo--wrapper">
+                    <a class="header-bar__link" target="_blank" href="https://www.libelle.be"><svg width="47"
+                            height="19" viewBox="0 0 47 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M46.4576 17.5491C46.0367 17.7303 45.0184 18.028 43.4978 18.028C40.1171 18.028 38.0806 15.6726 38.0806 11.3372C38.0806 7.23466 39.7641 5.43578 42.7239 5.43578C46.4983 5.43578 46.8106 9.18884 46.8106 10.936H40.2665C40.2665 13.5372 41.4205 16.255 44.5297 16.255C45.4529 16.255 46.0774 15.9961 46.4576 15.815V17.5491ZM44.5975 9.35708C44.5975 8.76177 44.2174 7.28643 42.5067 7.28643C40.8503 7.28643 40.2665 8.65824 40.2665 9.35708H44.5975ZM30.4232 17.5491C30.0023 17.7303 28.984 18.028 27.4634 18.028C24.0828 18.028 22.0462 15.6726 22.0462 11.3372C22.0462 7.23466 23.7297 5.43578 26.6895 5.43578C30.4639 5.43578 30.7762 9.18884 30.7762 10.936H24.2321C24.2321 13.5372 25.3861 16.255 28.4953 16.255C29.4185 16.255 30.043 15.9961 30.4232 15.815V17.5491ZM28.5631 9.35708C28.5631 8.76177 28.183 7.28643 26.4723 7.28643C24.8159 7.28643 24.2321 8.65824 24.2321 9.35708H28.5631ZM35.0258 0.414429H37.1438V17.7821H35.0258V0.414429ZM31.4822 0.414429H33.6002V17.7821H31.4822V0.414429ZM17.6608 5.61696C15.923 5.61696 15.2849 6.69111 14.8776 7.53232H14.8368V0.414429H12.6102V12.8772C12.6102 18.0668 15.923 18.0927 17.43 18.0927C19.9825 18.0927 21.5982 15.6467 21.5982 12.1007C21.6117 8.96884 20.8514 5.61696 17.6608 5.61696ZM16.982 16.2808C15.0676 16.2808 14.8368 14.262 14.8368 12.1395V11.9583C14.8368 9.71945 15.5157 7.37702 17.1721 7.37702C18.7742 7.37702 19.1543 9.93946 19.1543 11.7254C19.1543 13.7055 18.9235 16.2808 16.982 16.2808ZM11.3476 17.7821H9.22955V5.70755H11.3476V17.7821ZM10.2886 4.14161C11.0217 4.14161 11.6191 3.57218 11.6191 2.87334C11.6191 2.17449 11.0217 1.60506 10.2886 1.60506C9.5554 1.60506 8.95801 2.17449 8.95801 2.87334C8.95801 3.57218 9.5554 4.14161 10.2886 4.14161ZM6.93505 16.2032C3.85308 16.2032 2.73976 13.589 2.71261 11.0136V0.414429H0.594604V11.3889C0.608181 14.0161 1.35491 15.9055 2.71261 16.9797C3.58154 17.6656 4.69485 18.028 6.01181 18.028C7.53243 18.028 8.3199 17.795 8.74078 17.6138V15.815C8.36063 15.9961 7.65463 16.2032 6.93505 16.2032Z"
+                                fill="#242424" />
+                        </svg>
+                    </a>
+                    <a class="header-bar__link" target="_blank" href="https://mama.libelle.be/"><svg width="48"
+                            height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M41.1996 29.3246C42.5275 29.3246 43.221 30.2425 43.221 31.2453C43.221 32.117 42.4514 33.0118 41.1996 33.0118C40.0832 33.0118 39.1867 32.333 39.1867 31.1759C39.1867 30.0188 40.0832 29.3246 41.1996 29.3246ZM43.2295 28.4915C42.8235 27.8744 41.927 27.535 40.9713 27.535C38.7131 27.5041 36.9708 28.8618 36.9708 31.1759C36.9708 33.4747 38.6285 34.8246 40.9121 34.8169C41.6563 34.8015 42.7558 34.5238 43.2633 33.7909L43.3901 34.6626H45.403V27.6892H43.314L43.2295 28.4915ZM31.4311 34.6549V30.9214C31.4311 30.1345 31.9555 29.4403 32.8351 29.4403C33.7316 29.4403 33.9937 30.0188 33.9937 30.8905V34.6549H36.235V30.8442C36.235 28.2524 34.7803 27.5195 33.1903 27.5195C32.0654 27.5195 31.3381 27.8898 30.653 28.8309C30.154 27.8127 29.2575 27.535 28.4286 27.535C27.7774 27.535 26.8978 27.7201 26.4157 28.4761L26.2635 27.6892H24.3182V34.6549H26.5426V30.9291C26.5426 30.1423 27.0416 29.394 27.9212 29.394C28.8346 29.394 29.2321 30.0034 29.2321 30.9137V34.6472H31.4311V34.6549ZM19.0153 29.3246C20.3432 29.3246 21.0367 30.2425 21.0367 31.2453C21.0367 32.117 20.2671 33.0118 19.0153 33.0118C17.8989 33.0118 17.0024 32.333 17.0024 31.1759C17.0024 30.0188 17.8989 29.3246 19.0153 29.3246ZM21.0367 28.4915C20.6307 27.8744 19.7342 27.535 18.7785 27.535C16.5203 27.5041 14.7781 28.8618 14.7781 31.1682C14.7781 33.467 16.4358 34.8169 18.7193 34.8092C19.4636 34.7937 20.5631 34.516 21.0705 33.7832L21.1974 34.6549H23.2103V27.6892H21.1213L21.0367 28.4915ZM9.23833 34.6549V30.9214C9.23833 30.1345 9.76271 29.4403 10.6423 29.4403C11.5388 29.4403 11.801 30.0188 11.801 30.8905V34.6549H14.0423V30.8442C14.0423 28.2524 12.5875 27.5195 10.9975 27.5195C9.87265 27.5195 9.1453 27.8898 8.46023 28.8309C7.96124 27.8127 7.06473 27.535 6.23588 27.535C5.58465 27.535 4.70506 27.7201 4.22298 28.4761L4.07074 27.6892H2.12549V34.6549H4.34984V30.9291C4.34984 30.1423 4.84884 29.394 5.72843 29.394C6.64185 29.394 7.03936 30.0034 7.03936 30.9137V34.6472H9.23833V34.6549Z"
+                                fill="#242424" />
+                            <path
+                                d="M15.2568 15.9872H13.7155V25.209H15.2568V15.9872ZM11.3521 25.3841C12.4677 25.3841 13.0402 25.209 13.3485 25.0631V23.6915C13.0696 23.8374 12.5558 23.9979 12.0273 23.9979C9.78134 23.9979 8.95929 21.9989 8.94461 20.029V11.9453H7.40326V20.3209C7.40326 22.3199 7.96108 23.7645 8.94461 24.5816C9.59051 25.1069 10.3979 25.3841 11.3521 25.3841ZM15.4623 13.813C15.4623 13.2731 15.0219 12.85 14.4935 12.85C13.9503 12.85 13.5246 13.2877 13.5246 13.813C13.5246 14.3383 13.965 14.7761 14.4935 14.7761C15.0219 14.7907 15.4623 14.3529 15.4623 13.813ZM20.9671 20.5835C20.9671 22.0865 20.791 24.0563 19.3818 24.0563C17.9725 24.0563 17.811 22.5242 17.811 20.9045V20.7586C17.811 19.0514 18.3102 17.2712 19.5139 17.2712C20.7029 17.2566 20.9671 19.2119 20.9671 20.5835ZM22.7581 20.8608C22.7581 18.4823 22.2002 15.9142 19.8809 15.9142C18.6184 15.9142 18.134 16.7313 17.8551 17.3734H17.8257V11.9453H16.1963V21.459C16.1963 25.4279 18.6184 25.4425 19.7194 25.4425C21.5837 25.4279 22.7581 23.5602 22.7581 20.8608ZM24.6811 18.7742C24.6811 18.2489 25.1068 17.1983 26.3252 17.1983C27.5729 17.1983 27.8519 18.3218 27.8519 18.7742H24.6811ZM24.6811 19.9707H29.4666C29.4666 18.6428 29.2464 15.7829 26.4867 15.7829C24.3288 15.7829 23.0957 17.1545 23.0957 20.2771C23.0957 23.5894 24.5783 25.3841 27.0445 25.3841C28.1601 25.3841 28.9088 25.1653 29.217 25.0194V23.7061C28.9381 23.852 28.4831 24.0417 27.8078 24.0417C25.5178 24.0271 24.6811 21.9551 24.6811 19.9707ZM29.9804 25.1945H31.5217V11.9453H29.9804V25.1945ZM32.5787 25.1945H34.12V11.9453H32.5787V25.1945ZM39.5661 18.7742H36.3953C36.3953 18.2489 36.821 17.1983 38.0394 17.1983C39.2872 17.1983 39.5661 18.3072 39.5661 18.7742ZM41.1809 19.9707C41.1809 18.6428 40.9607 15.7829 38.2009 15.7829C36.043 15.7829 34.8099 17.1545 34.8099 20.2771C34.8099 23.5894 36.2926 25.3841 38.7587 25.3841C39.8744 25.3841 40.623 25.1653 40.9313 25.0194V23.7061C40.6524 23.852 40.1973 24.0417 39.5221 24.0417C37.2468 24.0417 36.41 21.9551 36.41 19.9853H41.1809V19.9707Z"
+                                fill="#918F90" />
+                        </svg>
+                    </a>
+                    <div class="header__logo">
+                        <a href="/" class="site-logo">
+                            <svg version="1.1" xmlns="http://www.w3.org/2000/svg"
+                                xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 217.3 842 160.2"
+                                enable-background="new 0 217.3 842 160.2" xml:space="preserve">
+
+                                <path d="M340.4,364.8c-3.1,1.4-10.7,3.7-21.9,3.7c-25.1,0-40.2-18.4-40.2-52.2c0-31.9,12.4-46,34.5-46
+	c28.1,0,30.4,29.2,30.4,42.9h-48.6c0,20.2,8.5,41.5,31.6,41.5c6.8,0,11.5-2,14.2-3.4L340.4,364.8L340.4,364.8z M326.6,301.1
+	c0-4.7-2.9-16.1-15.5-16.1c-12.3,0-16.7,10.7-16.7,16.1H326.6z" />
+                                <path d="M221.4,364.8c-3.1,1.4-10.7,3.7-21.9,3.7c-25.1,0-40.2-18.4-40.2-52.2c0-31.9,12.4-46,34.5-46
+c28.1,0,30.4,29.2,30.4,42.9h-48.6c0,20.2,8.6,41.5,31.6,41.5c6.8,0,11.5-2,14.2-3.4L221.4,364.8L221.4,364.8z M207.6,301.1
+c0-4.7-2.9-16.1-15.5-16.1c-12.3,0-16.7,10.7-16.7,16.1H207.6z" />
+                                <path d="M47,354.4c-22.9,0-31.2-20.4-31.4-40.5v-82.7H0v85.1l0,0c0,0.1,0,0.3,0,0.4c0,20.4,5.7,35.2,15.7,43.6
+c6.4,5.4,14.7,8.1,24.5,8.1c11.3,0,17.2-1.9,20.2-3.3v-13.8C57.7,352.9,52.4,354.4,47,354.4" />
+
+                                <rect x="255.6" y="231.3" width="15.7" height="135.4" />
+                                <rect x="229.3" y="231.3" width="15.7" height="135.4" />
+
+                                <path d="M126.7,271.9c-12.8,0-17.7,8.4-20.7,15h-0.3v-55.6H89.2v97.2c0,40.5,24.5,40.6,35.8,40.6
+c19,0,30.9-19.1,30.9-46.7C155.9,298.1,150.3,271.9,126.7,271.9 M121.7,355.1c-14.2,0-15.8-15.7-15.8-32.2v-1.4
+c0-17.5,5.1-35.6,17.2-35.6c12,0,14.7,20,14.7,33.9C137.8,335,136.1,355.1,121.7,355.1" />
+                                <path d="M79.8,366.8H64.1v-94.2h15.7V366.8z M72,260.4c5.4,0,9.8-4.4,9.8-9.8s-4.4-9.8-9.8-9.8
+c-5.4,0-9.8,4.4-9.8,9.8S66.5,260.4,72,260.4" />
+
+                                <path d="M462.4,335c0.6,3.3,1.4,6.4,2.6,9.4c4.6,12.5,14,21.7,29.2,21.7c21.8,0,30.8-25.4,32.9-35.5
+c0,14.1,0,31.4,0,32.6c0,2,4,8.3,13.7,8.3c4,0,5.6-1.6,5.6-5.8c0-3-0.3-26.1-0.3-42.6c0,0,9,40.5,39,40.5c10.7,0,20.8-13,26.1-37.3
+c-0.1,12.4-0.1,27.8-0.1,29.1c0,2,4,8.3,13.7,8.3c4,0,5.6-1.6,5.6-5.8c0-3-0.3-19.5-0.3-36.3c0,0,20.1,49,41.9,49
+c16.5,0,19.7-29.4,19.7-29.4v-0.1c4.3,13.7,14,24.1,30.2,24.1c34.1,0,44.2-57,47.2-81.9c6.8,1.7,16.1,1.4,16.1,1.4
+s-11.3,20.5-14.1,38.6c-5.8,36.8,15.5,54,35.9,54c23.9,0,35.2-22.2,35.2-38.8c0-5.7-1.6-10-4-13.1c-4.1-3.8-18.1-0.3-17,4.1
+c5.7,13,2.6,40.9-13.3,40.9c-11,0-18-13-18-28.5c0-28.5,11.1-38.3,19.5-58.1c3.7-8.8-13.4-14.4-16.4-11.1c0,0-2.4,3.1-11.4,3.1
+c-12.7,0-15.1-14-14.8-25.4c0.3-9.4,3.1-16.4-3.6-16.4c-11.7,0-19.1,15.8-19.1,22.8c0,4.8,3.8,16,15.7,22.5
+c2.6,35.3-14.4,76-34.5,76c-11.7,0-16.5-12.8-16.2-27.4c1.7,0.9,4.3,1.6,8.1,1.6c34.1,0,44-55.7,5.4-55.7
+c-20.1,0-32.5,23.7-33.3,46.7l0,0c0,0-3.4,33.9-15,33.9c-9.4-0.1-18.5-26.8-18.5-26.8s1.6-0.3,2.6-0.6c25.9-7.3,35.1-55.7,3.7-55.7
+c-17.5,0-31.8,29.4-31.8,29.4c0-1,0-0.6,0.1-1.4c0.9-25.4,4.6-46.3,8.6-61.7c0,0,2-5.3-7.8-7.6c-9.8-2.1-15.5,1.3-16,6.4
+c-1.7,21.2-2.8,44.6-3.3,60c-2.3,33.2-17.2,54-25.2,54c-12.3,0-17.4-22.7-17.4-22.7c30.4-2.1,43.7-54,8.4-54
+c-20.2,0-31.3,26.5-31.3,26.5c0-0.7,0-1.4,0-2.1c0.9-25.4,6-53.6,10-69c0,0,2-5.3-7.8-7.6c-9.8-2.3-13.1,1-14.1,6
+c-3.6,16.8-5.4,40.5-6.3,59l0,0c-1.3,31.6-11.4,71-30.2,71c-12,0-16.4-14-16-29.6c1.7,0.7,4.1,1.4,7.7,1.4
+c29.5,0.1,39.8-55.7,3-55.7c-16.7,0-27.9,19.7-30.4,40.8c0,0-10.5,51-24.7,51c-7.7,0-12.5-10.8-14.5-25.5
+c28.5-17,47.7-79.4,42.8-107.7c-1.7-10-11.4-14.7-22.2-14.7c-26.5,0-47,70.7-41.6,118.1c-20.4-3.4-28.8-20.5-28.8-34.6
+c0-15.7,11.4-19.2,11.4-19.2s-0.7-8.1-11.3-8.1c0,0-21.1,0.1-21.1,27.2c0,23.9,19.9,41.2,50.9,43.2c3.8,19.7,13.1,33.6,29.5,33.6
+C453.2,377.8,462.4,335,462.4,335z M731.6,285.9c14.2,0,6.7,36.9-14.1,36.9c-3.7,0-6.4-0.7-8.4-1.6
+C711.1,303.7,719.5,285.9,731.6,285.9z M502.2,285.9c11.1,0,5.7,36.9-12.1,36.9c-3.4,0-6-0.6-7.8-1.4
+C484.2,303.7,492.1,285.9,502.2,285.9z M422.7,306.4c4-31.4,21.1-78.5,31.2-78.5c10.7,0-3,84.1-32.1,104.2
+C421.4,323.8,421.5,315,422.7,306.4z M556.6,319.1c-6.6,0-9.8-2.9-10.5-6.1c2-13.8,18.7-33.6,30.6-33.6
+C584.7,279.3,575.7,319.1,556.6,319.1z M641.4,319.1c-6.6,0-9.8-2.9-10.5-6.1c2-13.8,18.7-34.2,30.6-34.2
+C669.3,278.6,660.3,319.1,641.4,319.1z" />
+
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="nav-button-block__container">
+                        <a class="header-shop__link"
+                            href="https://shop.libelle-lekker.be/?utm_source=Libelle-lekker.be&utm_medium=menu&utm_campaign=lekkershop&utm_term=menu&utm_content=menu"
+                            class="shop" target="_blank">
+                            <span class="text">Shop</span>
+                        </a>
+                        <a class="header-subscription__button button"
+                            href="https://www.mijnmagazines.be/promo/JSEK3?utm_source=libelle-lekker.be&amp;utm_medium=referral&amp;utm_campaign=menubutton"
+                            class="abonneren" target="_blank">
+                            <span class="text">Abonneren</span>
+                        </a>
+                    </div>
+                </div>
+                <nav class="header__nav">
+
+
+
+
+
+                    <ul class="header__nav__menu">
+
+                        <li class="">
+                            <a href="/zoeken/recepten" class="mm-searchlink ">
+                                <span class="text">Recepten</span>
+                            </a>
+
+
+                        </li>
+
+                        <li class="header__nav__menu--has-sub">
+                            <a href="javascript:void(0);" class="weekmenu ">
+                                <span class="text">Weekmenu</span>
+                            </a>
+
+
+                            <div class="header__nav__menu--dropdown">
+                                <div>
+                                    <a href="/weekmenu/2026-05-02" class=" ">
+                                        <span class="text">Ontdek ons weekmenu</span>
+                                    </a>
+
+                                    <a href="/profiel/mijn-weekmenu" class=" " data-popup-account
+                                        data-popup-type="account" data-utmcontent="datawall_mijnweekmenuknop">
+                                        <span class="text">Maak zelf je weekmenu</span>
+                                    </a>
+
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="">
+                            <a href="/maia" class=" ">
+                                <span class="text">Chat met Maia</span>
+                            </a>
+
+
+                        </li>
+
+                        <li class="header__nav__menu--has-sub">
+                            <a href="/inspiratie" class="editor ">
+                                <span class="text">Inspiratie</span>
+                            </a>
+
+
+                            <div class="header__nav__menu--dropdown">
+                                <div>
+                                    <a href="/inspiratie" class=" ">
+                                        <span class="text">Artikels</span>
+                                    </a>
+
+                                    <a href="/zoeken/recepten?q=&amp;has_video%5B%5D=true" class=" ">
+                                        <span class="text">Video</span>
+                                    </a>
+
+                                    <a href="/chefs" class=" ">
+                                        <span class="text">Chefs</span>
+                                    </a>
+
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="">
+                            <a href="/profiel/mijn-mappen" class=" " data-popup-account
+                                data-utmcontent="datawall_mijnreceptenknop">
+                                <span class="text">Mijn bewaarde recepten</span>
+                            </a>
+
+
+                        </li>
+
+
+
+                    </ul>
+                </nav>
+                <div class="header__stretcher"></div>
+                <button id="goToSearch" class="go-to-search">
+                    <i class="fa fa-search"></i>
+                </button>
+            </div>
+            <div class="header__user"></div>
+            <div class="season-theme-buttons header__spring-buttons">
+                <ul class="season-theme-menu spring-menu">
+                    <li>
+                        <a class="spring-link" href="https://www.libelle-lekker.be/zoeken/recepten?q=asperge">
+                            <span class="spring-menu__bold">Asperges</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link" href="https://www.libelle-lekker.be/zoeken/recepten?q=aardbei">
+                            <span class="spring-menu__bold">🍓 Aardbeien</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link"
+                            href="https://www.libelle-lekker.be/zoeken/recepten?q=&amp;family%5B%5D=Salade">
+                            <span class="spring-menu__bold">Salades</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link"
+                            href="https://www.libelle-lekker.be/zoeken/recepten?q=cocktail+AND+Mocktail">
+                            <span class="spring-menu__bold">Lekkere drankjes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link"
+                            href="https://eur04.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.mijnmagazines.be%2Fpromo%2FEQ7AF&amp;data=05%7C02%7Csofie.doms%40roularta.be%7C8fc819e95146437cc22c08dea6c5060c%7C3a5d6220ba2e4fd9a8e3ac0115fe397a%7C0%7C0%7C639131562297677250%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&amp;sdata=K03NEK7YyTMx1nvRTrSae8t3X7NqZOhXgRnhTCfiFB8%3D&amp;reserved=0">
+                            <span class="spring-menu__bold">Moederdagtip: een geschenkabonnement!</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </header>
+
+        <!-- mobile header -->
+        <div class="header-mobile">
+            <div class="season-theme-buttons header__spring-buttons">
+                <ul class="season-theme-menu spring-menu">
+                    <li>
+                        <a class="spring-link" href="https://www.libelle-lekker.be/zoeken/recepten?q=asperge">
+                            <span class="spring-menu__bold">Asperges</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link" href="https://www.libelle-lekker.be/zoeken/recepten?q=aardbei">
+                            <span class="spring-menu__bold">🍓 Aardbeien</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link"
+                            href="https://www.libelle-lekker.be/zoeken/recepten?q=&amp;family%5B%5D=Salade">
+                            <span class="spring-menu__bold">Salades</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link"
+                            href="https://www.libelle-lekker.be/zoeken/recepten?q=cocktail+AND+Mocktail">
+                            <span class="spring-menu__bold">Lekkere drankjes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="spring-link"
+                            href="https://eur04.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.mijnmagazines.be%2Fpromo%2FEQ7AF&amp;data=05%7C02%7Csofie.doms%40roularta.be%7C8fc819e95146437cc22c08dea6c5060c%7C3a5d6220ba2e4fd9a8e3ac0115fe397a%7C0%7C0%7C639131562297677250%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&amp;sdata=K03NEK7YyTMx1nvRTrSae8t3X7NqZOhXgRnhTCfiFB8%3D&amp;reserved=0">
+                            <span class="spring-menu__bold">Moederdagtip: een geschenkabonnement!</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="header__search-wrapper">
+
+            <div id="header__search" class="search main-search">
+                <form class="search__form" action="/zoeken/recepten" method="GET">
+                    <div class="search__form__inner">
+
+                        <div>
+                            <input class="search-input" type="text" name="q" value=""
+                                placeholder="Bijv.: pasta, gehakt, vegetarisch, pannenkoeken ..." autocomplete="off">
+                        </div>
+                        <button class="search-submit" type="submit">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="search__suggestions">
+                        <ul>
+                            <li>
+                                <a href="/zoeken/recepten" data-action="recipes">
+                                    <span class="icon icon-liblek-menu"></span>
+                                    Zoeken naar <span class="search-suggestion-term"></span> in recepten</a>
+                            </li>
+                            <li>
+                                <a href="/zoeken/content" data-action="articles">
+                                    <span class="icon icon-liblek-flag"></span>
+                                    Zoeken naar <span class="search-suggestion-term"></span> in artikels</a>
+                            </li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+
+        <div data-adshim data-adshim-format="banner-outofpage" data-adshim-slot="above"
+            data-adshim-targeting='{"AdType":"BANNER_ABOVE"}' id="gpt-ad-BANNER_ABOVE" class="rmgAd js-ad "
+            data-type="BANNER_ABOVE" data-device="all">
+        </div>
+
+        <main class="wrapper__content article-body">
+            <script>
+                var rmg_recipe_data = { "courses": ["Hoofdgerecht", "Lunch"], "cuisines": ["Belgisch", "Europees", "Mexicaans"], "variations": [], "families": ["Vlees"], "typicals": ["Kinderfavoriet", "Comfort food", "Met vrienden", "Familietopper"], "ingredients": ["tortilla's", "gemengd gehakt", "sjalot", "knoflook", "champignons", "courgette", "ma\u00efs", "limoen", "handvol bladpeterselie", "tomatenconcentraat", "tortillachip", "geraspte kaas", "zure room", "tacokruiden", "olijfolie", "peper", "zout"], "budget": "Goedkoop", "difficulty": "Erg makkelijk" };
+            </script>
+
+
+
+
+            <script type="application/ld+json">
+        {
+            "@context":         "http://schema.org/",
+            "@type":            "Recipe",
+                        "image":            "https://img.static-rmg.be/a/food/image/q75/w975/h333/1105121/gevulde-wraps-met-gehakt-mais-en-champignons.jpg",
+                        "name":             "Gevulde wraps met gehakt, maïs en champignons",
+            "totalTime":        "PT25M",
+            "recipeCuisine":    "Belgisch, Europees, Mexicaans",
+            "recipeCategory":   "Hoofdgerecht, Lunch",
+            "description":      "Met dit gerecht maak je vrienden.
+
+Helemaal TikTok-proof met gebakken wraps. Vul de wraps zoals hier beschreven of met een vulling naar keuze en rol ze strak op. Verhit een beetje olijfolie en bak de wraps rondom krokant. Smullen maar!",
+            "aggregateRating":  {
+                "@type":        "AggregateRating",
+                "ratingValue":  "2",
+                "worstRating":  "0",
+                "bestRating":   "5",
+                "ratingCount":  "1"
+            },
+            "recipeInstructions": [
+                                    "Pel en snipper de sjalot en de knoflook. Maak de champignons schoon en snij ze in plakjes. Spoel de courgette en snij ze in blokjes. Spoel de maïs en laat hem uitlekken.",
+                                    "Verhit olijfolie in een pan en fruit de knoflook en sjalot aan. Voeg de champignons en de courgette toe en bak ze op hoog vuur krokant. Neem alles uit de pan en maak die schoon.",
+                                    "Verhit opnieuw olijfolie in de pan en bak het gehakt rul. Voeg het tomaten-concentraat en de tacokruiden toe en roerbak tot de geuren vrijkomen. Zet het vuur zachter en bak het gehakt gaar. Voeg dan de maïs en de gebakken groenten toe. Kruid alles met peper en zout.",
+                                    "Verhit de tortilla’s kort in de micro-golfoven. Vul ze met het gebakken gehakt en werk ze af met geraspte kaas. Rol ze op en serveer met de zure room, tortillachips, peterselie en limoen. Werk ze af met een extra snuifje tacokruiden."
+                            ],
+            "recipeYield":      "4",
+            "ingredients": [
+                                                                                "8 tortilla&#039;s",
+                                                                                "500g gemengd gehakt",
+                                                                                "1 sjalot",
+                                                                                "1teentje knoflook",
+                                                                                "250g champignons",
+                                                                                "1 courgette",
+                                                                                "150g maïs",
+                                                                                "1 limoen",
+                                                                                "0 handvol bladpeterselie",
+                                                                                "2el tomatenconcentraat",
+                                                                                "0handje tortillachip",
+                                                                                "150g geraspte kaas",
+                                                                                "200g zure room",
+                                                                                "40g tacokruiden",
+                                                                                "0 olijfolie",
+                                                                                "0 peper",
+                                                                                "0 zout"
+                        ],
+            "author":           "Libelle Lekker",
+            "nutrition":        {
+                "@type":        "NutritionInformation",
+                "calories":     "0"
+            }
+        }
+    </script>
+
+            <main class="wrapper recipe-detail">
+
+                <!-- New recipe layout start -->
+                <div class="is--flex">
+                    <div class="left--content">
+
+                        <div id="bc-premium-wall"></div>
+
+                        <div class="recipe-detail__main-top">
+                            <div class="right--content--inner" data-inread>
+                                <div class="recipe-detail__top-info hide--for--print">
+                                    <div class="recipe-detail__endorsement">
+                                        <div class="recipe-detail__endorsement-brand">
+                                            Recept
+                                        </div>
+                                    </div>
+
+                                    <div class="recipe-detail__rating hide--for--print">
+                                        <div class="recipe-details__stars">
+                                            <div class="rating-component" data-popup-account data-popup-type="account"
+                                                data-content-type="recipe" data-content-id="93161"
+                                                data-content-totalratings="1" data-content-position="top"
+                                                data-utmcontent="datawall_ratingknop">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+
+                                <h3 class="recipe-detail__title">Gevulde wraps met gehakt, maïs en champignons</h3>
+
+                                <div class="recipe-detail__meta hide--for--mobile">
+
+                                    <ul>
+                                        <li class="main-meta">
+                                            <span class="hide--for--mobile">Duur: </span>
+                                            <a
+                                                href="/zoeken/recepten?preparation_time%5B%5D=Minder%20dan%2030%20minuten">
+                                                <i class="icon-liblek icon-liblek-time" aria-hidden="true"
+                                                    title="Minder dan 30 minuten"></i>
+                                            </a>
+                                        </li>
+                                        <li class="main-meta">
+                                            <span class="hide--for--mobile">Budget: </span>
+                                            <a href="/zoeken/recepten?budget%5B%5D=Goedkoop">
+                                                <i class="icon-liblek icon-liblek-euro" aria-hidden="true"
+                                                    title="Goedkoop"></i>
+                                            </a>
+                                        </li>
+                                        <li class="main-meta">
+                                            <span class="hide--for--mobile">Moeilijkheid: </span>
+                                            <a href="/zoeken/recepten?difficulty%5B%5D=Erg%20makkelijk">
+                                                <i class="icon-liblek icon-liblek-chef" aria-hidden="true"
+                                                    title="Erg makkelijk"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="recipe-detail__description hide--for--print">
+                                    <p>
+                                    <p>Met dit gerecht maak je vrienden.</p>
+
+                                    <p>Helemaal TikTok-proof met gebakken wraps. Vul de wraps zoals hier beschreven of
+                                        met een vulling naar keuze en rol ze strak op. Verhit een beetje olijfolie en
+                                        bak de wraps rondom krokant. Smullen maar!</p>
+                                    </p>
+                                </div>
+
+                                <div class="recipe-detail__actions hide--for--print">
+                                    <ul class="social-share">
+                                        <li><a href="https://www.facebook.com/sharer/sharer.php?u=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons"
+                                                class="fa fa-facebook"></a></li>
+                                        <li><a data-pin-do="buttonPin"
+                                                href="https://www.pinterest.com/pin/create/button/?url=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons&media=//img.static-rmg.be/a/food/image/q75/w975/h/1105121/gevulde-wraps-met-gehakt-mais-en-champignons.jpg"
+                                                class="fa fa-pinterest popup"></a></li>
+                                        <li class="whatsapp"><a
+                                                href="whatsapp://send?text=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons"
+                                                data-action="share/whatsapp/share" class="fa fa-whatsapp"></a></li>
+                                        <li><a href="mailto:?subject=Gevulde wraps met gehakt, maïs en champignons&body=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons"
+                                                class="fa fa-envelope"></a></li>
+                                    </ul>
+                                    <ul class="print-save-menu">
+                                        <li>
+                                            <div class="react-folder-content" data-remove-on-unlike=""
+                                                data-content-id="93161" data-content-type="FAVORITE" data-popup-account
+                                                data-tracking-id="button:save-recipe:recipe-detail"
+                                                data-utmcontent="datawall_bewaarknop"></div>
+                                        </li>
+                                        <li>
+                                            <div class="products__folder-content" data-popup-account
+                                                data-popup-type="print"
+                                                data-tracking-id="button:print-recipe:recipe-detail"
+                                                data-utmcontent="datawall_printknop">
+                                                <a href="javascript:window.print();">
+                                                    Print dit recept
+                                                </a>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="recipe-detail__preparation ">
+                                    <h5 class="hide--for--print">bereiding</h5>
+                                    <ol>
+                                        <li>
+                                            <p class="step-number">1</p>
+                                            <p>Pel en snipper de sjalot en de knoflook. Maak de champignons schoon en
+                                                snij ze in plakjes. Spoel de courgette en snij ze in blokjes. Spoel de
+                                                maïs en laat hem uitlekken.</p>
+                                        </li>
+                                        <li>
+                                            <p class="step-number">2</p>
+                                            <p>Verhit olijfolie in een pan en fruit de knoflook en sjalot aan. Voeg de
+                                                champignons en de courgette toe en bak ze op hoog vuur krokant. Neem
+                                                alles uit de pan en maak die schoon.</p>
+                                        </li>
+                                        <li>
+                                            <p class="step-number">3</p>
+                                            <p>Verhit opnieuw olijfolie in de pan en bak het gehakt rul. Voeg het
+                                                tomaten-concentraat en de tacokruiden toe en roerbak tot de geuren
+                                                vrijkomen. Zet het vuur zachter en bak het gehakt gaar. Voeg dan de maïs
+                                                en de gebakken groenten toe. Kruid alles met peper en zout.</p>
+                                        </li>
+                                        <li>
+                                            <p class="step-number">4</p>
+                                            <p>Verhit de tortilla’s kort in de micro-golfoven. Vul ze met het gebakken
+                                                gehakt en werk ze af met geraspte kaas. Rol ze op en serveer met de zure
+                                                room, tortillachips, peterselie en limoen. Werk ze af met een extra
+                                                snuifje tacokruiden.</p>
+                                        </li>
+                                    </ol>
+                                </div>
+
+
+                                <div class="recipe-detail__chatbot hidden" data-article="93161">
+                                    <h5>Meer interessante vragen</h5>
+                                    <div id="miso-explore-questions" class="miso-explore-questions"></div>
+                                </div>
+
+                                <div class="recipe-detail__foot-actions hide--for--print">
+                                    <div class="left">
+                                        <p>Deel dit recept</p>
+                                        <ul class="social-share">
+                                            <li><a href="https://www.facebook.com/sharer/sharer.php?u=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons"
+                                                    class="fa fa-facebook"></a></li>
+                                            <li><a data-pin-do="buttonPin"
+                                                    href="https://www.pinterest.com/pin/create/button/?url=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons&media=//img.static-rmg.be/a/food/image/q75/w975/h/1105121/gevulde-wraps-met-gehakt-mais-en-champignons.jpg"
+                                                    class="fa fa-pinterest popup"></a></li>
+                                            <li class="whatsapp"><a
+                                                    href="whatsapp://send?text=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons"
+                                                    data-action="share/whatsapp/share" class="fa fa-whatsapp"></a></li>
+                                            <li><a href="mailto:?subject=Gevulde wraps met gehakt, maïs en champignons&body=https://www.libelle-lekker.be/bekijk-recept/93161/gevulde-wraps-met-gehakt-mais-en-champignons"
+                                                    class="fa fa-envelope"></a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="right">
+                                        <p>Hoe vond je het recept?</p>
+                                        <div class="recipe-details__stars">
+                                            <div class="rating-component" data-popup-account data-popup-type="account"
+                                                data-content-type="recipe" data-content-id="93161"
+                                                data-content-totalratings="1" data-content-position="bottom"
+                                                data-utmcontent="datawall_ratingknop">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="bc-below-recipe-mob"
+                                    class="bc-below-recipe hide--for--print hide--for--desktop"></div>
+
+                                <div class="recipe-detail__tags hide--for--print">
+                                    <p class="tags-title">
+                                        Tags:
+                                    </p>
+                                    <ul class="tags-list">
+                                        <li>
+                                            <a href="/zoeken/recepten?cuisine%5B%5D=Belgisch">
+                                                <span>Belgisch</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="/zoeken/recepten?cuisine%5B%5D=Europees">
+                                                <span>Europees</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="/zoeken/recepten?cuisine%5B%5D=Mexicaans">
+                                                <span>Mexicaans</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="/zoeken/recepten?course%5B%5D=Hoofdgerecht">
+                                                <span>Hoofdgerecht</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="/zoeken/recepten?course%5B%5D=Lunch">
+                                                <span>Lunch</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="/zoeken/recepten?family%5B%5D=Vlees">
+                                                <span>Vlees</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="left--content--inner" data-inread>
+                                <div class="recipe-detail__thumbnail hide--for--print ">
+
+
+                                    <img src="//img.static-rmg.be/a/food/image/q75/w640/h400/1105121/gevulde-wraps-met-gehakt-mais-en-champignons.jpg"
+                                        alt="Gevulde wraps met gehakt, maïs en champignons" width="640" height="400" />
+                                </div>
+
+                                <div id="bc-below-recipe-desk"
+                                    class="bc-below-recipe hide--for--mobile hide--for--tablet"></div>
+                                <div id="bc-recipe-detail"></div>
+
+
+                                <div data-adshim data-adshim-format="rect-large" data-adshim-slot="above"
+                                    data-adshim-targeting='{"AdType":"RECT_ABOVE"}' id="gpt-ad-RECT_ABOVE-recipe"
+                                    class="rmgAd js-ad " data-type="RECT_ABOVE" data-device="mobile">
+                                </div>
+
+                                <div id="bc-premium-wall-below-intro"></div>
+
+                                <div class="recipe-detail__ingredients">
+                                    <div id="react-recipe-ingredients" data-affiliate="" data-brand="[]"
+                                        data-ingredient-groups="[{&quot;title&quot;:null,&quot;id&quot;:1245101,&quot;description&quot;:null,&quot;ingredients&quot;:[{&quot;itemType&quot;:null,&quot;id&quot;:83,&quot;sortOrder&quot;:1,&quot;quantity&quot;:&quot;8.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:1,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:83,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;tortilla&quot;,&quot;nameDisplay&quot;:&quot;tortilla&quot;,&quot;nameDisplayPlural&quot;:&quot;tortilla&#039;s&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n Een soort ongezuurde pannenkoek die gemaakt is van ma&amp;iuml;s- of tarwemeel en oorspronkelijk uit Mexico&amp;nbsp;komt. Niet te verwarren met de Spaanse tortilla dat een soort omelet is.&lt;\/p&gt;\n&lt;p&gt;\n &lt;strong&gt;Bereiding&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Tortilla&amp;#39;s kunnen in allerlei, vooral Zuid-Amerikaanse gerechten gebruikt worden zoals bijvoorbeeld burrito&amp;#39;s (een tortilla gevuld met bonen en vlees), enchilada&amp;#39;s (tortilla gevuld met gehakt en kaas) of taco&amp;#39;s (een ingepakte tortilla).&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:4608,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;tortilla&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:&quot;Reporters \/ Food &amp; Drink Photos&quot;,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;tortilla.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/4608\/tortilla.jpg&quot;}],&quot;id&quot;:268,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:267,&quot;name&quot;:&quot;tortilla&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;tortilla&#039;s&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:127,&quot;sortOrder&quot;:2,&quot;quantity&quot;:&quot;500.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:127,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;gemengd gehakt&quot;,&quot;nameDisplay&quot;:&quot;gemengd gehakt&quot;,&quot;nameDisplayPlural&quot;:&quot;gemengd gehakt&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;h1&gt;Kalfsgehakt&lt;\/h1&gt;\r\n\r\n&lt;p&gt;Kalfsgehakt is de magerste soort gehakt. Het heeft een lichtroze kleur en wordt in tal van bereidingen gebruikt.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bewaren&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Gebruik gehakt altijd zo vers mogelijk. Omdat het vlees gehakt is, verhoogt de kans op bacteri&amp;euml;n namelijk sterk. Je kan het daarom slechts 2 dagen in de koelkast bewaren, maar &amp;nbsp;je kan het wel altijd invriezen als je het wat langer wil bewaren.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bereiding&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Kalfsgehakt is nogal flauw van smaak, gebruik daarom de nodige kruiden om een fijnere smaak te bekomen. Vergeet tijdens het bereiden niet dat gehakt sterk kan slinken doordat het vet wegsmelt bij het braden.&lt;\/p&gt;\r\n\r\n&lt;h1&gt;Lamsgehakt&lt;\/h1&gt;\r\n\r\n&lt;p&gt;Voor het maken van gehakt worden niet de beste stukken vlees gebruikt. Meestal gebruiken ze nek-, borst-, schouder- of boutdelen om gehakt van te maken.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Aankopen&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Lamsgehakt zal niet zomaar bij de slager klaarliggen, je zal er hoogstwaarschijnlijk naar moeten vragen. Het kan zowel puur als toebereid aangeboden worden.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bewaren&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Gebruik gehakt altijd zo vers mogelijk. Omdat het vlees gehakt is, verhoogt de kans op bacteri&amp;euml;n namelijk sterk. Je kan het daarom slechts 2 dagen in de koelkast bewaren, maar &amp;nbsp;je kan het wel altijd invriezen als je het wat langer wil bewaren.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bereiding&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Lamsgehakt wordt het best klaargemaakt met wat ui, peterselie en geserveerd met rijst of brood.&lt;\/p&gt;\r\n\r\n&lt;h1&gt;Rundergehakt&lt;\/h1&gt;\r\n\r\n&lt;p&gt;Rundergehakt is vers gemalen rundvlees, en het beste stukje dat zich hiertoe leent, is het nekvlees.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Aankopen&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Rundergehakt wordt meestal in zijn pure vorm verkocht.&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bewaren&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Gebruik gehakt altijd zo vers mogelijk. Omdat het vlees gehakt is, verhoogt de kans op bacteri&amp;euml;n namelijk sterk. Je kan het daarom slechts 2 dagen in de koelkast bewaren, maar &amp;nbsp;je kan het wel altijd invriezen als je het wat langer wil bewaren.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bereiding&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Rundergehakt kan zonder gevaar rauw worden gegeten, maar kan ook lekker klaargemaakt worden met een gesnipperde ui, fijne peterselie en paprikapoeder.&lt;\/p&gt;\r\n\r\n&lt;h1&gt;Varkensgehakt&lt;\/h1&gt;\r\n\r\n&lt;p&gt;Varkensgehakt is vers gemalen varkensvlees en het taaie nekvlees is hiervoor ideaal.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bewaren&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Gebruik gehakt altijd zo vers mogelijk. Omdat het vlees gehakt is, verhoogt de kans op bacteri&amp;euml;n namelijk sterk. Je kan het daarom slechts 2 dagen in de koelkast bewaren, maar &amp;nbsp;je kan het wel altijd invriezen als je het wat langer wil bewaren.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Bereiding&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Varkensgehakt kan lekker worden klaargemaakt met een gesnipperde ui, fijne peterselie en paprikapoeder.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Gezondheid&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Varkensgehakt is de vetste gehaktsoort en bevat dus ook de meeste calorie&amp;euml;n.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1320,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;gehakt&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;279.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1320\/gehakt.jpg&quot;}],&quot;id&quot;:279,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:278,&quot;name&quot;:&quot;gehakt&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:18,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;g&quot;,&quot;namePlural&quot;:&quot;g&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;gemengd gehakt&quot;,&quot;unitName&quot;:&quot;g&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:410,&quot;sortOrder&quot;:3,&quot;quantity&quot;:&quot;1.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:410,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;sjalot&quot;,&quot;nameDisplay&quot;:&quot;sjalot&quot;,&quot;nameDisplayPlural&quot;:&quot;sjalotten&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n De ui of de ajuin behoort tot de familie van de bolgewassen. Uien zijn in een ruime verscheidenheid verkrijgbaar. Ze vari&amp;euml;ren in grootte, kleur en vorm. Er zijn zeer kleine uitjes, zoals de zilveruitjes, grote, koperkleurige bollen, langwerpige lente-uitjes, slanke eivormige sjalotten en rode of Italiaanse uien. In smaak vari&amp;euml;ren ze van eerder zoet naar scherp.&lt;\/p&gt;\n&lt;p&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;h2&gt;\n Aankopen&lt;\/h2&gt;\n&lt;p&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p&gt;\n Ajuin en sjalotten zijn het hele jaar te krijgen. Naargelang het tijdstip van aanvoer zijn ze vers of gedroogd. Als er nog groen loof aanzit moeten ze vers verwerkt worden.&amp;nbsp;Uien worden zowel los als in netjes verkocht. Bij aankoop moeten de uien droog zijn en stevig aanvoelen. Vermijd exemplaren met groene uitlopers en zachte, vochtige of zwarte plekken.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Bewaren&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Wanneer het groene loof verdroogd is als je de uien koopt kunnen uien verschillende weken koel en droog bewaard worden. Deze bewaarajuin is te koop in de herfst en winter.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Bereiding&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Er zijn maar weinig bereidingen waar geen ui in verwerkt wordt. Vaak begint een recept met het snipperen van een ui. Zorg er steeds voor dat het harde stukje waar de haarworteltjes aan vastzitten verwijderd wordt. Het is taai en smaakt bitter in bereidingen. Om de ui fijn te snipperen mag deze wortelaanzet op het allerlaatste ogenblik verwijderd worden.&lt;\/p&gt;\n&lt;p&gt;\n Ui is een uiterst veelzijdige groente. Vaak gebruikt als smaakgevend ingredi&amp;euml;nt kan de ui ook op zichzelf verwerkt worden. De ui behoort tot de basis van saus, groentesoep, stoofschotels met groente, vlees of vis en bijgerechten zoals uienconfituur of chutney.&lt;\/p&gt;\n&lt;p&gt;\n Als garnering kan men geglaceerde ui bereiden: uien of sjalotten stoven in een klontje boter, met een scheut wijn of azijn en indien gewenst, peper en zout, wat suiker, kaneel en kruidnagel toevoegen.&lt;\/p&gt;\n&lt;p&gt;\n Geblancheerde, uitgeholde ui kan ook opgevuld worden met gehakt of ei. Al dan niet met kaas bestrooid worden deze gevulde uien gebakken in de oven.&lt;\/p&gt;\n&lt;p&gt;\n Ongepelde ajuinen kunnen ook in de oven of op de rand van de barbecue garen en als een puree bij geroosterd vlees geserveerd worden.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Gezondheid&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Uien en sjalotten bevatten veel vezels, koolhydraten en Vitamine C.&lt;\/p&gt;\n&lt;table border=\&quot;0\&quot; cellpadding=\&quot;0\&quot; cellspacing=\&quot;0\&quot; width=\&quot;351\&quot;&gt;\n &lt;tbody&gt;\n  &lt;tr&gt;\n   &lt;td align=\&quot;center\&quot; bgcolor=\&quot;#cccccc\&quot; valign=\&quot;middle\&quot;&gt;\n    &lt;table border=\&quot;0\&quot; cellpadding=\&quot;0\&quot; cellspacing=\&quot;1\&quot; class=\&quot;designed\&quot; width=\&quot;350\&quot;&gt;\n     &lt;tbody&gt;\n      &lt;tr bgcolor=\&quot;#ffffff\&quot;&gt;\n       &lt;td colspan=\&quot;2\&quot; height=\&quot;30\&quot;&gt;\n        &amp;nbsp;&lt;span class=\&quot;tabeltitle\&quot;&gt;Voedingswaarde per 100 g&lt;\/span&gt;&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot; rowspan=\&quot;2\&quot; valign=\&quot;top\&quot;&gt;\n        &amp;nbsp;Energie&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot; color=\&quot;#000099\&quot;&gt;\n        &amp;nbsp;206 kJ&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;49 kcal&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Voedingsvezels&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;2 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot; height=\&quot;12\&quot;&gt;\n        &amp;nbsp;Koolhydraten&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot; height=\&quot;12\&quot;&gt;\n        &amp;nbsp;10 mg&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Vetten&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;0,5 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Eiwitten&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;1 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Vitamine C&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;10 mg&lt;\/td&gt;\n      &lt;\/tr&gt;\n     &lt;\/tbody&gt;\n    &lt;\/table&gt;\n   &lt;\/td&gt;\n  &lt;\/tr&gt;\n &lt;\/tbody&gt;\n&lt;\/table&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1214,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;ui&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;225.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1214\/ui.jpg&quot;}],&quot;id&quot;:225,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:224,&quot;name&quot;:&quot;ui&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;sjalot&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:48,&quot;sortOrder&quot;:4,&quot;quantity&quot;:&quot;1.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:48,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;knoflook&quot;,&quot;nameDisplay&quot;:&quot;knoflook&quot;,&quot;nameDisplayPlural&quot;:&quot;knoflook&quot;,&quot;description&quot;:null,&quot;isBasic&quot;:true,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;Knoflook groeit onder de grond als een bol die bestaat uit verschillende knoflooktenen. Het&amp;nbsp;is een plant uit de lookfamilie (Alliaceae) en&amp;nbsp;is nauw verwant aan ui, prei, sjalot en bieslook.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;In de keuken&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Knoflook is een kruid met een doordringende smaak en geur dat zowel vers, gedroogd, &lt;a href=\&quot;https:\/\/www.libelle.be\/lekker\/gerookte-knoflook-hoe-gebruik-je-die\/\&quot; target=\&quot;_blank\&quot;&gt;gerookt&lt;\/a&gt; en&amp;nbsp;in poedervorm gebruikt wordt als smaakmaker in allerlei gerechten.&amp;nbsp;Rauw heeft knoflook een sterke, scherpe smaak; gekookt of gebakken wordt hij milder en zoeter. Daarom wordt knoflook dikwijls eerst wat aangestoofd.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Gezondheid&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Aan knoflook wordt een cholesterol- en bloeddrukverlagende werking toegeschreven. Knoflook zou ook een&amp;nbsp;antibacteri&amp;euml;le en antivirale werking&amp;nbsp;hebben.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1104145,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;GettyImages-1833679726&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:&quot;GettyImages&quot;,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;GettyImages-1833679726.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1104145\/gettyimages-1833679726.jpg&quot;}],&quot;id&quot;:260,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:259,&quot;name&quot;:&quot;knoflook&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:51,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;teentje&quot;,&quot;namePlural&quot;:&quot;teentjes&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;knoflook&quot;,&quot;unitName&quot;:&quot;teentje&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:15,&quot;sortOrder&quot;:5,&quot;quantity&quot;:&quot;250.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:1,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:15,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;champignon&quot;,&quot;nameDisplay&quot;:&quot;champignon&quot;,&quot;nameDisplayPlural&quot;:&quot;champignons&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n Een paddenstoel is het vruchtlichaam van een zwam of schimmel. Paddenstoel is een verzamelnaam. Er bestaan duizenden soorten eetbare paddenstoelen die op grote schaal wereldwijd geoogst worden.&lt;\/p&gt;\n&lt;p&gt;\n &lt;strong&gt;Soorten&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Een paar van de meest geconsumeerde paddenstoelen:&lt;\/p&gt;\n&lt;p&gt;\n De &lt;strong&gt;champignon&lt;\/strong&gt;&amp;nbsp;is de meest gegeten paddenstoel ter wereld en kan gemakkelijk gekweekt worden. Dit type paddenstoel heet eigenlijk voluit champignon de Paris.&lt;\/p&gt;\n&lt;p&gt;\n De &lt;strong&gt;oesterzwam&lt;\/strong&gt;&amp;nbsp;is na de champignon wereldwijd de tweede meest gegeten eetbare paddenstoel. China is de grootste producent van deze paddenstoel.&lt;\/p&gt;\n&lt;p&gt;\n De &lt;strong&gt;shiitake &lt;\/strong&gt;wordt voornamelijk gebruikt in de Aziatische keuken.&lt;\/p&gt;\n&lt;p&gt;\n De &lt;strong&gt;morielje &lt;\/strong&gt;is&amp;nbsp;eveneens een populaire paddenstoel&lt;strong&gt;.&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n De &lt;strong&gt;cantharel&amp;nbsp;&lt;\/strong&gt;ook wel hanenkam of eetbare cantharel genoemd, is een van de lekkerste en makkelijkst herkenbare van de niet cultiveerbare eetbare paddenstoelen.&lt;\/p&gt;\n&lt;p&gt;\n Het &lt;strong&gt;eekhoorntjesbrood&lt;\/strong&gt;&amp;nbsp;is bekend om zijn nootachtige smaak. Het is een veelgezochte paddenstoel, die wordt gebruikt in een groot aantal culinaire schotels.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1224,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;paddenstoel&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;312.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1224\/paddenstoel.jpg&quot;}],&quot;id&quot;:312,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:311,&quot;name&quot;:&quot;paddenstoel&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:18,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;g&quot;,&quot;namePlural&quot;:&quot;g&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;champignons&quot;,&quot;unitName&quot;:&quot;g&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:135,&quot;sortOrder&quot;:6,&quot;quantity&quot;:&quot;1.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:135,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;courgette&quot;,&quot;nameDisplay&quot;:&quot;courgette&quot;,&quot;nameDisplayPlural&quot;:&quot;courgettes&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;Courgettes zijn vruchtgroenten die tot dezelfde familie behoren als &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/ingredienten\/producten\/130\/meloen\&quot; target=\&quot;_blank\&quot;&gt;meloenen&lt;\/a&gt; en &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/ingredienten\/producten\/105\/komkommer\&quot; target=\&quot;_blank\&quot;&gt;komkommers&lt;\/a&gt;. De meest bekende soort is de &lt;strong&gt;groene courgette&lt;\/strong&gt;. Die lijkt heel goed lijkt op zijn neef &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/ingredienten\/producten\/105\/komkommer\&quot; target=\&quot;_blank\&quot;&gt;de komkommer&lt;\/a&gt;. Er bestaan ook gele varianten. Het vruchtvlees van een courgette heeft een milde smaak.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Courgette aankopen&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Courgettes zijn verkrijgbaar van februari tot november met topaanvoer in de maanden &lt;strong&gt;juli tot september.&lt;\/strong&gt; Courgettes hebben een egale kleur over de hele oppervlakte. Let er bij aankoop op dat ze vrij zijn van beschadigingen. Kies voor courgettes met een gave schil die stevig aanvoelen. Het snijvlak aan het steeltje mag niet te nat zijn.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Courgette bewaren&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Zoals andere vruchtgroenten bewaar je courgettes het beste op een koele plaats, maar &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/artikelen\/193925\/welke-groenten-en-fruit-bewaar-je-beter-niet-in-de-koelkast\&quot;&gt;niet in de koelkast&lt;\/a&gt;. De kelder is bijvoorbeeld prima. Ze zijn dan 1 week houdbaar.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Courgette bereiden&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Voor gebruik moet je de courgette &lt;strong&gt;grondig spoelen&lt;\/strong&gt;. Schillen is meestal niet nodig, maar verwijder wel het kroontje. &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/artikelen\/182210\/how-to-dit-is-de-beste-manier-om-courgette-te-snijden\&quot;&gt;Snij ze daarna in blokjes of plakken &lt;\/a&gt;volgens het gekozen recept. &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/recepten-sets\/172670\/gevulde-courgette\&quot;&gt;Vul je de courgette op&lt;\/a&gt;, dan kan het steeltje aan de vrucht blijven. Het vruchtvlees kun je verwerken in het vulmengsel.&lt;\/p&gt;\r\n\r\n&lt;p&gt;Een courgette kent heel wat bereidingswijzen: samen met tomaten en aubergines in een &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/bekijk-recept\/5648\/ratatouille-basisrecept-2\&quot; target=\&quot;_blank\&quot;&gt;ratatouille&lt;\/a&gt;, &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/bekijk-recept\/16813\/gevulde-courgettes-met-gehakt-en-kerstomaten-1\&quot; target=\&quot;_blank\&quot;&gt;gevuld met gehakt&lt;\/a&gt;, in een &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/bekijk-recept\/5375\/ovenschotel-met-aardappeltjes-1\&quot; target=\&quot;_blank\&quot;&gt;ovenschotel&lt;\/a&gt; met aardappel en kaas, in &lt;a href=\&quot;https:\/\/www.libelle-lekker.be\/recepten-sets\/179201\/courgettesoep-10x-anders\&quot; target=\&quot;_blank\&quot;&gt;soep&lt;\/a&gt;....&lt;\/p&gt;\r\n\r\n&lt;p&gt;&lt;strong&gt;Eenvoudig recept:&lt;\/strong&gt; trek met een dunschiller of kaasschaaf reepjes van (groene) courgette en wortel. Bak kort in de pan of blancheer even. Meng deze slierten dan met hete, beetgare spaghetti en je hebt een lekkere, kleurrijke schotel.&lt;\/p&gt;\r\n\r\n&lt;h2&gt;Gezondheid&lt;\/h2&gt;\r\n\r\n&lt;p&gt;Courgettes bevatten &lt;strong&gt;vitamine A, C, calcium, fosfor en ijzer.&lt;\/strong&gt;&lt;br \/&gt;\r\n&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;table border=\&quot;0\&quot; cellpadding=\&quot;0\&quot; cellspacing=\&quot;0\&quot; style=\&quot;width:351px\&quot;&gt;\r\n\t&lt;tbody&gt;\r\n\t\t&lt;tr&gt;\r\n\t\t\t&lt;td&gt;\r\n\t\t\t&lt;table border=\&quot;0\&quot; cellpadding=\&quot;0\&quot; cellspacing=\&quot;1\&quot; style=\&quot;width:350px\&quot;&gt;\r\n\t\t\t\t&lt;tbody&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td colspan=\&quot;2\&quot;&gt;&amp;nbsp;Voedingswaarde per 100 g&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;Calorie&amp;euml;n&lt;\/td&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;36&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;Vezels&lt;\/td&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;1 g&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;Koolhydraten&lt;\/td&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;8 g&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;Vet&lt;\/td&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;0 g&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;Eiwit&lt;\/td&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;1 g&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t\t&lt;tr&gt;\r\n\t\t\t\t\t\t&lt;td&gt;&amp;nbsp;Water&lt;\/td&gt;\r\n\t\t\t\t\t\t&lt;td&gt;\r\n\t\t\t\t\t\t&lt;p&gt;&amp;nbsp;91 g&lt;\/p&gt;\r\n\t\t\t\t\t\t&lt;\/td&gt;\r\n\t\t\t\t\t&lt;\/tr&gt;\r\n\t\t\t\t&lt;\/tbody&gt;\r\n\t\t\t&lt;\/table&gt;\r\n\t\t\t&lt;\/td&gt;\r\n\t\t&lt;\/tr&gt;\r\n\t&lt;\/tbody&gt;\r\n&lt;\/table&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1235,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;courgette&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;47.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1235\/courgette.jpg&quot;}],&quot;id&quot;:47,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:47,&quot;name&quot;:&quot;courgette&quot;,&quot;seasonInfo&quot;:&quot;000001111000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;courgette&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:686,&quot;sortOrder&quot;:7,&quot;quantity&quot;:&quot;150.00&quot;,&quot;info&quot;:&quot;blik&quot;,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:686,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;ma\u00efs&quot;,&quot;nameDisplay&quot;:&quot;ma\u00efs&quot;,&quot;nameDisplayPlural&quot;:&quot;&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n Ma&amp;iuml;skorrels zitten in kolven die elk 750 tot 1000 ma&amp;iuml;skorrels bevatten in 8 tot 24 gelijkmatige rijen gerangschikt. Suikerma&amp;iuml;s is economisch gezien de belangrijkste vari&amp;euml;teit. De lichtgele korrels zijn zacht, sappig en zoet. Een andere vari&amp;euml;teit is pofma&amp;iuml;s, gebruikt voor popcorn. Ma&amp;iuml;smeel bestaat uit min of meer grof gemalen witte gedroogde ma&amp;iuml;skorrels. Polenta is Italiaans ma&amp;iuml;smeel, dat minder zuur en plakkerig is door het soort ma&amp;iuml;s dat gebruikt wordt.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Aankopen&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Verse ma&amp;iuml;s scheidt een melkachtige vloeistof af als je de korrels even met de&amp;nbsp;vingernagel inkrast. Polentameel is zowel fijn als grof gemalen verkrijgbaar en wordt soms met andere granen zoals boekweit gemengd.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Bewaren&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Ma&amp;iuml;s mag niet blootgesteld worden aan zonlicht of hoge temperaturen omdat warmte het omzettingsproces van suiker in zetmeel versnelt. Bewaar gedroogde korrels en meel op een donkere, droge en koele plaats.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Bereiding&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Hele gekookte ma&amp;iuml;skolven worden alleen met wat gesmolten boter en wat zout geserveerd. Gekookte ma&amp;iuml;skorrels kun je als groente eten of in een gemengde salade opdienen. Ma&amp;iuml;smeel kun je gebruiken in koekjes, gebak en brood. Polenta is een ma&amp;iuml;sbrij gemaakt van Italiaans ma&amp;iuml;smeel.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Gezondheid&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Ma&amp;iuml;s bevat 46 procent meervoudig onverzadigde vetzuren en 15 procent verzadigde vetzuren. De korrels bevatten vitamine B en magnesium, bovendien zijn ze rijk aan belangrijke vezels.&lt;\/p&gt;\n&lt;table border=\&quot;0\&quot; cellpadding=\&quot;0\&quot; cellspacing=\&quot;0\&quot; width=\&quot;351\&quot;&gt;\n &lt;tbody&gt;\n  &lt;tr&gt;\n   &lt;td align=\&quot;center\&quot; bgcolor=\&quot;#cccccc\&quot; valign=\&quot;middle\&quot;&gt;\n    &lt;table border=\&quot;0\&quot; cellpadding=\&quot;0\&quot; cellspacing=\&quot;1\&quot; class=\&quot;designed\&quot; width=\&quot;350\&quot;&gt;\n     &lt;tbody&gt;\n      &lt;tr bgcolor=\&quot;#ffffff\&quot;&gt;\n       &lt;td colspan=\&quot;2\&quot; height=\&quot;30\&quot;&gt;\n        &amp;nbsp;Voedingswaarde per 100 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Energie&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;66&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot; height=\&quot;16\&quot;&gt;\n        &amp;nbsp;Koolhydraten&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot; height=\&quot;16\&quot;&gt;\n        &amp;nbsp;10 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Vet&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;2 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Eiwit&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;3 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Water&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;78 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n      &lt;tr&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;Vezels&lt;\/td&gt;\n       &lt;td bgcolor=\&quot;#ffffff\&quot; class=\&quot;tabelcontent\&quot;&gt;\n        &amp;nbsp;4 g&lt;\/td&gt;\n      &lt;\/tr&gt;\n     &lt;\/tbody&gt;\n    &lt;\/table&gt;\n   &lt;\/td&gt;\n  &lt;\/tr&gt;\n &lt;\/tbody&gt;\n&lt;\/table&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1194,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;ma\u00efs&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;123.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1194\/mais.jpg&quot;}],&quot;id&quot;:123,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:122,&quot;name&quot;:&quot;ma\u00efs&quot;,&quot;seasonInfo&quot;:&quot;000000011000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:18,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;g&quot;,&quot;namePlural&quot;:&quot;g&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;ma\u00efs&quot;,&quot;unitName&quot;:&quot;g&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:51,&quot;sortOrder&quot;:8,&quot;quantity&quot;:&quot;1.00&quot;,&quot;info&quot;:&quot;voor de afwerking&quot;,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:51,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;limoen&quot;,&quot;nameDisplay&quot;:&quot;limoen&quot;,&quot;nameDisplayPlural&quot;:&quot;limoenen&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;De limoen komt van nature vooral voor in Zuidoost-Azi&amp;euml;, maar is later ook steeds meer ge&amp;iuml;ntroduceerd in westelijke landen. Van alle citrus-soorten is deze het minst bestand tegen de kou. De vrucht is eivormig en de schil is groen-geel. Dankzij de zure smaak wordt het vooral gebruikt in dranken en als smaakmaker.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1219,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;limoen&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;262.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1219\/limoen.jpg&quot;}],&quot;id&quot;:262,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:261,&quot;name&quot;:&quot;limoen&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;limoen&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:37318,&quot;sortOrder&quot;:9,&quot;quantity&quot;:null,&quot;info&quot;:&quot;voor de afwerking&quot;,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:37318,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;handvol bladpeterselie&quot;,&quot;nameDisplay&quot;:&quot;handvol bladpeterselie&quot;,&quot;nameDisplayPlural&quot;:&quot;handvol bladpeterselie&quot;,&quot;description&quot;:&quot;&lt;p&gt;handvol bladpeterselie&lt;\/p&gt;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:null},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;handvol bladpeterselie&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:886,&quot;sortOrder&quot;:10,&quot;quantity&quot;:&quot;2.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:886,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;tomatenconcentraat&quot;,&quot;nameDisplay&quot;:&quot;tomatenconcentraat&quot;,&quot;nameDisplayPlural&quot;:&quot;tomatenconcentraat&quot;,&quot;description&quot;:null,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n Tomatenpuree kan gebruikt worden in heel wat verschillende gerechten zoals (dip)sauzen, pasta, pizza&amp;#39;s.&lt;\/p&gt;&quot;,&quot;images&quot;:[],&quot;id&quot;:299,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:298,&quot;name&quot;:&quot;tomatenpuree&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:15,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;el&quot;,&quot;namePlural&quot;:&quot;el&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;tomatenconcentraat&quot;,&quot;unitName&quot;:&quot;el&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:35842,&quot;sortOrder&quot;:11,&quot;quantity&quot;:null,&quot;info&quot;:&quot;voor de afwerking&quot;,&quot;plural&quot;:1,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:35842,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;tortillachip&quot;,&quot;nameDisplay&quot;:&quot;tortillachip&quot;,&quot;nameDisplayPlural&quot;:&quot;tortillachip&quot;,&quot;description&quot;:&quot;tortillachip&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:null},&quot;unit&quot;:{&quot;id&quot;:20,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;handje&quot;,&quot;namePlural&quot;:&quot;handjes&quot;,&quot;scalable&quot;:0},&quot;ingredientName&quot;:&quot;tortillachip&quot;,&quot;unitName&quot;:&quot;handje&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:2203,&quot;sortOrder&quot;:12,&quot;quantity&quot;:&quot;150.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:2203,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;geraspte kaas&quot;,&quot;nameDisplay&quot;:&quot;geraspte kaas&quot;,&quot;nameDisplayPlural&quot;:&quot;geraspte kaas&quot;,&quot;description&quot;:null,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;Kaas behoort tot de groep &amp;#39;zuivelproducten&amp;#39;. Het woord &amp;#39;kaas&amp;#39; dekt een bijzonder breed gamma aan kaasproducten met soms heel aparte eigenschappen. Kaas wordt omschreven als een &amp;#39;al dan niet gerijpt product, verkregen door het stremmen of verzuren van al dan niet met room gemengde volle melk, van afgeroomde melk of van karnemelk.&amp;#39; Er zijn 3 fasen te onderscheiden bij de bereiding van kaas: (1) het stremmen van de melk waarbij wrongel en wei ontstaat, (2) het bewerken van de wrongel tot jonge kaas en (3) het rijpen van de jonge kaas tot consumptieklare kaas. Vaak voegt men plantaardige kleurstoffen toe om de kaas een mooier uitzicht te geven. Uiteindelijk wordt de kaas gepekeld om de houdbaarheid te verzekeren.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Op basis van hun consistentie wordt er een onderscheid gemaakt tussen 3 verschillende groepen kaas: kazen met harde zuivel, met half harde zuivel en met zachte zuivel. In de groep met harde zuivel zijn onder andere Cheddar, Emmentaler, Goudse, Gruy&amp;egrave;re en Pelgrim opgenomen. De kaassoorten Lo, Maredsous, Passendale, Port Salut en St.-Paulin behoren tot de half harde zuivel. Camembert, Brie en Herve zijn zachte zuivelproducten. Er wordt bovendien altijd een indicatie gegeven van het vetgehalte in de kaas. De vermeldingen vari&amp;euml;ren van 20+ tot 60+. Dat betekent dat de kaas een vetgehalte van respectievelijk meer dan 20% en meer dan 60% heeft.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Kaas kun je ook indelen naargelang de rijpingsperiode: &amp;#39;jonge kaas&amp;#39; ondergaat 4 weken rijping, &amp;#39;jonge belegen kaas&amp;#39; ondergaat 8 weken rijping, &amp;#39;belegen kaas&amp;#39; laat men 4 maanden rijpen, &amp;#39;extra belegen kaas&amp;#39; 7 maanden en &amp;#39;oude kaas&amp;#39; rijpt 10 maanden.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;p&gt;&lt;strong&gt;Aankopen&lt;\/strong&gt;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Bij aankoop van een kaas van het harde of half harde type moet de structuur homogeen zijn. Deze kazen moeten trouwens een intacte korst hebben en mogen niet vochtig zijn. De gaten in de kaas moeten van een gelijke grootte en vorm zijn. Ze moeten trouwens over de ganse kaasdoorsnede verspreid zijn. Schimmelkazen of kazen met een bacteri&amp;euml;nflora op de korst (zoals Herve) rijpen van binnen naar buiten. Daardoor kunnen jonge kazen een nogal stugge kern hebben, terwijl oude kazen een vervloeid buitenste deel vertonen. Schimmelkazen die te oud zijn kunnen door de sterke afbraak van de eiwitten zelfs naar ammoniak smaken.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;p&gt;&lt;strong&gt;Bewaren&lt;\/strong&gt;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Kaas bewaart je het beste op een luchtige plaats, beschermd van licht en tocht. Bij voorkeur in het groentevak van de koelkast. Je kunt de kaas ook in aluminiumfolie wikkelen of in een gesloten doos bewaren. Bewaar je kaas onder een stolp, dan zorg je voor een kleine luchtspleet. Haal de kaas een half uurtje voor gebruik uit de koelkast.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;p&gt;&lt;strong&gt;Bereiding&lt;\/strong&gt;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Kaas leent zich uitstekend in kaassauzen, bij salades, bij vlees- en visgerechten, pasta, enz.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&amp;nbsp;&lt;\/p&gt;\r\n\r\n&lt;p&gt;&lt;strong&gt;Gezondheid&lt;\/strong&gt;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Kaas is erg gezond en bevat vitamine A, B2, B12, D en is rijk aan calcium en eiwitten.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1347,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;kaas&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;87.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1347\/kaas.jpg&quot;}],&quot;id&quot;:87,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:86,&quot;name&quot;:&quot;kaas&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:18,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;g&quot;,&quot;namePlural&quot;:&quot;g&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;geraspte kaas&quot;,&quot;unitName&quot;:&quot;g&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:36,&quot;sortOrder&quot;:13,&quot;quantity&quot;:&quot;200.00&quot;,&quot;info&quot;:&quot;voor de afwerking&quot;,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:36,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;zure room&quot;,&quot;nameDisplay&quot;:&quot;zure room&quot;,&quot;nameDisplayPlural&quot;:&quot;zure room&quot;,&quot;description&quot;:null,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n Room is een substantie die bestaat uit melkvet&amp;nbsp;en kleine hoeveelheden van andere &lt;span data-scayt_word=\&quot;koemelkbestanddelen\&quot; data-scaytid=\&quot;19\&quot;&gt;koemelkbestanddelen&lt;\/span&gt;. Die melk wordt afgeroomd en de room die je daarna overhoudt wordt vooral gebruikt bij taarten en gebakjes.&lt;\/p&gt;\n&lt;p&gt;\n Er bestaan verschillende soorten room, en dit zowel op &lt;span data-scayt_word=\&quot;melkbasis\&quot; data-scaytid=\&quot;20\&quot;&gt;melkbasis&lt;\/span&gt; als zonder melk. Voorbeelden van die eerste categorie zijn slagroom, banketbakkersroom, cr&amp;egrave;me fra&amp;icirc;che en zure room. &lt;span data-scayt_word=\&quot;Roomsoorten\&quot; data-scaytid=\&quot;21\&quot;&gt;Roomsoorten&lt;\/span&gt; zonder melk zijn bijvoorbeeld &lt;span data-scayt_word=\&quot;kokosroom\&quot; data-scaytid=\&quot;22\&quot;&gt;kokosroom&lt;\/span&gt; of &lt;span data-scayt_word=\&quot;sojaroom\&quot; data-scaytid=\&quot;23\&quot;&gt;sojaroom&lt;\/span&gt;.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:4660,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;room&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:&quot;&quot;,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;room.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/4660\/room.jpg&quot;}],&quot;id&quot;:256,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:255,&quot;name&quot;:&quot;room&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:18,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;g&quot;,&quot;namePlural&quot;:&quot;g&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;zure room&quot;,&quot;unitName&quot;:&quot;g&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:1983,&quot;sortOrder&quot;:14,&quot;quantity&quot;:&quot;40.00&quot;,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:1983,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;tacokruiden&quot;,&quot;nameDisplay&quot;:&quot;tacokruiden&quot;,&quot;nameDisplayPlural&quot;:&quot;tacokruiden&quot;,&quot;description&quot;:null,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&quot;,&quot;images&quot;:[],&quot;id&quot;:1549,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:623,&quot;name&quot;:&quot;kruidenmix&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:18,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;g&quot;,&quot;namePlural&quot;:&quot;g&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;tacokruiden&quot;,&quot;unitName&quot;:&quot;g&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:20,&quot;sortOrder&quot;:15,&quot;quantity&quot;:null,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:20,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;olijfolie&quot;,&quot;nameDisplay&quot;:&quot;olijfolie&quot;,&quot;nameDisplayPlural&quot;:&quot;olijfolie&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:false,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;br \/&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:1322,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;olie&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;287.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/1322\/olie.jpg&quot;}],&quot;id&quot;:287,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:286,&quot;name&quot;:&quot;olie&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;olijfolie&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:14,&quot;sortOrder&quot;:16,&quot;quantity&quot;:null,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:14,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;peper&quot;,&quot;nameDisplay&quot;:&quot;peper&quot;,&quot;nameDisplayPlural&quot;:&quot;peper&quot;,&quot;description&quot;:&quot;&quot;,&quot;isBasic&quot;:true,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;\n De peperplant is een klimplant afkomstig uit India. Er zijn meer dan 100 soorten peper, maar ze groeien allemaal in een warm en tropisch klimaat. Na twee tot drie jaar verschijnen aan de peperplant witte bloempjes die zich ontwikkelen tot trossen ronde bessen. Deze bessen zijn eerst groen, dan rood en uiteindelijk donkerbruin. Groene, zwarte en witte peper zijn allemaal afkomstig van dezelfde peperplant. Groene peper zijn bessen die men oogst als ze nog groen zijn. Zwarte peper zijn bessen die men halfrijp plukt en daarna droogt. Witte peper wint men uit rijpe bessen. Deze laatste peper smaakt het mildst.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Aankopen&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Groene peperkorrels zijn gedroogd of ingelegd in azijn verkrijgbaar. Zwarte en witte peper vind je gemalen of als hele korrels. Om zo veel mogelijk het aroma te bewaren, koop je best hele peperkorrels en maal je ze vlak voor gebruik. Peperkorrels moeten volkomen gaaf zijn.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Bewaren&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Hele peperkorrels zijn onbeperkt houdbaar. Groene peper in azijn blijft na het openen van de verpakking nog 1 week goed.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Bereiding&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Peper kun je in bijna alle hartige gerechten gebruiken. Voeg gemalen peper pas tegen het einde van de kooktijd toe, anders smaakt hij bitter.&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &amp;nbsp;&lt;\/p&gt;\n&lt;p class=\&quot;dossierTitle\&quot;&gt;\n &lt;strong&gt;Gezondheid&lt;\/strong&gt;&lt;\/p&gt;\n&lt;p&gt;\n Peper werkt stimulerend en antibacterieel.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:4174,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;peper&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:&quot;&quot;,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;152.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/4174\/peper.jpg&quot;}],&quot;id&quot;:152,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:151,&quot;name&quot;:&quot;peper&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;peper&quot;,&quot;unitName&quot;:&quot;&quot;},{&quot;itemType&quot;:null,&quot;id&quot;:21,&quot;sortOrder&quot;:17,&quot;quantity&quot;:null,&quot;info&quot;:null,&quot;plural&quot;:0,&quot;important&quot;:null,&quot;ingredient&quot;:{&quot;id&quot;:21,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;nameSelect&quot;:&quot;zout&quot;,&quot;nameDisplay&quot;:&quot;zout&quot;,&quot;nameDisplayPlural&quot;:&quot;zout&quot;,&quot;description&quot;:null,&quot;isBasic&quot;:true,&quot;product&quot;:{&quot;description&quot;:&quot;&lt;p&gt;Zout is bij de meeste mensen bekend als smaakmiddel en smaakversterker in de keuken. Zout wordt echter ook gebruikt als bewaarmiddel: vroeger werd vlees of vis bestrooid met zout &amp;nbsp;en dan in speciale kisten bewaard. Deze werkwijze staat bekend als &amp;#39;pekelen&amp;#39;. Door het zout drogen de bacteri&amp;euml;n die aanwezig zijn uit en zal het voedsel niet bederven.&lt;\/p&gt;\r\n\r\n&lt;p&gt;&lt;strong&gt;Gezondheid&lt;\/strong&gt;&lt;\/p&gt;\r\n\r\n&lt;p&gt;Ons menselijk lichaam heeft dagelijks minimum 2 gram zout nodig. Producten die veel zout bevatten zijn bjivoorbeeld&amp;nbsp;pizza, maar ook brood. Te veel zout eten kan zorgen voor een hoge bloeddruk dus je houdt het best bij maximum 6 gram per dag.&lt;\/p&gt;&quot;,&quot;images&quot;:[{&quot;id&quot;:2096,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;type&quot;:&quot;image\/jpeg&quot;,&quot;path&quot;:&quot;medialib\/&quot;,&quot;caption&quot;:&quot;zout&quot;,&quot;fileCaption&quot;:null,&quot;copyright&quot;:null,&quot;dateCreated&quot;:null,&quot;dateUpdated&quot;:null,&quot;originalFilename&quot;:&quot;250.jpg&quot;,&quot;producerId&quot;:null,&quot;assetLink&quot;:&quot;\/\/img.static-rmg.be\/a\/food\/image\/q{quality}\/w{width}\/h{height}\/2096\/zout.jpg&quot;}],&quot;id&quot;:250,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;sortOrder&quot;:249,&quot;name&quot;:&quot;zout&quot;,&quot;seasonInfo&quot;:&quot;000000000000&quot;,&quot;family&quot;:null}},&quot;unit&quot;:{&quot;id&quot;:59,&quot;langCode&quot;:&quot;NL&quot;,&quot;countryCode&quot;:&quot;BE&quot;,&quot;name&quot;:&quot;&quot;,&quot;namePlural&quot;:&quot;&quot;,&quot;scalable&quot;:1},&quot;ingredientName&quot;:&quot;zout&quot;,&quot;unitName&quot;:&quot;&quot;}],&quot;sortOrder&quot;:1}]"
+                                        data-servings-type="{&quot;id&quot;:1,&quot;countryCode&quot;:&quot;BE&quot;,&quot;langCode&quot;:&quot;NL&quot;,&quot;code&quot;:&quot;person&quot;,&quot;singular&quot;:&quot;persoon&quot;,&quot;plural&quot;:&quot;personen&quot;}"
+                                        data-servings="4" data-recipeId="93161"></div>
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+
+                        <div class="recipe-detail__main-bottom">
+                            <div class="clearfix"></div>
+
+
+                            <div data-adshim data-adshim-format="inpage" data-adshim-slot=""
+                                data-adshim-targeting='{"AdType":"INPAGE"}' id="gpt-ad-INPAGE" class="rmgAd js-ad "
+                                data-type="INPAGE" data-device="all">
+                            </div>
+                        </div>
+
+                        <div class="recipe-detail__related-recipes hide--for--print">
+                            <div class="products__title">
+                                <h3>
+                                    Of een ander recept?
+                                </h3>
+                            </div>
+                            <div class="products">
+                                <div class="products__item   ">
+                                    <div class="products__inner">
+                                        <div class="products__photo">
+
+                                            <a
+                                                href="/bekijk-recept/85714/quesadilla-met-hummus-lamsgehakt-en-groene-asperges-1">
+
+
+                                                <img src="//img.static-rmg.be/a/food/image/q75/w480/h360/1095917/quesadilla-met-hummus-lamsgehakt-en-groene-asperges.png"
+                                                    alt="Quesadilla met hummus, lamsgehakt en groene asperges"
+                                                    loading="lazy" width="480" height="360">
+                                            </a>
+
+
+                                        </div>
+
+
+                                        <a
+                                            href="/bekijk-recept/85714/quesadilla-met-hummus-lamsgehakt-en-groene-asperges-1">
+
+                                            <div class="products__text">
+                                                <span class="c-premium-indicator c-teaser-block__premium-indicator"
+                                                    lock="0" aria-hidden="true">
+                                                    <span
+                                                        class="c-icon c-icon--lock c-premium-indicator__icon c-premium-indicator__icon--locked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M20.3,10.5h-1.1V7.1C19.1,3.2,15.9,0,12,0S4.9,3.2,4.9,7.1v3.4H3.8c-1.2,0-2.3,1-2.3,2.3v9c0,1.2,1,2.3,2.3,2.3h16.5 c1.2,0,2.3-1,2.3-2.3v-9C22.5,11.5,21.5,10.5,20.3,10.5z M13.9,18.4c0,1-0.8,1.9-1.9,1.9s-1.9-0.8-1.9-1.9v-2.3c0-1,0.8-1.9,1.9-1.9 s1.9,0.8,1.9,1.9V18.4z M15.4,10.5H8.6V7.1c0-1.9,1.5-3.4,3.4-3.4s3.4,1.5,3.4,3.4V10.5z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                    <span
+                                                        class="c-icon c-icon--lock-open c-premium-indicator__icon c-premium-indicator__icon--unlocked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M17.6,1.3c-3.5,0-6.3,2.9-6.3,6.4v2.9H2c-1.1,0-2,0.9-2,2v8c0,1.1,0.9,2,2,2h14.7c1.1,0,2-0.9,2-2v-8c0-1.1-0.9-2-2-2h-2v-3 c0-1.7,1.3-3,3-3c1.7,0,3,1.3,3,3V11c0,0.6,0.4,1,1,1H23c0.6,0,1-0.4,1-1V7.7C24,4.2,21.1,1.3,17.6,1.3z M11,17.7 c0,0.9-0.7,1.7-1.7,1.7s-1.7-0.7-1.7-1.7v-2c0-0.9,0.7-1.7,1.7-1.7s1.7,0.7,1.7,1.7V17.7z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                </span>
+                                                <p>Quesadilla met hummus, lamsgehakt en groene asperges</p>
+                                                <p class="products__subtitle"></p>
+                                            </div>
+
+                                        </a>
+
+                                        <div class="map__actions">
+
+
+
+                                            <div class="react-folder-content" data-remove-on-unlike=""
+                                                data-content-id="85714" data-content-type="FAVORITE" data-popup-account
+                                                data-tracking-id="button:save-recipe:list"></div>
+
+
+                                        </div>
+
+
+                                    </div>
+                                </div>
+                                <div>
+
+
+                                    <div data-adshim data-adshim-format="native" data-adshim-slot="1"
+                                        data-adshim-targeting='{"AdType":"NATIVE"}' id="gpt-ad-NATIVE-related1"
+                                        class="rmgAd js-ad " data-type="NATIVE" data-device="all">
+                                    </div>
+                                </div>
+                                <div class="products__item   ">
+                                    <div class="products__inner">
+                                        <div class="products__photo">
+
+                                            <a href="/bekijk-recept/88460/mexicaanse-lasagne-met-maiswraps-1">
+
+
+                                                <img src="//img.static-rmg.be/a/food/image/q75/w480/h360/1099973/mexicaanse-lasagne-met-maiswraps.png"
+                                                    alt="Mexicaanse lasagne met maïswraps" loading="lazy" width="480"
+                                                    height="360">
+                                            </a>
+
+
+                                        </div>
+
+
+                                        <a href="/bekijk-recept/88460/mexicaanse-lasagne-met-maiswraps-1">
+
+                                            <div class="products__text">
+                                                <span class="c-premium-indicator c-teaser-block__premium-indicator"
+                                                    lock="0" aria-hidden="true">
+                                                    <span
+                                                        class="c-icon c-icon--lock c-premium-indicator__icon c-premium-indicator__icon--locked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M20.3,10.5h-1.1V7.1C19.1,3.2,15.9,0,12,0S4.9,3.2,4.9,7.1v3.4H3.8c-1.2,0-2.3,1-2.3,2.3v9c0,1.2,1,2.3,2.3,2.3h16.5 c1.2,0,2.3-1,2.3-2.3v-9C22.5,11.5,21.5,10.5,20.3,10.5z M13.9,18.4c0,1-0.8,1.9-1.9,1.9s-1.9-0.8-1.9-1.9v-2.3c0-1,0.8-1.9,1.9-1.9 s1.9,0.8,1.9,1.9V18.4z M15.4,10.5H8.6V7.1c0-1.9,1.5-3.4,3.4-3.4s3.4,1.5,3.4,3.4V10.5z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                    <span
+                                                        class="c-icon c-icon--lock-open c-premium-indicator__icon c-premium-indicator__icon--unlocked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M17.6,1.3c-3.5,0-6.3,2.9-6.3,6.4v2.9H2c-1.1,0-2,0.9-2,2v8c0,1.1,0.9,2,2,2h14.7c1.1,0,2-0.9,2-2v-8c0-1.1-0.9-2-2-2h-2v-3 c0-1.7,1.3-3,3-3c1.7,0,3,1.3,3,3V11c0,0.6,0.4,1,1,1H23c0.6,0,1-0.4,1-1V7.7C24,4.2,21.1,1.3,17.6,1.3z M11,17.7 c0,0.9-0.7,1.7-1.7,1.7s-1.7-0.7-1.7-1.7v-2c0-0.9,0.7-1.7,1.7-1.7s1.7,0.7,1.7,1.7V17.7z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                </span>
+                                                <p>Mexicaanse lasagne met maïswraps</p>
+                                                <p class="products__subtitle"></p>
+                                            </div>
+
+                                        </a>
+
+                                        <div class="map__actions">
+
+
+
+                                            <div class="react-folder-content" data-remove-on-unlike=""
+                                                data-content-id="88460" data-content-type="FAVORITE" data-popup-account
+                                                data-tracking-id="button:save-recipe:list"></div>
+
+
+                                        </div>
+
+
+                                    </div>
+                                </div>
+                                <div class="products__item   ">
+                                    <div class="products__inner">
+                                        <div class="products__photo">
+
+                                            <a
+                                                href="/bekijk-recept/90466/pulled-paddenstoelen-met-guacamole-en-nachos-1">
+
+
+                                                <img src="//img.static-rmg.be/a/food/image/q75/w480/h360/1102219/pulled-paddenstoelen-met-guacamole-en-nacho-s.png"
+                                                    alt="Pulled paddenstoelen met guacamole en nacho’s" loading="lazy"
+                                                    width="480" height="360">
+                                            </a>
+
+
+                                        </div>
+
+
+                                        <a href="/bekijk-recept/90466/pulled-paddenstoelen-met-guacamole-en-nachos-1">
+
+                                            <div class="products__text">
+                                                <span class="c-premium-indicator c-teaser-block__premium-indicator"
+                                                    lock="0" aria-hidden="true">
+                                                    <span
+                                                        class="c-icon c-icon--lock c-premium-indicator__icon c-premium-indicator__icon--locked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M20.3,10.5h-1.1V7.1C19.1,3.2,15.9,0,12,0S4.9,3.2,4.9,7.1v3.4H3.8c-1.2,0-2.3,1-2.3,2.3v9c0,1.2,1,2.3,2.3,2.3h16.5 c1.2,0,2.3-1,2.3-2.3v-9C22.5,11.5,21.5,10.5,20.3,10.5z M13.9,18.4c0,1-0.8,1.9-1.9,1.9s-1.9-0.8-1.9-1.9v-2.3c0-1,0.8-1.9,1.9-1.9 s1.9,0.8,1.9,1.9V18.4z M15.4,10.5H8.6V7.1c0-1.9,1.5-3.4,3.4-3.4s3.4,1.5,3.4,3.4V10.5z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                    <span
+                                                        class="c-icon c-icon--lock-open c-premium-indicator__icon c-premium-indicator__icon--unlocked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M17.6,1.3c-3.5,0-6.3,2.9-6.3,6.4v2.9H2c-1.1,0-2,0.9-2,2v8c0,1.1,0.9,2,2,2h14.7c1.1,0,2-0.9,2-2v-8c0-1.1-0.9-2-2-2h-2v-3 c0-1.7,1.3-3,3-3c1.7,0,3,1.3,3,3V11c0,0.6,0.4,1,1,1H23c0.6,0,1-0.4,1-1V7.7C24,4.2,21.1,1.3,17.6,1.3z M11,17.7 c0,0.9-0.7,1.7-1.7,1.7s-1.7-0.7-1.7-1.7v-2c0-0.9,0.7-1.7,1.7-1.7s1.7,0.7,1.7,1.7V17.7z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                </span>
+                                                <p>Pulled paddenstoelen met guacamole en nacho’s</p>
+                                                <p class="products__subtitle"></p>
+                                            </div>
+
+                                        </a>
+
+                                        <div class="map__actions">
+
+
+
+                                            <div class="react-folder-content" data-remove-on-unlike=""
+                                                data-content-id="90466" data-content-type="FAVORITE" data-popup-account
+                                                data-tracking-id="button:save-recipe:list"></div>
+
+
+                                        </div>
+
+
+                                    </div>
+                                </div>
+                                <div class="products__item  chef-recipe   ">
+                                    <div class="products__inner">
+                                        <div class="products__photo">
+
+                                            <a href="/bekijk-recept/90188/wraps-met-chili-con-carne-1">
+
+
+                                                <img src="//img.static-rmg.be/a/food/image/q75/w480/h360/1101909/wraps-met-chili-con-carne.png"
+                                                    alt="wraps met chili con carne" loading="lazy" width="480"
+                                                    height="360">
+                                            </a>
+
+
+                                            <div
+                                                class="products__photo-details chef-recipe__image  chef-recipe__image--small ">
+
+                                                <a href="/chef/2/ilse-d%27hooge">
+
+                                                    <img src="//img.static-rmg.be/a/food/image/q75/w40/h40/1094683/ilse2.png"
+                                                        loading="lazy" width="40" height="40" />
+                                                    <p>Ilse D&#039;hooge</p>
+                                                </a>
+                                            </div>
+                                        </div>
+
+
+                                        <a href="/bekijk-recept/90188/wraps-met-chili-con-carne-1">
+
+                                            <div class="products__text">
+                                                <span class="c-premium-indicator c-teaser-block__premium-indicator"
+                                                    lock="0" aria-hidden="true">
+                                                    <span
+                                                        class="c-icon c-icon--lock c-premium-indicator__icon c-premium-indicator__icon--locked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M20.3,10.5h-1.1V7.1C19.1,3.2,15.9,0,12,0S4.9,3.2,4.9,7.1v3.4H3.8c-1.2,0-2.3,1-2.3,2.3v9c0,1.2,1,2.3,2.3,2.3h16.5 c1.2,0,2.3-1,2.3-2.3v-9C22.5,11.5,21.5,10.5,20.3,10.5z M13.9,18.4c0,1-0.8,1.9-1.9,1.9s-1.9-0.8-1.9-1.9v-2.3c0-1,0.8-1.9,1.9-1.9 s1.9,0.8,1.9,1.9V18.4z M15.4,10.5H8.6V7.1c0-1.9,1.5-3.4,3.4-3.4s3.4,1.5,3.4,3.4V10.5z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                    <span
+                                                        class="c-icon c-icon--lock-open c-premium-indicator__icon c-premium-indicator__icon--unlocked">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                            viewBox="0 0 24 24">
+                                                            <path
+                                                                d="M17.6,1.3c-3.5,0-6.3,2.9-6.3,6.4v2.9H2c-1.1,0-2,0.9-2,2v8c0,1.1,0.9,2,2,2h14.7c1.1,0,2-0.9,2-2v-8c0-1.1-0.9-2-2-2h-2v-3 c0-1.7,1.3-3,3-3c1.7,0,3,1.3,3,3V11c0,0.6,0.4,1,1,1H23c0.6,0,1-0.4,1-1V7.7C24,4.2,21.1,1.3,17.6,1.3z M11,17.7 c0,0.9-0.7,1.7-1.7,1.7s-1.7-0.7-1.7-1.7v-2c0-0.9,0.7-1.7,1.7-1.7s1.7,0.7,1.7,1.7V17.7z">
+                                                            </path>
+                                                        </svg>
+                                                    </span>
+                                                </span>
+                                                <p>Wraps met chili con carne</p>
+                                                <p class="products__subtitle"></p>
+                                            </div>
+
+                                        </a>
+
+                                        <div class="map__actions">
+
+
+
+                                            <div class="react-folder-content" data-remove-on-unlike=""
+                                                data-content-id="90188" data-content-type="FAVORITE" data-popup-account
+                                                data-tracking-id="button:save-recipe:list"></div>
+
+
+                                        </div>
+
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="rmg_ob_placeholder"></div>
+                            <script>
+                                (function () {
+
+                                    function getCookie(name) {
+                                        const nameEQ = name + "=";
+                                        const ca = document.cookie.split(';');
+                                        for (let i = 0; i < ca.length; i++) {
+                                            let c = ca[i];
+                                            while (c.charAt(0) === ' ') {
+                                                c = c.substring(1, c.length);
+                                            }
+                                            if (c.indexOf(nameEQ) === 0) {
+                                                return c.substring(nameEQ.length, c.length);
+                                            }
+                                        }
+
+                                        return null;
+                                    }
+
+                                    const rmgObPlaceholder = document.querySelector('#rmg_ob_placeholder');
+                                    const rmgSub = getCookie('rmg_sub');
+                                    let showOB = true;
+
+                                    if (!rmgObPlaceholder) {
+                                        return;
+                                    }
+
+                                    if (rmgSub) {
+                                        const parts = rmgSub.split('|');
+                                        if (parts[0]) {
+                                            if (parts[0] === 'true') {
+                                                showOB = false;
+                                            }
+                                        }
+                                    }
+
+                                    if (showOB) {
+                                        const outbrainUrl = "https\u003A\/\/www.libelle\u002Dlekker.be\/bekijk\u002Drecept\/93161\/gevulde\u002Dwraps\u002Dmet\u002Dgehakt\u002Dmais\u002Den\u002Dchampignons";
+                                        const outbrainDiv = document.createElement('div');
+                                        outbrainDiv.className = 'OUTBRAIN';
+                                        outbrainDiv.setAttribute('data-src', outbrainUrl);
+                                        outbrainDiv.setAttribute('data-widget-id', 'AR_2');
+                                        const outbrainScript = document.createElement('script');
+                                        outbrainScript.setAttribute('data-vendor', 'iab:164');
+                                        outbrainScript.type = 'didomi/javascript';
+                                        outbrainScript.async = true;
+                                        outbrainScript.src = '//widgets.outbrain.com/outbrain.js';
+                                        rmgObPlaceholder.appendChild(outbrainDiv);
+                                        rmgObPlaceholder.appendChild(outbrainScript);
+                                    }
+                                })();
+                            </script>
+                        </div>
+
+
+
+                        <div data-adshim data-adshim-format="banner" data-adshim-slot="middle"
+                            data-adshim-targeting='{"AdType":"BANNER_MIDDLE"}' id="gpt-ad-BANNER_MIDDLE"
+                            class="rmgAd js-ad " data-type="BANNER_MIDDLE" data-device="mobile">
+                        </div>
+
+
+                        <div class="recipe-detail__related-articles hide--for--print">
+                        </div>
+
+                    </div>
+                    <div class="right--content hide--for--print">
+                        <div class="recipe-detail__sidebar">
+                            <div id="bc-article-topright"></div>
+
+
+
+                            <div data-adshim data-adshim-format="rect-large" data-adshim-slot="above"
+                                data-adshim-targeting='{"AdType":"RECT_ABOVE"}' id="gpt-ad-RECT_ABOVE-sidebar"
+                                class="rmgAd js-ad " data-type="RECT_ABOVE" data-device="desktop">
+                            </div>
+
+
+                            <div data-adshim data-adshim-format="native" data-adshim-slot="1"
+                                data-adshim-targeting='{"AdType":"NATIVE"}' id="gpt-ad-NATIVE-sidebar"
+                                class="rmgAd js-ad " data-type="NATIVE" data-device="all">
+                            </div>
+                            <div
+                                class="recipe-detail__newsletterbox products__item--newsletterbox newsletterbox__small">
+                                <script>
+                                    function go_to_myAccount() {
+                                        const referer = encodeURIComponent(window.location) + '%3A';
+                                        const my_account = `https://account.mijnmagazines.be/newsletters?site_code=Site-LibelleLekker-NL&newsletter_list=&referrer=${referer}`;
+                                        window.location.href = my_account;
+                                    }
+                                </script>
+
+                                <div class="newletterbox newsletterbox newsletterbox_" id="newsletterbox">
+                                    <div class="newsletterbox__inner">
+
+                                        <h2>Schrijf je in voor de lekkerste nieuwsbrief!</h2>
+                                        <div class="form-inline subscribe">
+                                            <button class="button"
+                                                style="margin-top: 15px; margin-bottom: 15px; width: auto; display: inline-block"
+                                                onclick="go_to_myAccount()">
+                                                Jouw nieuwsbriefkeuze &gt;
+                                            </button>
+                                        </div>
+                                        <div class="legal">
+                                            Uitschrijven is op elk moment mogelijk
+                                            <a href="https://www.roularta.be/nl/privacy-policy" target="_blank">
+                                                Privacybeleid
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="newsletterbox_footer_"></div>
+                            </div>
+
+
+                            <div data-adshim data-adshim-format="rect" data-adshim-slot="middle"
+                                data-adshim-targeting='{"AdType":"RECT_MIDDLE"}' id="gpt-ad-RECT_MIDDLE-sidebar"
+                                class="rmgAd js-ad " data-type="RECT_MIDDLE" data-device="desktop">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- New recipe layout end -->
+            </main>
+        </main>
+
+
+        <div data-adshim data-adshim-format="banner" data-adshim-slot="below"
+            data-adshim-targeting='{"AdType":"BANNER_BELOW"}' id="gpt-ad-BANNER_BELOW" class="rmgAd js-ad "
+            data-type="BANNER_BELOW" data-device="all">
+        </div>
+        <div class="pre-footer pre-footer--nl centered">
+            <div class="pre-footer__row">
+                <div class="pre-footer__item">
+                    <a href="/chefs">
+                        <img src="/build/Site-LibelleLekker-NL/img/footer/chefs.jpg" alt="Libelle Lekker chefs"
+                            loading="lazy" width="152" height="152">
+                        <p>Libelle Lekker chefs <span>De recepten van Ilse D’hooge, Sandra Bekkari en al onze andere
+                                chefs.</span></p>
+                    </a>
+                </div>
+
+                <div class="pre-footer__item">
+                    <a href="/ingredienten">
+                        <img src="/build/Site-LibelleLekker-NL/img/footer/seizoen.jpg" alt="In het seizoen"
+                            loading="lazy" width="152" height="152">
+                        <p>In het seizoen <span>Ontdek hier wat nú het lekkerste is.</span></p>
+                    </a>
+                </div>
+
+                <div class="pre-footer__item">
+                    <a href="/weekmenu/2026-05-02">
+                        <img src="/build/Site-LibelleLekker-NL/img/footer/weekmenu.jpg" alt="Ontdek ons weekmenu"
+                            loading="lazy" width="152" height="152">
+                        <p>Ontdek ons weekmenu <span>Veel honger, weinig inspiratie? Weekmenu to the rescue!</span></p>
+                    </a>
+                </div>
+
+                <div class="pre-footer__item">
+                    <a href="/profiel/mijn-weekmenu" data-popup-account="true" data-popup-type="account"
+                        data-utmcontent="datawall_mijnweekmenufooter">
+                        <img src="/build/Site-LibelleLekker-NL/img/footer/mijn-weekmenu.jpg" alt="Maak zelf je weekmenu"
+                            loading="lazy" width="152" height="152">
+                        <p>Maak zelf je weekmenu <span>Snel jouw favoriete recepten bewaren, mét
+                                boodschappenlijst!</span></p>
+                    </a>
+                </div>
+
+                <div class="pre-footer__item">
+                    <a target="_blank"
+                        href="https://shop.libelle.be/?utm_source=Libelle-lekker.be&utm_medium=Footer&utm_campaign=libelleshop&utm_term=footer&utm_content=footer">
+                        <img src="/build/Site-LibelleLekker-NL/img/footer/shop.jpg" alt="Libelle shop" loading="lazy"
+                            width="152" height="152">
+                        <p>Libelle Shop <span>De allermooiste hebbedingen voor in de keuken en op tafel koop je
+                                hier.</span></p>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="social_footer">
+            Volg ons ook op sociale media:
+            <a target="_blank" href="https://www.facebook.com/libellelekker" aria-label="Facebook Libelle">
+
+                <span class="c-icon c-icon--facebook c-socials__icon" aria-hidden="true" focusable="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                        viewBox="0 0 24 24">
+                        <path d="M9.8,13.1V24h4.5V13.1H18l0.6-4.3h-4.3V6.1c0-1.2,0.4-2.1,2.1-2.1h2.3V0.2C17.6,0.1,16.5,0,15.4,0C12,0,9.8,2,9.8,5.6v3.2H6
+		v4.3H9.8z" />
+                    </svg>
+                </span>
+            </a>
+
+            <a target="_blank" href="https://www.instagram.com/libellelekker/"
+                aria-label="https://www.instagram.com/libellelekker/">
+
+                <span class="c-icon c-icon--instagram c-socials__icon" aria-hidden="true" focusable="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                        viewBox="0 0 24 24">
+                        <path d="M12,2.2c3.2,0,3.6,0,4.8,0.1c3.3,0.1,4.8,1.7,4.9,4.9c0.1,1.3,0.1,1.6,0.1,4.8c0,3.2,0,3.6-0.1,4.8
+		c-0.1,3.2-1.7,4.8-4.9,4.9c-1.3,0.1-1.6,0.1-4.8,0.1c-3.2,0-3.6,0-4.8-0.1c-3.3-0.1-4.8-1.7-4.9-4.9c-0.1-1.3-0.1-1.6-0.1-4.8
+		c0-3.2,0-3.6,0.1-4.8c0.1-3.2,1.7-4.8,4.9-4.9C8.4,2.2,8.8,2.2,12,2.2z M12,0C8.7,0,8.3,0,7.1,0.1c-4.4,0.2-6.8,2.6-7,7
+		C0,8.3,0,8.7,0,12c0,3.3,0,3.7,0.1,4.9c0.2,4.4,2.6,6.8,7,7C8.3,24,8.7,24,12,24c3.3,0,3.7,0,4.9-0.1c4.4-0.2,6.8-2.6,7-7
+		C24,15.7,24,15.3,24,12c0-3.3,0-3.7-0.1-4.9c-0.2-4.4-2.6-6.8-7-7C15.7,0,15.3,0,12,0L12,0z M12,5.8c-3.4,0-6.2,2.8-6.2,6.2
+		c0,3.4,2.8,6.2,6.2,6.2c3.4,0,6.2-2.8,6.2-6.2C18.2,8.6,15.4,5.8,12,5.8z M12,16c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4
+		C16,14.2,14.2,16,12,16z M18.4,4.2c-0.8,0-1.4,0.6-1.4,1.4S17.6,7,18.4,7c0.8,0,1.4-0.6,1.4-1.4S19.2,4.2,18.4,4.2z" />
+                    </svg>
+                </span>
+            </a>
+
+            <a class="c-socials__link" target="_blank" href="https://www.youtube.com/@libelle-lekker"
+                aria-label="YouTube Libelle">
+
+                <span class="c-icon c-icon--youtube c-socials__icon" aria-hidden="true" focusable="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                        viewBox="0 0 24 24">
+                        <path d="M23.5,6.2c-0.3-1-1.1-1.9-2.1-2.1C19.5,3.6,12,3.6,12,3.6s-7.5,0-9.4,0.5c-1,0.3-1.8,1.1-2.1,2.1C0,8.1,0,12,0,12
+	s0,3.9,0.5,5.8c0.3,1,1.1,1.8,2.1,2.1c1.9,0.5,9.4,0.5,9.4,0.5s7.5,0,9.4-0.5c1-0.3,1.8-1.1,2.1-2.1C24,15.9,24,12,24,12
+	S24,8.1,23.5,6.2z M9.5,15.6V8.4l6.3,3.6L9.5,15.6L9.5,15.6z" />
+                    </svg>
+                </span>
+            </a>
+
+            <a class="c-socials__link" target="_blank" href="https://www.pinterest.com/libellelekker"
+                aria-label="Pinterest Libelle">
+
+                <span class="c-icon c-icon--pinterest c-socials__icon" aria-hidden="true" focusable="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                        viewBox="0 0 24 24">
+                        <path d="M12.6,0C7.6,0,2.8,3.3,2.8,8.6c0,3.4,1.9,5.3,3.1,5.3c0.5,0,0.8-1.3,0.8-1.7c0-0.4-1.1-1.4-1.1-3.3c0-3.9,2.9-6.6,6.8-6.6
+	c3.3,0,5.7,1.9,5.7,5.3c0,2.6-1,7.3-4.3,7.3c-1.2,0-2.2-0.9-2.2-2.1c0-1.8,1.3-3.6,1.3-5.5c0-3.2-4.5-2.6-4.5,1.2
+	c0,0.8,0.1,1.7,0.5,2.4c-0.7,2.9-2,7.1-2,10.1c0,0.9,0.1,1.8,0.2,2.7C6.9,24,6.8,24,7.1,23.9c2.4-3.3,2.3-4,3.4-8.3
+	c0.6,1.1,2.1,1.7,3.3,1.7c5.1,0,7.4-5,7.4-9.5C21.2,3.1,17.1,0,12.6,0z" />
+                    </svg>
+                </span>
+            </a>
+        </div>
+        <footer class="footer">
+
+
+            <p>&copy; 2026 - Roularta Media Group</p>
+            <ul class="footer__list">
+                <li class="footer__list_item"><a href="https://www.roularta.com/privacybeleid/">Privacy</a></li>
+                <li class="footer__list_item"><a
+                        href="https://www.roularta.com/disclaimer/disclaimer-belgie/">Gebruiksvoorwaarden</a></li>
+                <li class="footer__list_item"><a href="https://www.roularta.com/cookiebeleid/#cookie-policy">Cookies</a>
+                </li>
+                <li class="footer__list_item"><a href="javascript:Didomi.preferences.show()">Cookies instellingen</a>
+                </li>
+                <li class="footer__list_item"><a href="/contact">Contact</a></li>
+                <li class="footer__list_item"><a
+                        href="https://www.libelle-lekker.be/artikelen/216208/mijn-kookhoekje-het-antwoord-op-al-je-vragen"
+                        target="_blank">FAQ</a></li>
+                <li class="footer__list_item"><a
+                        href="https://www.roularta.com/content/uploads/2025/10/Wedstrijden-magazines-en-gerelateerde-websites-van-Roularta-Media-Group-Roularta.pdf"
+                        target="_blank">Wedstrijdreglement</a></li>
+                <li class="footer__list_item"><a
+                        href="https://www.mijnmagazines.be/abonnement-libellelekker?utm_source=libelle-lekker.be&amp;utm_medium=referral&amp;utm_campaign=footerbutton"
+                        target="_blank">Abonneren</a></li>
+                <li class="footer__list_item"><a
+                        href="https://www.roularta-advertising.be/nl/libelle-lekkerbe/">Adverteren</a></li>
+                <li class="footer__list_item"><a
+                        href="https://www.libelle-lekker.be/artikelen/177496/onze-zustersites">Onze zusterwebsites</a>
+                </li>
+            </ul>
+
+
+            <div class="footer__item_right">
+                <a href="https://www.cim.be/nl/internet/disclaimer-cim-internet" target="_blank">
+                    <img src="/build/Site-LibelleLekker-NL/img/footer/logo_cim.png" width="100" height="33">
+                </a>
+            </div>
+
+        </footer>
+
+
+
+        <div data-adshim data-adshim-format="floorad" data-adshim-slot="" data-adshim-targeting='{"AdType":"FLOORAD"}'
+            id="gpt-ad-FLOORAD" class="rmgAd js-ad " data-type="FLOORAD" data-device="desktop">
+        </div>
+    </div>
+    <div id="react-popup-holder"></div>
+    <div id="react-folder-content-popup-holder"></div>
+    <div id="chatbot_widget" class="closed teaser">
+        <div class="chatbot_modal">
+            <button class="chatbot_close"><i class="fa fa-times"></i></button>
+            <div>
+                <p><strong class="chatbot_hello">Welkom bij Libelle Lekker!</strong>
+                    <br>Stel je kookvraag aan Maia...
+                </p>
+            </div>
+            <form action="/maia" method="get">
+                <fieldset>
+                    <input type="text" name="q">
+                    <button><i class="fa fa-arrow-right"></i></button>
+                </fieldset>
+                <a href="/maia">Meer info</a>
+            </form>
+        </div>
+
+        <button id="chatbot_cta">
+            <img src="/build/Site-LibelleLekker-NL/img/maia.svg" alt="Chatbot">
+        </button>
+    </div>
+
+    <script src="/build/Site-LibelleLekker-NL/runtime.d4bc3819.js" defer></script>
+    <script src="/build/Site-LibelleLekker-NL/873.81696cd2.js" defer></script>
+    <script src="/build/Site-LibelleLekker-NL/app.99b3b327.js" defer></script>
+    <div class="header-mobile-nav">
+        <button class="toggle-btn-menu"><i class="fa fa-close"></i></button>
+
+        <p class="header-bar__text--mobile">BEZOEK ONZE ANDERE WEBSITES</p>
+        <div class="flex">
+            <a class="header-bar__link main-site" href="https://www.libelle.be/"><svg width="47" height="19"
+                    viewBox="0 0 47 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M46.4576 17.5491C46.0367 17.7303 45.0184 18.028 43.4978 18.028C40.1171 18.028 38.0806 15.6726 38.0806 11.3372C38.0806 7.23466 39.7641 5.43578 42.7239 5.43578C46.4983 5.43578 46.8106 9.18884 46.8106 10.936H40.2665C40.2665 13.5372 41.4205 16.255 44.5297 16.255C45.4529 16.255 46.0774 15.9961 46.4576 15.815V17.5491ZM44.5975 9.35708C44.5975 8.76177 44.2174 7.28643 42.5067 7.28643C40.8503 7.28643 40.2665 8.65824 40.2665 9.35708H44.5975ZM30.4232 17.5491C30.0023 17.7303 28.984 18.028 27.4634 18.028C24.0828 18.028 22.0462 15.6726 22.0462 11.3372C22.0462 7.23466 23.7297 5.43578 26.6895 5.43578C30.4639 5.43578 30.7762 9.18884 30.7762 10.936H24.2321C24.2321 13.5372 25.3861 16.255 28.4953 16.255C29.4185 16.255 30.043 15.9961 30.4232 15.815V17.5491ZM28.5631 9.35708C28.5631 8.76177 28.183 7.28643 26.4723 7.28643C24.8159 7.28643 24.2321 8.65824 24.2321 9.35708H28.5631ZM35.0258 0.414429H37.1438V17.7821H35.0258V0.414429ZM31.4822 0.414429H33.6002V17.7821H31.4822V0.414429ZM17.6608 5.61696C15.923 5.61696 15.2849 6.69111 14.8776 7.53232H14.8368V0.414429H12.6102V12.8772C12.6102 18.0668 15.923 18.0927 17.43 18.0927C19.9825 18.0927 21.5982 15.6467 21.5982 12.1007C21.6117 8.96884 20.8514 5.61696 17.6608 5.61696ZM16.982 16.2808C15.0676 16.2808 14.8368 14.262 14.8368 12.1395V11.9583C14.8368 9.71945 15.5157 7.37702 17.1721 7.37702C18.7742 7.37702 19.1543 9.93946 19.1543 11.7254C19.1543 13.7055 18.9235 16.2808 16.982 16.2808ZM11.3476 17.7821H9.22955V5.70755H11.3476V17.7821ZM10.2886 4.14161C11.0217 4.14161 11.6191 3.57218 11.6191 2.87334C11.6191 2.17449 11.0217 1.60506 10.2886 1.60506C9.5554 1.60506 8.95801 2.17449 8.95801 2.87334C8.95801 3.57218 9.5554 4.14161 10.2886 4.14161ZM6.93505 16.2032C3.85308 16.2032 2.73976 13.589 2.71261 11.0136V0.414429H0.594604V11.3889C0.608181 14.0161 1.35491 15.9055 2.71261 16.9797C3.58154 17.6656 4.69485 18.028 6.01181 18.028C7.53243 18.028 8.3199 17.795 8.74078 17.6138V15.815C8.36063 15.9961 7.65463 16.2032 6.93505 16.2032Z"
+                        fill="#242424" />
+                </svg>
+            </a>
+            <a class="header-bar__link mama" href="https://mama.libelle.be/"><svg width="48" height="48"
+                    viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M41.1996 29.3246C42.5275 29.3246 43.221 30.2425 43.221 31.2453C43.221 32.117 42.4514 33.0118 41.1996 33.0118C40.0832 33.0118 39.1867 32.333 39.1867 31.1759C39.1867 30.0188 40.0832 29.3246 41.1996 29.3246ZM43.2295 28.4915C42.8235 27.8744 41.927 27.535 40.9713 27.535C38.7131 27.5041 36.9708 28.8618 36.9708 31.1759C36.9708 33.4747 38.6285 34.8246 40.9121 34.8169C41.6563 34.8015 42.7558 34.5238 43.2633 33.7909L43.3901 34.6626H45.403V27.6892H43.314L43.2295 28.4915ZM31.4311 34.6549V30.9214C31.4311 30.1345 31.9555 29.4403 32.8351 29.4403C33.7316 29.4403 33.9937 30.0188 33.9937 30.8905V34.6549H36.235V30.8442C36.235 28.2524 34.7803 27.5195 33.1903 27.5195C32.0654 27.5195 31.3381 27.8898 30.653 28.8309C30.154 27.8127 29.2575 27.535 28.4286 27.535C27.7774 27.535 26.8978 27.7201 26.4157 28.4761L26.2635 27.6892H24.3182V34.6549H26.5426V30.9291C26.5426 30.1423 27.0416 29.394 27.9212 29.394C28.8346 29.394 29.2321 30.0034 29.2321 30.9137V34.6472H31.4311V34.6549ZM19.0153 29.3246C20.3432 29.3246 21.0367 30.2425 21.0367 31.2453C21.0367 32.117 20.2671 33.0118 19.0153 33.0118C17.8989 33.0118 17.0024 32.333 17.0024 31.1759C17.0024 30.0188 17.8989 29.3246 19.0153 29.3246ZM21.0367 28.4915C20.6307 27.8744 19.7342 27.535 18.7785 27.535C16.5203 27.5041 14.7781 28.8618 14.7781 31.1682C14.7781 33.467 16.4358 34.8169 18.7193 34.8092C19.4636 34.7937 20.5631 34.516 21.0705 33.7832L21.1974 34.6549H23.2103V27.6892H21.1213L21.0367 28.4915ZM9.23833 34.6549V30.9214C9.23833 30.1345 9.76271 29.4403 10.6423 29.4403C11.5388 29.4403 11.801 30.0188 11.801 30.8905V34.6549H14.0423V30.8442C14.0423 28.2524 12.5875 27.5195 10.9975 27.5195C9.87265 27.5195 9.1453 27.8898 8.46023 28.8309C7.96124 27.8127 7.06473 27.535 6.23588 27.535C5.58465 27.535 4.70506 27.7201 4.22298 28.4761L4.07074 27.6892H2.12549V34.6549H4.34984V30.9291C4.34984 30.1423 4.84884 29.394 5.72843 29.394C6.64185 29.394 7.03936 30.0034 7.03936 30.9137V34.6472H9.23833V34.6549Z"
+                        fill="#242424" />
+                    <path
+                        d="M15.2568 15.9872H13.7155V25.209H15.2568V15.9872ZM11.3521 25.3841C12.4677 25.3841 13.0402 25.209 13.3485 25.0631V23.6915C13.0696 23.8374 12.5558 23.9979 12.0273 23.9979C9.78134 23.9979 8.95929 21.9989 8.94461 20.029V11.9453H7.40326V20.3209C7.40326 22.3199 7.96108 23.7645 8.94461 24.5816C9.59051 25.1069 10.3979 25.3841 11.3521 25.3841ZM15.4623 13.813C15.4623 13.2731 15.0219 12.85 14.4935 12.85C13.9503 12.85 13.5246 13.2877 13.5246 13.813C13.5246 14.3383 13.965 14.7761 14.4935 14.7761C15.0219 14.7907 15.4623 14.3529 15.4623 13.813ZM20.9671 20.5835C20.9671 22.0865 20.791 24.0563 19.3818 24.0563C17.9725 24.0563 17.811 22.5242 17.811 20.9045V20.7586C17.811 19.0514 18.3102 17.2712 19.5139 17.2712C20.7029 17.2566 20.9671 19.2119 20.9671 20.5835ZM22.7581 20.8608C22.7581 18.4823 22.2002 15.9142 19.8809 15.9142C18.6184 15.9142 18.134 16.7313 17.8551 17.3734H17.8257V11.9453H16.1963V21.459C16.1963 25.4279 18.6184 25.4425 19.7194 25.4425C21.5837 25.4279 22.7581 23.5602 22.7581 20.8608ZM24.6811 18.7742C24.6811 18.2489 25.1068 17.1983 26.3252 17.1983C27.5729 17.1983 27.8519 18.3218 27.8519 18.7742H24.6811ZM24.6811 19.9707H29.4666C29.4666 18.6428 29.2464 15.7829 26.4867 15.7829C24.3288 15.7829 23.0957 17.1545 23.0957 20.2771C23.0957 23.5894 24.5783 25.3841 27.0445 25.3841C28.1601 25.3841 28.9088 25.1653 29.217 25.0194V23.7061C28.9381 23.852 28.4831 24.0417 27.8078 24.0417C25.5178 24.0271 24.6811 21.9551 24.6811 19.9707ZM29.9804 25.1945H31.5217V11.9453H29.9804V25.1945ZM32.5787 25.1945H34.12V11.9453H32.5787V25.1945ZM39.5661 18.7742H36.3953C36.3953 18.2489 36.821 17.1983 38.0394 17.1983C39.2872 17.1983 39.5661 18.3072 39.5661 18.7742ZM41.1809 19.9707C41.1809 18.6428 40.9607 15.7829 38.2009 15.7829C36.043 15.7829 34.8099 17.1545 34.8099 20.2771C34.8099 23.5894 36.2926 25.3841 38.7587 25.3841C39.8744 25.3841 40.623 25.1653 40.9313 25.0194V23.7061C40.6524 23.852 40.1973 24.0417 39.5221 24.0417C37.2468 24.0417 36.41 21.9551 36.41 19.9853H41.1809V19.9707Z"
+                        fill="#918F90" />
+                </svg>
+            </a>
+        </div>
+
+
+
+
+        <ul class="header__nav__menu">
+
+            <li class="">
+                <a href="/zoeken/recepten" class="mm-searchlink ">
+                    <span class="text">Recepten</span>
+                </a>
+
+
+            </li>
+
+            <li class="header__nav__menu--has-sub">
+                <a href="javascript:void(0);" class="weekmenu ">
+                    <span class="text">Weekmenu</span>
+                </a>
+
+
+                <div class="header__nav__menu--dropdown">
+                    <div>
+                        <a href="/weekmenu/2026-05-02" class=" ">
+                            <span class="text">Ontdek ons weekmenu</span>
+                        </a>
+
+                        <a href="/profiel/mijn-weekmenu" class=" " data-popup-account data-popup-type="account"
+                            data-utmcontent="datawall_mijnweekmenuknop">
+                            <span class="text">Maak zelf je weekmenu</span>
+                        </a>
+
+                    </div>
+                </div>
+            </li>
+
+            <li class="">
+                <a href="/maia" class=" ">
+                    <span class="text">Chat met Maia</span>
+                </a>
+
+
+            </li>
+
+            <li class="header__nav__menu--has-sub">
+                <a href="javascript:void(0);" class="editor ">
+                    <span class="text">Inspiratie</span>
+                </a>
+
+
+                <div class="header__nav__menu--dropdown">
+                    <div>
+                        <a href="/inspiratie" class=" ">
+                            <span class="text">Artikels</span>
+                        </a>
+
+                        <a href="/zoeken/recepten?q=&amp;has_video%5B%5D=true" class=" ">
+                            <span class="text">Video</span>
+                        </a>
+
+                        <a href="/chefs" class=" ">
+                            <span class="text">Chefs</span>
+                        </a>
+
+                    </div>
+                </div>
+            </li>
+
+            <li class="">
+                <a href="/profiel/mijn-mappen" class=" " data-popup-account data-utmcontent="datawall_mijnreceptenknop">
+                    <span class="text">Mijn bewaarde recepten</span>
+                </a>
+
+
+            </li>
+
+
+
+        </ul>
+    </div>
+
+</body>
+
+</html>
