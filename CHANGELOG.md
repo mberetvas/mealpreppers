@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Unit tests for `filterRecipes` and `emptyStateType` utility functions.
 
 ### Fixed
+- Recipe URL import: preview fetch now uses **browser-like headers** (Chromium-style `User-Agent`, `Accept-Language`, `Sec-Fetch-*`) so publishers that bot-filter minimal clients are more likely to return public recipe HTML.
+- Libelle / Roularta: when the server follows SSO and returns a **login wall** instead of recipe markup, the preview API responds with **422** and a clear message instead of importing an empty “Inloggen” draft and only warning about missing steps.
+- JSON-LD import: `recipeInstructions` shaped as schema.org **`HowTo` with `step`** (not only `itemListElement` / `steps`) now yields preparation steps.
 - Dagelijkse Kost import: recipe **title** is taken from `og:title` (or the page title) instead of the JSON-LD `name` field, which is a long SEO blurb; descriptions still come from structured data.
 - Dagelijkse Kost URL import: the site only lists two preparation steps in JSON-LD; the preview API now loads full steps from the public Firestore `recipes/{id}` document when a storage URL in the page exposes the id (falls back to JSON-LD and warns if the extra fetch does not return more steps).
 - Mobile bottom nav: the full-width `fixed` bar no longer intercepts touches outside the tab and FAB controls (`pointer-events-none` on the bar, `auto` on links), so taps on recipe content behind the bar area (and gaps) reach the page.

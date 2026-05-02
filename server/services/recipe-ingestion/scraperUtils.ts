@@ -209,8 +209,8 @@ function extractInstructionTexts(value: unknown): string[] {
   // Prioritise itemListElement/steps so that HowToSection containers (which VRT
   // uses for multi-component recipes and may include a text field as the section
   // heading) recurse into their child steps instead of returning the heading.
-  if (value.itemListElement != null || value.steps != null) {
-    return extractInstructionTexts(value.itemListElement ?? value.steps)
+  if (value.itemListElement != null || value.steps != null || value.step != null) {
+    return extractInstructionTexts(value.itemListElement ?? value.steps ?? value.step)
   }
 
   if (typeof value.text === 'string') {
