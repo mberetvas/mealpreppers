@@ -1,7 +1,9 @@
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { DEFAULT_RECIPE_CATEGORIES, DEFAULT_RECIPE_TAGS } from '../../../services/recipe-catalog/recipeDefaults'
 
 /**
- * Returns distinct categories and tags across all recipes for use in selection dropdowns.
+ * Returns distinct categories and tags for use in selection dropdowns.
+ * Predefined defaults are merged with any values already stored in the database.
  */
 export default defineEventHandler(async () => {
   const supabase = getSupabaseServerClient()
@@ -14,8 +16,8 @@ export default defineEventHandler(async () => {
     throw createError({ statusCode: 500, statusMessage: error.message ?? 'Could not load recipe options.' })
   }
 
-  const categoriesSet = new Set<string>()
-  const tagsSet = new Set<string>()
+  const categoriesSet = new Set<string>(DEFAULT_RECIPE_CATEGORIES)
+  const tagsSet = new Set<string>(DEFAULT_RECIPE_TAGS)
 
   for (const recipe of recipes ?? []) {
     for (const cat of (recipe as { categories: string[], tags: string[] }).categories) {
