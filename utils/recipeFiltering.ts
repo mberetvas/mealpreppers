@@ -1,0 +1,59 @@
+import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
+
+export interface RecipeFilterOptions {
+  query: string
+  category: string
+  tag: string
+  sortBy: 'updatedAt' | 'title'
+}
+
+/**
+ * Filters and sorts recipes based on search query, category, tag, and sort preference.
+ * Pure function — easy to test without Vue reactivity.
+ */
+export function filterRecipes(recipes: RecipeCatalogItem[], options: RecipeFilterOptions): RecipeCatalogItem[] {
+  const { query, category, tag, sortBy } = options
+  const normalizedQuery = query.trim().toLowerCase()
+
+  let results = recipes
+
+  if (normalizedQuery) {
+    results = results.filter((recipe) => {
+      const searchableText = [
+        recipe.title,
+        recipe.description,
+        recipe.difficulty,
+        ...recipe.categories,
+        ...recipe.tags,
+        ...recipe.ingredients.map(ingredient => ingredient.rawText),
+      ].filter(Boolean).join(' ').toLowerCase()
+
+      return searchableText.includes(normalizedQuery)
+    })
+  }
+
+  if (category) {
+    results = results.filter(r => r.categories.includes(category))
+  }
+
+  if (tag) {
+    results = results.filter(r => r.tags.includes(tag))
+  }
+
+  if (sortBy === 'title') {
+    results = [...results].sort((a, b) => a.title.localeCompare(b.title))
+  }
+  else {
+    results = [...results].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  }
+
+  return results
+}
+
+/**
+ * Returns the appropriate empty-state message type.
+ */
+export function emptyStateType(totalCount: number, hasActiveFilters: boolean): 'empty-library' | 'no-matches' {
+  if (totalCount === 0) return 'empty-library'
+  return hasActiveFilters ? 'no-matches' : 'empty-library'
+}

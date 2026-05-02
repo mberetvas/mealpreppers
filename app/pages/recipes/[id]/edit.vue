@@ -8,6 +8,7 @@ interface IngredientFormRow {
   name: string
   quantity: string
   unit: string
+  showDetails: boolean
 }
 
 interface StepFormRow {
@@ -78,6 +79,7 @@ function populateForm(recipe: RecipeCatalogItem): void {
         name: ing.name,
         quantity: ing.quantity !== undefined ? String(ing.quantity) : '',
         unit: ing.unit ?? '',
+        showDetails: !!(ing.quantity || ing.unit || (ing.name && ing.name !== ing.rawText)),
       }))
     : [blankIngredient()]
   form.steps = recipe.steps.length > 0
@@ -166,7 +168,7 @@ function normalizedIngredients() {
 }
 
 function blankIngredient(): IngredientFormRow {
-  return { rawText: '', name: '', quantity: '', unit: '' }
+  return { rawText: '', name: '', quantity: '', unit: '', showDetails: false }
 }
 
 function blankStep(): StepFormRow {
@@ -323,7 +325,7 @@ useSeoMeta({
                 <input
                   v-model="form.title"
                   type="text"
-                  class="min-h-14 rounded-2xl bg-white px-4 text-base font-medium text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+                  class="design-input"
                 >
               </label>
 
@@ -332,7 +334,7 @@ useSeoMeta({
                 <textarea
                   v-model="form.description"
                   rows="4"
-                  class="rounded-2xl bg-white px-4 py-3 text-base text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+                  class="design-textarea"
                 />
               </label>
 
@@ -341,7 +343,7 @@ useSeoMeta({
                 <input
                   v-model="form.imageUrl"
                   type="url"
-                  class="min-h-14 rounded-2xl bg-white px-4 text-base text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+                  class="design-input"
                 >
               </label>
 
@@ -392,27 +394,44 @@ useSeoMeta({
               </button>
             </div>
 
+            <p class="mb-4 text-xs leading-relaxed text-[#526458]">
+              Type ingredients as you'd write them on a shopping list. Expand a row to split quantity, unit, and name for structured data.
+            </p>
+
             <div class="grid gap-4">
-              <div v-for="(ingredient, index) in form.ingredients" :key="index" class="grid min-w-0 gap-3 rounded-3xl bg-white/80 p-4 shadow-inner shadow-[#0f5238]/5 lg:grid-cols-[minmax(0,2fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1fr)_auto] lg:items-end">
-                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Name
-                  <input v-model="ingredient.name" type="text" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Qty
-                  <input v-model="ingredient.quantity" type="text" inputmode="decimal" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Unit
-                  <input v-model="ingredient.unit" type="text" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Raw text
-                  <input v-model="ingredient.rawText" type="text" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <button type="button" class="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove ingredient" @click="removeIngredient(index)">
-                  <span class="material-symbols-outlined text-[21px]">delete</span>
-                </button>
+              <div v-for="(ingredient, index) in form.ingredients" :key="index" class="grid min-w-0 gap-3 rounded-3xl bg-white/80 p-4 shadow-inner shadow-[#0f5238]/5">
+                <div class="flex min-w-0 items-end gap-3">
+                  <label class="grid min-w-0 flex-1 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                    As on your list
+                    <input v-model="ingredient.rawText" type="text" placeholder="e.g. 2 tbsp olive oil" class="design-input-sm min-w-0 normal-case tracking-normal">
+                  </label>
+                  <button
+                    type="button"
+                    class="mb-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#526458] transition hover:bg-[#f0e4d2]"
+                    :aria-label="ingredient.showDetails ? 'Collapse details' : 'Split quantity'"
+                    @click="ingredient.showDetails = !ingredient.showDetails"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">{{ ingredient.showDetails ? 'unfold_less' : 'unfold_more' }}</span>
+                  </button>
+                  <button type="button" class="mb-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove ingredient" @click="removeIngredient(index)">
+                    <span class="material-symbols-outlined text-[19px]">delete</span>
+                  </button>
+                </div>
+
+                <div v-if="ingredient.showDetails" class="grid min-w-0 gap-3 pt-1 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,2fr)]">
+                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                    Qty
+                    <input v-model="ingredient.quantity" type="text" inputmode="decimal" class="design-input-sm min-w-0 normal-case tracking-normal">
+                  </label>
+                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                    Unit
+                    <input v-model="ingredient.unit" type="text" class="design-input-sm min-w-0 normal-case tracking-normal">
+                  </label>
+                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                    Name
+                    <input v-model="ingredient.name" type="text" class="design-input-sm min-w-0 normal-case tracking-normal">
+                  </label>
+                </div>
               </div>
             </div>
           </section>
@@ -432,7 +451,7 @@ useSeoMeta({
                 <div class="flex size-10 items-center justify-center rounded-full bg-[#0f5238] font-bold text-white">
                   {{ index + 1 }}
                 </div>
-                <textarea v-model="step.text" rows="3" class="rounded-2xl bg-white px-4 py-3 text-sm text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45" />
+                <textarea v-model="step.text" rows="3" class="design-textarea" />
                 <button type="button" class="inline-flex size-10 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove step" @click="removeStep(index)">
                   <span class="material-symbols-outlined text-[21px]">delete</span>
                 </button>
@@ -451,7 +470,20 @@ useSeoMeta({
                 </label>
                 <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
                   Difficulty
-                  <input v-model="form.difficulty" type="text" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                  <select v-model="form.difficulty" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                    <option value="">
+                      —
+                    </option>
+                    <option value="Easy">
+                      Easy
+                    </option>
+                    <option value="Medium">
+                      Medium
+                    </option>
+                    <option value="Hard">
+                      Hard
+                    </option>
+                  </select>
                 </label>
               </div>
               <div class="grid min-w-0 grid-cols-3 gap-4">

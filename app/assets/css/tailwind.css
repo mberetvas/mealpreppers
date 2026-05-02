@@ -22,6 +22,44 @@
   }
 }
 
+@layer components {
+  /* DESIGN.md-aligned input: surface_container_lowest bg, bottom border only */
+  .design-input {
+    @apply min-h-14 w-full bg-surface-container-lowest px-4 text-base font-medium text-on-surface outline-none
+      border-b border-outline-variant/40 rounded-none
+      transition-[border-color] duration-200
+      focus:border-b-2 focus:border-primary focus:pb-[calc(theme(spacing.[0.5])-1px)];
+  }
+
+  .design-input-sm {
+    @apply min-h-11 w-full bg-surface-container-lowest px-3 text-sm font-medium text-on-surface outline-none
+      border-b border-outline-variant/40 rounded-none
+      transition-[border-color] duration-200
+      focus:border-b-2 focus:border-primary focus:pb-[calc(theme(spacing.[0.5])-1px)];
+  }
+
+  .design-textarea {
+    @apply w-full bg-surface-container-lowest px-4 py-3 text-base text-on-surface outline-none
+      border-b border-outline-variant/40 rounded-none
+      transition-[border-color] duration-200
+      focus:border-b-2 focus:border-primary;
+  }
+
+  .design-select {
+    @apply min-h-14 w-full appearance-none bg-surface-container-lowest px-4 text-base font-medium text-on-surface outline-none
+      border-b border-outline-variant/40 rounded-none
+      transition-[border-color] duration-200
+      focus:border-b-2 focus:border-primary focus:pb-[calc(theme(spacing.[0.5])-1px)];
+  }
+
+  .design-select-sm {
+    @apply min-h-11 w-full appearance-none bg-surface-container-lowest px-3 text-sm font-medium text-on-surface outline-none
+      border-b border-outline-variant/40 rounded-none
+      transition-[border-color] duration-200
+      focus:border-b-2 focus:border-primary focus:pb-[calc(theme(spacing.[0.5])-1px)];
+  }
+}
+
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
