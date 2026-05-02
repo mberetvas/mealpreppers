@@ -326,8 +326,8 @@ function toErrorMessage(error: unknown, fallback: string): string {
         </p>
       </div>
 
-      <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <main class="grid gap-8">
+      <div v-if="entryMode === 'manual'" class="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+        <main class="grid min-w-0 gap-8">
           <section class="rounded-[28px] bg-[#fffaf0] p-5 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-7">
             <div class="grid gap-5">
               <label class="grid gap-3 text-sm font-semibold text-[#31463a]">
@@ -370,24 +370,24 @@ function toErrorMessage(error: unknown, fallback: string): string {
             </div>
 
             <div class="grid gap-4">
-              <div v-for="(ingredient, index) in form.ingredients" :key="index" class="grid gap-3 rounded-3xl bg-white/80 p-4 shadow-inner shadow-[#0f5238]/5 lg:grid-cols-[1.4fr_0.7fr_0.7fr_1fr_auto] lg:items-end">
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Raw
-                  <input v-model="ingredient.rawText" type="text" class="min-h-11 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Qty
-                  <input v-model="ingredient.quantity" type="text" inputmode="decimal" class="min-h-11 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
-                  Unit
-                  <input v-model="ingredient.unit" type="text" class="min-h-11 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
-                </label>
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+              <div v-for="(ingredient, index) in form.ingredients" :key="index" class="grid min-w-0 gap-3 rounded-3xl bg-white/80 p-4 shadow-inner shadow-[#0f5238]/5 lg:grid-cols-[minmax(0,2fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,1fr)_auto] lg:items-end">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
                   Name
-                  <input v-model="ingredient.name" type="text" class="min-h-11 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
+                  <input v-model="ingredient.name" type="text" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
                 </label>
-                <button type="button" class="inline-flex size-11 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove ingredient" @click="removeIngredient(index)">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  Qty
+                  <input v-model="ingredient.quantity" type="text" inputmode="decimal" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
+                </label>
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  Unit
+                  <input v-model="ingredient.unit" type="text" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
+                </label>
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  Raw text
+                  <input v-model="ingredient.rawText" type="text" class="min-h-11 w-full min-w-0 rounded-xl bg-white px-3 text-sm font-medium normal-case tracking-normal text-[#1e261f] outline-none ring-1 ring-[#0f5238]/10 focus:ring-2 focus:ring-[#0f5238]/45">
+                </label>
+                <button type="button" class="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove ingredient" @click="removeIngredient(index)">
                   <span class="material-symbols-outlined text-[21px]">delete</span>
                 </button>
               </div>
@@ -418,36 +418,40 @@ function toErrorMessage(error: unknown, fallback: string): string {
           </section>
         </main>
 
-        <aside class="grid content-start gap-6">
-          <section class="rounded-[28px] bg-[#123628] p-5 text-white shadow-[0_22px_70px_rgba(15,82,56,0.20)] sm:p-6">
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
-                Servings
-                <input v-model="form.servings" type="number" min="1" class="min-h-12 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
-              </label>
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
-                Difficulty
-                <input v-model="form.difficulty" type="text" class="min-h-12 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
-              </label>
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
-                Prep
-                <input v-model="form.prepTimeMinutes" type="number" min="0" class="min-h-12 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
-              </label>
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
-                Cook
-                <input v-model="form.cookTimeMinutes" type="number" min="0" class="min-h-12 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
-              </label>
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
-                Total
-                <input v-model="form.totalTimeMinutes" type="number" min="0" class="min-h-12 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
-              </label>
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
+        <aside class="grid min-w-0 content-start gap-6">
+          <section class="min-w-0 rounded-[28px] bg-[#123628] p-5 text-white shadow-[0_22px_70px_rgba(15,82,56,0.20)] sm:p-6">
+            <div class="grid min-w-0 gap-4">
+              <div class="grid min-w-0 grid-cols-2 gap-4">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                  Servings
+                  <input v-model="form.servings" type="number" min="1" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                </label>
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                  Difficulty
+                  <input v-model="form.difficulty" type="text" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                </label>
+              </div>
+              <div class="grid min-w-0 grid-cols-3 gap-4">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                  Prep
+                  <input v-model="form.prepTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                </label>
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                  Cook
+                  <input v-model="form.cookTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                </label>
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                  Total
+                  <input v-model="form.totalTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                </label>
+              </div>
+              <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
                 Categories
-                <textarea v-model="form.categoriesText" rows="3" class="rounded-2xl bg-white/95 px-4 py-3 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]" />
+                <textarea v-model="form.categoriesText" rows="3" class="w-full min-w-0 rounded-2xl bg-white/95 px-4 py-3 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]" />
               </label>
-              <label class="grid gap-2 text-sm font-semibold text-[#d8e4db]">
+              <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
                 Tags
-                <textarea v-model="form.tagsText" rows="3" class="rounded-2xl bg-white/95 px-4 py-3 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]" />
+                <textarea v-model="form.tagsText" rows="3" class="w-full min-w-0 rounded-2xl bg-white/95 px-4 py-3 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]" />
               </label>
             </div>
           </section>
