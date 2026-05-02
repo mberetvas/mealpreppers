@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { onBeforeUnmount } from 'vue'
+import { validateRecipeImageFile } from '~/utils/recipeImageValidation'
+
 definePageMeta({
   layout: 'fullwidth',
 })
@@ -77,6 +80,12 @@ const form = reactive({
   steps: [blankStep()],
 })
 
+const localPreviewUrl = ref<string | null>(null)
+const isUploadingImage = ref(false)
+const recipeImageInputRef = ref<HTMLInputElement | null>(null)
+
+const imagePreviewSource = computed(() => localPreviewUrl.value || form.imageUrl.trim())
+
 const canSave = computed(() => form.title.trim().length > 0 && normalizedIngredients().length > 0 && !isSaving.value)
 
 async function importRecipe(): Promise<void> {
@@ -129,6 +138,11 @@ async function saveRecipe(): Promise<void> {
 }
 
 function applyPreviewDraft(draft: PreviewDraft): void {
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
+  }
+
   form.title = draft.title
   form.description = draft.description ?? ''
   form.imageUrl = draft.imageUrl ?? ''
@@ -258,6 +272,88 @@ function toErrorMessage(error: unknown, fallback: string): string {
 
   return fallback
 }
+
+function triggerRecipeImagePicker(): void {
+  recipeImageInputRef.value?.click()
+}
+
+function clearRecipeImage(): void {
+  form.imageUrl = ''
+
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
+  }
+
+  if (recipeImageInputRef.value) {
+    recipeImageInputRef.value.value = ''
+  }
+}
+
+async function onRecipeImageSelected(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  errorMessage.value = ''
+
+  const validated = validateRecipeImageFile(file.type || 'application/octet-stream', file.size)
+
+  if (!validated.ok) {
+    errorMessage.value = validated.statusMessage
+    input.value = ''
+    return
+  }
+
+  const previousUrl = form.imageUrl.trim()
+
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
+  }
+
+  localPreviewUrl.value = URL.createObjectURL(file)
+  isUploadingImage.value = true
+
+  try {
+    const body = new FormData()
+    body.append('file', file)
+
+    const result = await $fetch<{ url: string }>('/api/v1/recipes/upload-image', {
+      method: 'POST',
+      body,
+    })
+
+    form.imageUrl = result.url
+
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value)
+      localPreviewUrl.value = null
+    }
+  }
+  catch (error) {
+    errorMessage.value = toErrorMessage(error, 'Image could not be uploaded.')
+    form.imageUrl = previousUrl
+
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value)
+      localPreviewUrl.value = null
+    }
+  }
+  finally {
+    isUploadingImage.value = false
+    input.value = ''
+  }
+}
+
+onBeforeUnmount(() => {
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+  }
+})
 </script>
 
 <template>
@@ -356,6 +452,41 @@ function toErrorMessage(error: unknown, fallback: string): string {
                   class="min-h-14 rounded-2xl bg-white px-4 text-base text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
                 >
               </label>
+
+              <div class="grid gap-3 rounded-2xl bg-white/60 p-4 ring-1 ring-[#0f5238]/10">
+                <p class="text-sm font-semibold text-[#31463a]">
+                  Or upload a photo
+                </p>
+                <p class="text-xs leading-relaxed text-[#526458]">
+                  JPEG, PNG, WebP, or GIF, up to 5MB. Saves to your library and fills the image URL.
+                </p>
+                <input
+                  ref="recipeImageInputRef"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  class="sr-only"
+                  @change="onRecipeImageSelected"
+                >
+                <div class="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#f0e4d2] px-5 text-sm font-bold text-[#0f5238] transition hover:bg-[#e6d6bd] disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="isUploadingImage"
+                    @click="triggerRecipeImagePicker"
+                  >
+                    <span class="material-symbols-outlined text-[20px]">upload</span>
+                    {{ isUploadingImage ? 'Uploading' : 'Choose image file' }}
+                  </button>
+                  <button
+                    v-if="imagePreviewSource"
+                    type="button"
+                    class="text-sm font-semibold text-[#8d4b2b] underline-offset-2 hover:underline"
+                    @click="clearRecipeImage"
+                  >
+                    Remove image
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -456,8 +587,8 @@ function toErrorMessage(error: unknown, fallback: string): string {
             </div>
           </section>
 
-          <section v-if="form.imageUrl" class="overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_22px_70px_rgba(15,82,56,0.10)]">
-            <img :src="form.imageUrl" :alt="form.title || 'Recipe image'" class="aspect-[4/3] w-full object-cover">
+          <section v-if="imagePreviewSource" class="overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_22px_70px_rgba(15,82,56,0.10)]">
+            <img :src="imagePreviewSource" :alt="form.title || 'Recipe image'" class="aspect-[4/3] w-full object-cover">
           </section>
 
           <button
