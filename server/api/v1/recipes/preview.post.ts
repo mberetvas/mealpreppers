@@ -1,4 +1,5 @@
 import consola from 'consola'
+import { fetchLibelleRecipePagePlaywright } from '../../../services/recipe-ingestion/fetchLibelleRecipePagePlaywright'
 import { isSupportedRecipeUrl, parseRecipeHtml } from '../../../services/recipe-ingestion/recipeScraper'
 import { detectPublisherAuthWall, fetchRecipePageHtml } from '../../../services/recipe-ingestion/fetchRecipePageHtml'
 import { toRecipeSteps } from '../../../services/recipe-ingestion/scraperUtils'
@@ -10,6 +11,7 @@ import {
 } from '../../../services/recipe-ingestion/dagelijksekostFirestore'
 
 const previewLogger = consola.withTag('recipe-preview')
+const LIBELLE_HOST = 'libelle-lekker.be'
 
 export default defineEventHandler(async (event) => {
   const parsedBody = recipePreviewRequestSchema.safeParse(await readBody(event))
@@ -24,7 +26,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'This recipe source is not supported.' })
   }
 
-  const { html, finalUrl, status } = await fetchRecipePageHtml(body.url)
+  const requestedHost = canonicalHost(body.url)
+  const { html, finalUrl, status } = requestedHost === LIBELLE_HOST
+    ? await fetchLibelleRecipePagePlaywright(body.url)
+    : await fetchRecipePageHtml(body.url)
 
   if (status < 200 || status >= 300) {
     throw createError({ statusCode: 502, statusMessage: 'The recipe page could not be fetched.' })
@@ -62,3 +67,12 @@ export default defineEventHandler(async (event) => {
 
   return { draft, warnings }
 })
+
+function canonicalHost(value: string): string | undefined {
+  try {
+    return new URL(value).hostname.toLowerCase().replace(/^www\./, '')
+  }
+  catch {
+    return undefined
+  }
+}

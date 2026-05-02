@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Recipe page: sidebar and ingredient rows no longer overflow their cards (grid `min-w-0` and full-width inputs).
 
 ### Changed
+- Libelle Lekker URL preview now uses Playwright Chromium navigation on the server (instead of plain `fetch`) so import parsing sees the same document shape as a real browser; setup docs now include `playwright install chromium` (`--with-deps` for CI/Linux hosts).
 - Default app layout no longer renders the desktop `SideNavBar` aside (component file retained under `app/components/layout/SideNavBar.vue`); main content uses full width below the top nav.
 - Recipe catalog filters: categories and tags moved out of always-visible scroll strips into labeled trigger buttons that open animated popover pickers (with optional inline search for long lists), with outside-click and Escape dismissal, focus return, and reduced-motion support.
 - Recipe catalog filter panel: search and sort share one toolbar row on larger screens; categories and tags are labeled groups with horizontal scroll so the panel no longer grows into a tall wrapping chip wall.
