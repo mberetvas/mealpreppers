@@ -11,6 +11,30 @@ const bulkDeleting = ref(false)
 const bulkDeleteError = ref<string | null>(null)
 const bulkDeleteStep = ref<'idle' | 'confirm'>('idle')
 
+type FilterPanelKind = 'categories' | 'tags'
+const openPanel = ref<FilterPanelKind | null>(null)
+const categoriesTriggerRef = ref<HTMLButtonElement | null>(null)
+const tagsTriggerRef = ref<HTMLButtonElement | null>(null)
+
+function togglePanel(kind: FilterPanelKind): void {
+  openPanel.value = openPanel.value === kind ? null : kind
+}
+
+function closePanel(): void {
+  if (openPanel.value === null) return
+  const lastKind = openPanel.value
+  openPanel.value = null
+  nextTick(() => {
+    if (document.activeElement && document.activeElement !== document.body) return
+    const trigger = lastKind === 'categories' ? categoriesTriggerRef.value : tagsTriggerRef.value
+    trigger?.focus()
+  })
+}
+
+watch(selectionMode, (isSelecting) => {
+  if (isSelecting) openPanel.value = null
+})
+
 const { data: recipes, pending, error, refresh } = await useFetch<RecipeCatalogItem[]>('/api/v1/recipes', {
   default: () => [],
 })
@@ -161,6 +185,10 @@ const cardFrameClass =
   'group w-full overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.10)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]'
 const cardLinkClass = `${cardFrameClass} block transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(15,82,56,0.14)]`
 const cardSelectClass = `${cardFrameClass} text-left ring-offset-2 ring-offset-[#f7f2e8]`
+
+/** DESIGN.md chips: pill shape, token backgrounds; min 44px hit target for kitchen / mobile. */
+const filterTriggerClass
+  = 'group inline-flex min-h-12 min-w-0 items-center justify-between gap-3 rounded-2xl bg-white px-4 text-left text-sm font-bold text-[#123628] shadow-[0_8px_22px_rgba(15,82,56,0.08)] ring-1 ring-[#0f5238]/10 transition hover:bg-[#fffaf0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]'
 </script>
 
 <template>
@@ -194,48 +222,116 @@ const cardSelectClass = `${cardFrameClass} text-left ring-offset-2 ring-offset-[
         </div>
       </header>
 
-      <section class="grid gap-4 rounded-[28px] bg-[#fffaf0] p-4 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-5">
-        <label class="flex min-h-14 items-center gap-3 rounded-2xl bg-white px-4 shadow-inner shadow-[#0f5238]/5 ring-1 ring-[#0f5238]/10 focus-within:ring-2 focus-within:ring-[#0f5238]/45">
-          <span class="material-symbols-outlined text-[22px] text-[#6b7b6e]">search</span>
-          <input v-model="searchQuery" type="search" class="min-w-0 flex-1 bg-transparent text-base font-medium text-[#1e261f] outline-none" placeholder="Search recipes">
-        </label>
+      <section
+        class="grid gap-5 rounded-[28px] bg-[#fffaf0] p-4 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-5"
+        aria-label="Search and filter recipes"
+      >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <label class="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white px-4 shadow-inner shadow-[#0f5238]/5 ring-1 ring-[#0f5238]/10 focus-within:ring-2 focus-within:ring-[#0f5238]/45">
+            <span class="material-symbols-outlined shrink-0 text-[22px] text-[#6b7b6e]" aria-hidden="true">search</span>
+            <input v-model="searchQuery" type="search" class="min-w-0 flex-1 bg-transparent text-base font-medium text-[#1e261f] outline-none" placeholder="Search recipes" autocomplete="off">
+          </label>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            v-for="cat in recipeOptions.categories"
-            :key="`cat-${cat}`"
-            type="button"
-            class="rounded-full px-3 py-1.5 text-xs font-bold transition"
-            :class="selectedCategory === cat ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'"
-            @click="selectedCategory = selectedCategory === cat ? '' : cat"
+          <div class="flex w-full shrink-0 flex-col gap-1.5 sm:w-auto sm:min-w-[11.5rem]">
+            <label for="recipe-catalog-sort" class="text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+              Sort
+            </label>
+            <select
+              id="recipe-catalog-sort"
+              v-model="sortBy"
+              class="min-h-11 w-full cursor-pointer rounded-full bg-surface-container-low px-3.5 text-xs font-bold text-on-surface-variant outline-none transition-colors duration-200 ease-out focus-visible:ring-2 focus-visible:ring-primary/40 motion-reduce:transition-none"
+            >
+              <option value="updatedAt">
+                Recently updated
+              </option>
+              <option value="title">
+                Title A–Z
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div
+          v-if="recipeOptions.categories.length > 0 || recipeOptions.tags.length > 0"
+          class="grid gap-3 sm:grid-cols-2"
+        >
+          <RecipeFilterPicker
+            v-if="recipeOptions.categories.length > 0"
+            label="Categories"
+            panel-id="recipe-filter-panel-categories"
+            :options="recipeOptions.categories"
+            :model-value="selectedCategory"
+            :open="openPanel === 'categories'"
+            :searchable="recipeOptions.categories.length > 8"
+            search-placeholder="Filter categories"
+            @update:model-value="selectedCategory = $event"
+            @close="closePanel"
           >
-            {{ cat }}
-          </button>
+            <template #trigger="{ open, selected, panelId }">
+              <button
+                ref="categoriesTriggerRef"
+                type="button"
+                :class="filterTriggerClass"
+                :aria-expanded="open"
+                :aria-controls="panelId"
+                aria-haspopup="dialog"
+                @click="togglePanel('categories')"
+              >
+                <span class="flex min-w-0 flex-col">
+                  <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+                    Categories
+                  </span>
+                  <span class="truncate text-sm font-bold text-[#123628]">
+                    {{ selected || 'Any' }}
+                  </span>
+                </span>
+                <span
+                  class="material-symbols-outlined text-[20px] text-[#485746] transition-transform duration-200 ease-out motion-reduce:transition-none"
+                  :class="open ? 'rotate-180' : 'rotate-0'"
+                  aria-hidden="true"
+                >expand_more</span>
+              </button>
+            </template>
+          </RecipeFilterPicker>
 
-          <span v-if="recipeOptions.categories.length > 0 && recipeOptions.tags.length > 0" class="mx-1 h-4 w-px bg-outline-variant/40" />
-
-          <button
-            v-for="tag in recipeOptions.tags"
-            :key="`tag-${tag}`"
-            type="button"
-            class="rounded-full px-3 py-1.5 text-xs font-bold transition"
-            :class="selectedTag === tag ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'"
-            @click="selectedTag = selectedTag === tag ? '' : tag"
+          <RecipeFilterPicker
+            v-if="recipeOptions.tags.length > 0"
+            label="Tags"
+            panel-id="recipe-filter-panel-tags"
+            :options="recipeOptions.tags"
+            :model-value="selectedTag"
+            :open="openPanel === 'tags'"
+            searchable
+            search-placeholder="Filter tags"
+            @update:model-value="selectedTag = $event"
+            @close="closePanel"
           >
-            {{ tag }}
-          </button>
-
-          <select
-            v-model="sortBy"
-            class="ml-auto rounded-full bg-surface-container-low px-3 py-1.5 text-xs font-bold text-on-surface-variant outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="updatedAt">
-              Recently updated
-            </option>
-            <option value="title">
-              Title A–Z
-            </option>
-          </select>
+            <template #trigger="{ open, selected, panelId }">
+              <button
+                ref="tagsTriggerRef"
+                type="button"
+                :class="filterTriggerClass"
+                :aria-expanded="open"
+                :aria-controls="panelId"
+                aria-haspopup="dialog"
+                @click="togglePanel('tags')"
+              >
+                <span class="flex min-w-0 flex-col">
+                  <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+                    Tags
+                  </span>
+                  <span class="truncate text-sm font-bold text-[#123628]">
+                    {{ selected || 'Any' }}
+                  </span>
+                </span>
+                <span
+                  class="material-symbols-outlined text-[20px] text-[#485746] transition-transform duration-200 ease-out motion-reduce:transition-none"
+                  :class="open ? 'rotate-180' : 'rotate-0'"
+                  aria-hidden="true"
+                >expand_more</span>
+              </button>
+            </template>
+          </RecipeFilterPicker>
         </div>
       </section>
 

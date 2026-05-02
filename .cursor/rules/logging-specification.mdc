@@ -1,0 +1,57 @@
+---
+description: Structured logging, correlation, and safe observability for Nuxt/Nitro server and Supabase-backed APIs
+alwaysApply: true
+---
+
+# Logging specification (mealprepper)
+
+## Why log this way
+
+- **Debuggability:** Production failures need timestamps, context, and a single id to grep — not scattered `console.log` noise.
+- **Separation of concerns:** `createError()` shapes the HTTP response; **logs** capture what happened internally. Never put secrets or full internal stacks in the response body.
+- **Blast radius:** Verbose or PII-heavy logs become a data leak. Default to structured fields you would paste in a ticket.
+
+## How (stack defaults)
+
+- **Server (Nitro):** Prefer **structured logs** (JSON one line per event in production, or tagged objects in dev). Use **`consola`** (`import consola from 'consola'`, optionally `consola.withTag('recipes')`) in `server/` code, or a small shared module under `server/utils/` if the project centralizes format/levels. For **Nuxt modules**, `useLogger` from `@nuxt/kit` is appropriate. Add **Pino** (or similar) only if it becomes a declared dependency and standard.
+- **Correlation:** Propagate a **request id** (header `x-request-id` or generate per request) into every log for that request and include it in user-facing error payloads only as an **opaque `errorId`** / `requestId` string — never as a database key users can guess.
+- **Levels:** `error` — failed operation / throw; `warn` — invalid input, retries, deprecations; `info` — request lifecycle, major domain steps; `debug` — dev-only or behind `LOG_LEVEL` / env gate.
+- **Supabase / Postgres:** Use **Supabase Dashboard logs** and DB tooling for query/auth failures that never surface in app code. App logs should name the **operation** (e.g. `recipeRepository.save`) and outcome, not raw SQL with secrets.
+
+## Guidelines
+
+### Server (`server/**/*.ts`, server-side API handlers)
+
+- Log at **boundaries:** request start/finish (method, path template, status, duration), validation outcome, external I/O (scrapers, storage, Supabase calls).
+- Include **safe context:** `requestId`, route name, operation, entity id when non-sensitive. Omit service role keys, cookies, full request bodies, and full recipe text unless explicitly approved for debug.
+- On unexpected errors: log **message + stack** (or `cause`) server-side; return a **generic** `statusMessage` plus optional **`errorId`** matching the log line.
+
+### Client (`app/**`)
+
+- Do not log secrets or full payloads in production. Prefer user-visible errors + optional **sanitized** reporting to a server endpoint if one exists.
+- Avoid high-frequency logs in render paths (performance + noise).
+
+### Anti-patterns
+
+```typescript
+// BAD: silent failure
+catch (e) {
+  return null
+}
+
+// BAD: leaks internals to client
+throw createError({ statusMessage: String(rawDbError) })
+
+// GOOD: log server-side, opaque id to client
+catch (e) {
+  const errorId = crypto.randomUUID()
+  logger.error('Recipe save failed', { errorId, err: e })
+  throw createError({ statusCode: 500, statusMessage: 'Recipe could not be saved.', data: { errorId } })
+}
+```
+
+### Configuration
+
+- Drive verbosity with **environment** (`NODE_ENV`, optional `LOG_LEVEL` in `runtimeConfig` server-only). Production defaults to `info` or higher unless debugging an incident.
+
+When adding new API routes or services, **extend logging at the same time** as error handling — not as a follow-up chore.

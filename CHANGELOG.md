@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Recipe page: sidebar and ingredient rows no longer overflow their cards (grid `min-w-0` and full-width inputs).
 
 ### Changed
+- Default app layout no longer renders the desktop `SideNavBar` aside (component file retained under `app/components/layout/SideNavBar.vue`); main content uses full width below the top nav.
+- Recipe catalog filters: categories and tags moved out of always-visible scroll strips into labeled trigger buttons that open animated popover pickers (with optional inline search for long lists), with outside-click and Escape dismissal, focus return, and reduced-motion support.
+- Recipe catalog filter panel: search and sort share one toolbar row on larger screens; categories and tags are labeled groups with horizontal scroll so the panel no longer grows into a tall wrapping chip wall.
 - Recipe edit form inputs now use DESIGN.md bottom-border style instead of ring-based inputs.
 - Ingredient rows use progressive disclosure: primary "As on your list" field visible by default, structured qty/unit/name behind expand toggle.
 - Difficulty field is now a `<select>` (Easy / Medium / Hard) instead of free-text input.
