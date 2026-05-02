@@ -2,11 +2,14 @@
 import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 
 const searchQuery = ref('')
+const selectionMode = ref(false)
+const selectedIds = ref<Set<string>>(new Set())
+const bulkDeleting = ref(false)
+const bulkDeleteError = ref<string | null>(null)
+
 const { data: recipes, pending, error, refresh } = await useFetch<RecipeCatalogItem[]>('/api/v1/recipes', {
   default: () => [],
 })
-
-const { formatTime, primaryMeta } = useRecipeTimeFormat()
 
 const filteredRecipes = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -28,6 +31,93 @@ const filteredRecipes = computed(() => {
     return searchableText.includes(query)
   })
 })
+
+const selectedCount = computed(() => selectedIds.value.size)
+
+function isSelected(id: string): boolean {
+  return selectedIds.value.has(id)
+}
+
+function toggleSelection(id: string): void {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  }
+  else {
+    next.add(id)
+  }
+  selectedIds.value = next
+}
+
+function selectAllFiltered(): void {
+  selectedIds.value = new Set(filteredRecipes.value.map(r => r.id))
+}
+
+function clearSelection(): void {
+  selectedIds.value = new Set()
+}
+
+function exitSelectionMode(): void {
+  selectionMode.value = false
+  bulkDeleteError.value = null
+  clearSelection()
+}
+
+function toggleSelectionMode(): void {
+  if (selectionMode.value) {
+    exitSelectionMode()
+  }
+  else {
+    selectionMode.value = true
+    bulkDeleteError.value = null
+  }
+}
+
+async function confirmBulkDelete(): Promise<void> {
+  const ids = [...selectedIds.value]
+  if (ids.length === 0 || bulkDeleting.value) {
+    return
+  }
+
+  const n = ids.length
+  const ok = confirm(`Delete ${n} recipe${n === 1 ? '' : 's'}? This cannot be undone.`)
+  if (!ok) {
+    return
+  }
+
+  bulkDeleting.value = true
+  bulkDeleteError.value = null
+
+  try {
+    await $fetch<{ deleted: number }>('/api/v1/recipes/bulk-delete', {
+      method: 'POST',
+      body: { ids },
+    })
+    await refresh()
+    exitSelectionMode()
+  }
+  catch (e: unknown) {
+    let message = 'Recipes could not be deleted.'
+    if (typeof e === 'object' && e !== null && 'data' in e) {
+      const data = (e as { data?: { statusMessage?: string } }).data
+      if (data?.statusMessage) {
+        message = data.statusMessage
+      }
+    }
+    else if (e instanceof Error && e.message) {
+      message = e.message
+    }
+    bulkDeleteError.value = message
+  }
+  finally {
+    bulkDeleting.value = false
+  }
+}
+
+const cardFrameClass =
+  'group w-full overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.10)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]'
+const cardLinkClass = `${cardFrameClass} block hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(15,82,56,0.14)]`
+const cardSelectClass = `${cardFrameClass} text-left ring-offset-2 ring-offset-[#f7f2e8]`
 </script>
 
 <template>
@@ -43,10 +133,22 @@ const filteredRecipes = computed(() => {
           </h1>
         </div>
 
-        <NuxtLink to="/add-recipe" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-6 text-sm font-bold text-white shadow-[0_14px_30px_rgba(15,82,56,0.22)] transition hover:bg-[#174d38]">
-          <span class="material-symbols-outlined text-[20px]">add</span>
-          Add Recipe
-        </NuxtLink>
+        <div class="flex flex-wrap items-center gap-3 lg:justify-end">
+          <button
+            type="button"
+            class="inline-flex min-h-14 min-w-[7.5rem] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-bold shadow-[0_10px_26px_rgba(15,82,56,0.12)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+            :class="selectionMode ? 'bg-[#f0e4d2] text-[#123628] ring-2 ring-[#0f5238]/25' : 'bg-white text-[#123628] ring-1 ring-[#0f5238]/15'"
+            @click="toggleSelectionMode"
+          >
+            <span class="material-symbols-outlined text-[20px]">{{ selectionMode ? 'close' : 'checklist' }}</span>
+            {{ selectionMode ? 'Done' : 'Select' }}
+          </button>
+
+          <NuxtLink to="/add-recipe" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-6 text-sm font-bold text-white shadow-[0_14px_30px_rgba(15,82,56,0.22)] transition hover:bg-[#174d38]">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+            Add Recipe
+          </NuxtLink>
+        </div>
       </header>
 
       <section class="rounded-[28px] bg-[#fffaf0] p-4 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-5">
@@ -86,52 +188,68 @@ const filteredRecipes = computed(() => {
       </section>
 
       <section v-else class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        <NuxtLink
-          v-for="recipe in filteredRecipes"
-          :key="recipe.id"
-          :to="`/recipes/${recipe.id}`"
-          class="group block overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.10)] transition hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(15,82,56,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
-        >
-          <article class="grid h-full grid-rows-[auto_1fr]">
-            <div class="relative aspect-[4/3] bg-[#e6d6bd]">
-              <img
-                v-if="recipe.imageUrl"
-                :src="recipe.imageUrl"
-                :alt="`Photo of ${recipe.title}`"
-                class="h-full w-full object-cover"
-              >
-              <div v-else class="flex h-full items-center justify-center text-[#0f5238]">
-                <span class="material-symbols-outlined text-[54px]" aria-hidden="true">restaurant</span>
-              </div>
-              <div v-if="recipe.categories.length > 0" class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-[#0f5238] shadow-[0_8px_22px_rgba(15,82,56,0.12)]">
-                {{ recipe.categories[0] }}
-              </div>
-            </div>
+        <template v-for="recipe in filteredRecipes" :key="recipe.id">
+          <NuxtLink
+            v-if="!selectionMode"
+            :to="`/recipes/${recipe.id}`"
+            :class="cardLinkClass"
+          >
+            <RecipeCatalogGridCard :recipe="recipe" />
+          </NuxtLink>
 
-            <div class="grid gap-4 p-5">
-              <div>
-                <h2 class="font-['Newsreader'] text-2xl font-semibold leading-tight text-[#123628] group-hover:underline group-hover:decoration-[#0f5238]/30 group-hover:underline-offset-4">
-                  {{ recipe.title }}
-                </h2>
-                <p v-if="recipe.description" class="mt-2 line-clamp-2 text-sm leading-6 text-[#5d6c60]">
-                  {{ recipe.description }}
-                </p>
-              </div>
-
-              <div v-if="primaryMeta(recipe).length > 0" class="flex flex-wrap gap-2">
-                <span v-for="item in primaryMeta(recipe)" :key="item" class="rounded-full bg-[#f0e4d2] px-3 py-1 text-xs font-bold text-[#485746]">
-                  {{ item }}
-                </span>
-              </div>
-
-              <div class="flex items-center justify-between gap-4 text-sm font-semibold text-[#6a786b]">
-                <span>{{ recipe.ingredients.length }} ingredients</span>
-                <span>{{ recipe.steps.length }} steps</span>
-              </div>
-            </div>
-          </article>
-        </NuxtLink>
+          <button
+            v-else
+            type="button"
+            :class="[cardSelectClass, isSelected(recipe.id) ? 'ring-2 ring-[#0f5238]' : 'ring-0']"
+            :aria-pressed="isSelected(recipe.id)"
+            @click="toggleSelection(recipe.id)"
+          >
+            <RecipeCatalogGridCard :recipe="recipe" selectable :selected="isSelected(recipe.id)" />
+          </button>
+        </template>
       </section>
+    </div>
+
+    <div
+      v-if="selectionMode"
+      class="fixed inset-x-0 bottom-0 z-[60] border-t border-[#0f5238]/10 bg-[#fffaf0]/95 px-4 py-4 shadow-[0_-12px_40px_rgba(15,82,56,0.12)] backdrop-blur-md pb-[max(1rem,env(safe-area-inset-bottom))]"
+      role="region"
+      aria-label="Bulk actions"
+    >
+      <div class="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm font-semibold text-[#485746]">
+          {{ selectedCount }} selected
+        </p>
+
+        <p v-if="bulkDeleteError" class="text-sm font-semibold text-[#9c3d16]">
+          {{ bulkDeleteError }}
+        </p>
+
+        <div class="flex flex-wrap gap-2 sm:justify-end">
+          <button
+            type="button"
+            class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-bold text-[#123628] ring-1 ring-[#0f5238]/18 transition hover:bg-[#f0e4d2]"
+            @click="selectAllFiltered"
+          >
+            Select all
+          </button>
+          <button
+            type="button"
+            class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#f0e4d2] px-5 text-sm font-bold text-[#123628] transition hover:bg-[#e6d6bd]"
+            @click="clearSelection"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#9c3d16] px-5 text-sm font-bold text-white shadow-[0_10px_26px_rgba(156,61,22,0.22)] transition hover:bg-[#852f12] disabled:pointer-events-none disabled:opacity-45"
+            :disabled="selectedCount === 0 || bulkDeleting"
+            @click="confirmBulkDelete"
+          >
+            {{ bulkDeleting ? 'Deleting…' : `Delete${selectedCount ? ` (${selectedCount})` : ''}` }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

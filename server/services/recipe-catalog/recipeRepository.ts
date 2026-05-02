@@ -279,6 +279,28 @@ export async function updateRecipe(client: SupabaseClient, id: string, payload: 
   return mapRecipe(recipeRow, ingredients as IngredientRow[], steps as StepRow[])
 }
 
+/**
+ * Deletes recipes by id. Child rows cascade in the database. Returns the number of rows removed.
+ */
+export async function deleteRecipesByIds(client: SupabaseClient, ids: string[]): Promise<number> {
+  const unique = [...new Set(ids.map(id => id.trim()).filter(Boolean))]
+  if (unique.length === 0) {
+    return 0
+  }
+
+  const { data, error } = await client
+    .from('recipes')
+    .delete()
+    .in('id', unique)
+    .select('id')
+
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Recipes could not be deleted.' })
+  }
+
+  return data?.length ?? 0
+}
+
 function groupByRecipeId<Row extends { recipe_id: string }>(rows: Row[]): Map<string, Row[]> {
   const groupedRows = new Map<string, Row[]>()
 

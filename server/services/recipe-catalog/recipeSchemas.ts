@@ -38,7 +38,12 @@ export const recipePreviewRequestSchema = z.object({
 
 export const recipeUpdatePayloadSchema = recipeCreatePayloadSchema
 
+export const recipeBulkDeleteRequestSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+})
+
 export type RecipeCreatePayload = z.infer<typeof recipeCreatePayloadSchema>
 export type RecipeUpdatePayload = z.infer<typeof recipeUpdatePayloadSchema>
 export type RecipeIngredientInput = z.infer<typeof recipeIngredientInputSchema>
 export type RecipeStepInput = z.infer<typeof recipeStepInputSchema>
+export type RecipeBulkDeleteRequest = z.infer<typeof recipeBulkDeleteRequestSchema>
