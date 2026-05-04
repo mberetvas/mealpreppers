@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Weekly planner on `/weekly-plan`: week editor (Day 1–7 only, three meal slots, picker with search, category chips, max time, recently used), month horizon (four snapshot slots, copy working week, open in week editor), templates library (load/delete, save-as-template, debounced auto-save when `?template=` points at a row). Duplicate-recipe warning with assign-anyway.
+- Planning APIs under `/api/v1/planning/`: week-templates and month-plans list/create/read/patch/delete; Zod validation, recipe id existence checks on save, `consola` logging and opaque `errorId` on unexpected failures.
+- `types/planning.ts` (`week_v1` / `month_v1`), `utils/weekPlan.ts`, `utils/plannerDuplicateMessages.ts`, and `filterRecipesForPlanner` in `utils/recipeFiltering.ts`.
 - Recipe catalog: **chip filters** for categories and tags, **sort** (Recently updated / Title A–Z), and split empty-state messaging (empty library vs no matches with "Clear filters" button).
 - Recipe catalog bulk delete: **Select** mode on `/recipes`, multi-select cards, and `POST /api/v1/recipes/bulk-delete` with validated `{ ids }` payload.
 - Recipe detail page at `/recipes/:id` (full recipe, loading/error states, back to catalog) and `GET /api/v1/recipes/:id` backed by the catalog repository.
@@ -14,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add recipe creation with manual entry and URL import preview for 15gram, Colruyt, Delhaize, Dagelijkse Kost, and Libelle Lekker.
 - Add Supabase-backed recipe catalog tables, RLS policies, explicit service-role grants, and Nuxt server APIs for previewing, creating, and listing recipes.
 - Shared `design-input`, `design-textarea`, `design-select` CSS component classes aligned with DESIGN.md input spec (bottom border, surface_container_lowest background, primary focus).
-- Unit tests for `filterRecipes` and `emptyStateType` utility functions.
+- Unit tests for `filterRecipes`, `emptyStateType`, `filterRecipesForPlanner`, and week plan helpers (`test/unit/week-plan.test.ts`).
 
 ### Fixed
 - Recipe detail and edit pages: resolve the recipe id from `route.path` when `route.params.id` is not yet populated on client navigation, so `useFetch` no longer calls `/api/v1/recipes/undefined` (Postgres uuid error).

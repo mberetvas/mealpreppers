@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterRecipes, emptyStateType } from '../../utils/recipeFiltering'
+import { filterRecipes, filterRecipesForPlanner, emptyStateType } from '../../utils/recipeFiltering'
 import type { RecipeCatalogItem } from '../../types/recipe-catalog-item'
 
 function makeRecipe(overrides: Partial<RecipeCatalogItem> = {}): RecipeCatalogItem {
@@ -80,6 +80,23 @@ describe('filterRecipes', () => {
     const result = filterRecipes(recipes, { query: 'SPAGHETTI', category: '', tag: '', sortBy: 'updatedAt' })
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('r1')
+  })
+})
+
+describe('filterRecipesForPlanner', () => {
+  it('filters by max total time when set', () => {
+    const list = [
+      makeRecipe({ id: 'a', title: 'Quick', totalTimeMinutes: 15 }),
+      makeRecipe({ id: 'b', title: 'Slow', totalTimeMinutes: 90 }),
+      makeRecipe({ id: 'c', title: 'Unknown time' }),
+    ]
+    const r = filterRecipesForPlanner(list, {
+      query: '',
+      category: '',
+      maxTotalTimeMinutes: 30,
+      sortBy: 'title',
+    })
+    expect(r.map(x => x.id).sort()).toEqual(['a', 'c'])
   })
 })
 
