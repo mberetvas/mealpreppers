@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Template Library - Culinary Atelier</title>
+<!-- Google Fonts: Newsreader (Display) & Plus Jakarta Sans (Body) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#efeded",
+                    "primary": "#0f5238",
+                    "outline-variant": "#bfc9c1",
+                    "primary-container": "#2d6a4f",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e4e2e2",
+                    "inverse-primary": "#95d4b3",
+                    "secondary-container": "#fc8f34",
+                    "tertiary-container": "#655f4a",
+                    "surface-variant": "#e4e2e2",
+                    "primary-fixed-dim": "#95d4b3",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed-variant": "#713700",
+                    "surface-dim": "#dbd9d9",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#ffdcc5",
+                    "on-tertiary-fixed-variant": "#4c4733",
+                    "on-background": "#1b1c1c",
+                    "surface": "#fbf9f8",
+                    "tertiary-fixed-dim": "#cec6ad",
+                    "on-secondary-fixed": "#301400",
+                    "surface-bright": "#fbf9f8",
+                    "on-tertiary-container": "#e2d9bf",
+                    "surface-tint": "#2c694e",
+                    "surface-container-low": "#f5f3f3",
+                    "error": "#ba1a1a",
+                    "outline": "#707973",
+                    "on-tertiary-fixed": "#1f1c0b",
+                    "on-primary-container": "#a8e7c5",
+                    "secondary": "#944a00",
+                    "on-surface": "#1b1c1c",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#303030",
+                    "tertiary-fixed": "#ebe2c8",
+                    "on-surface-variant": "#404943",
+                    "secondary-fixed-dim": "#ffb783",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-secondary-container": "#663100",
+                    "surface-container-high": "#eae8e7",
+                    "primary-fixed": "#b1f0ce",
+                    "on-primary-fixed": "#002114",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#4c4734",
+                    "on-primary-fixed-variant": "#0e5138",
+                    "inverse-on-surface": "#f2f0f0",
+                    "background": "#fbf9f8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Newsreader", "serif"],
+                    "display": ["Newsreader", "serif"],
+                    "body": ["Plus Jakarta Sans", "sans-serif"],
+                    "label": ["Plus Jakarta Sans", "sans-serif"]
+            }
+          }
+        }
+      }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            }
+            .material-symbols-outlined[data-weight="fill"] {
+                font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased flex min-h-screen selection:bg-primary-container selection:text-on-primary">
+<!-- SideNavBar (Hidden on Mobile, Flex on Desktop) -->
+<!-- Applying style_ shell layout and structure from JSON -->
+<aside class="hidden lg:flex flex-col h-full py-8 pl-6 h-screen w-64 border-r-0 bg-[#f5f3f3] dark:bg-[#1b1c1c] fixed left-0 top-0 z-40">
+<div class="mb-12 pr-6">
+<h1 class="font-serif text-xl font-bold text-[#0f5238]">The Atelier</h1>
+<p class="font-sans font-medium text-sm tracking-wide text-[#1b1c1c]/70 mt-1">Your Kitchen, Curated</p>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<!-- Planner - ACTIVE -->
+<a class="flex items-center gap-4 py-3 pl-4 pr-6 text-[#0f5238] bg-[#fbf9f8] rounded-l-full font-bold translate-x-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-weight="fill">calendar_month</span>
+<span class="font-sans font-medium text-sm tracking-wide">Planner</span>
+</a>
+<!-- Recipes - INACTIVE -->
+<a class="flex items-center gap-4 py-3 pl-4 pr-6 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-sans font-medium text-sm tracking-wide">Recipes</span>
+</a>
+<!-- Pantry - INACTIVE -->
+<a class="flex items-center gap-4 py-3 pl-4 pr-6 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-sans font-medium text-sm tracking-wide">Pantry</span>
+</a>
+<!-- Discover - INACTIVE -->
+<a class="flex items-center gap-4 py-3 pl-4 pr-6 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-sans font-medium text-sm tracking-wide">Discover</span>
+</a>
+</nav>
+<div class="mt-auto pr-6">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-sm font-medium px-4 py-3 rounded-lg hover:opacity-90 transition-opacity mb-4">
+                New Recipe
+            </button>
+<a class="flex items-center gap-4 py-3 pl-4 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out rounded-l-full" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-sans font-medium text-sm tracking-wide">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 lg:ml-64 flex flex-col min-h-screen relative pb-24 lg:pb-0">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-8 py-4 max-w-[1920px] w-full mx-auto docked full-width top-0 z-30 sticky bg-[#fbf9f8]/80 dark:bg-[#1b1c1c]/80 backdrop-blur-xl bg-surface-container-low">
+<div class="flex items-center gap-4 lg:hidden">
+<h1 class="font-serif italic text-2xl text-[#0f5238] dark:text-[#fbf9f8]">Culinary Atelier</h1>
+</div>
+<!-- Global Nav for Web (Hidden on Mobile) -->
+<nav class="hidden md:flex gap-8 items-center ml-auto mr-8">
+<a class="font-sans font-medium text-sm tracking-wide text-[#0f5238] dark:text-[#fbf9f8] font-bold border-b-2 border-[#0f5238] pb-1 cursor-pointer active:opacity-70" href="#">Planner</a>
+<a class="font-sans font-medium text-sm tracking-wide text-[#1b1c1c]/60 dark:text-[#fbf9f8]/60 hover:text-[#0f5238] transition-colors duration-300 cursor-pointer active:opacity-70" href="#">Recipes</a>
+<a class="font-sans font-medium text-sm tracking-wide text-[#1b1c1c]/60 dark:text-[#fbf9f8]/60 hover:text-[#0f5238] transition-colors duration-300 cursor-pointer active:opacity-70" href="#">Pantry</a>
+<a class="font-sans font-medium text-sm tracking-wide text-[#1b1c1c]/60 dark:text-[#fbf9f8]/60 hover:text-[#0f5238] transition-colors duration-300 cursor-pointer active:opacity-70" href="#">Discover</a>
+</nav>
+<div class="flex items-center gap-6 ml-auto lg:ml-0 text-[#0f5238] dark:text-[#2d6a4f]">
+<button class="hover:text-[#0f5238] transition-colors duration-300 cursor-pointer active:opacity-70">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="hover:text-[#0f5238] transition-colors duration-300 cursor-pointer active:opacity-70">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-surface-container-highest cursor-pointer">
+<img alt="Chef profile" class="w-full h-full object-cover" data-alt="A softly lit, professional portrait of a chef in a minimalist kitchen setting, focusing on culinary elegance and modern gastronomy. High key lighting, editorial style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBBFkOaWks30sRzh54PywIpTqD7HtaMg_hwiDOiSJERme84Z17c5dG-tPtTGtpe4GeiWIkFP24A4NvQ-008NdejL9dKYPSduDmn-aeyFRc1FFCa6jUTvthv0M6w0Ck1LnYTQnPIYsMAiUdjbDssXMoT0MU-xNtESrQZkXR0SRLaL4payF45QKCXli1XHW99j5IypG_v6MY1NPlT9dq80XoEN8apgwZrq69T0K0j453Q-CN_X-60aBJoCN7yDM0U54Ehq6MYOCiozU"/>
+</div>
+</div>
+</header>
+<!-- Canvas Content -->
+<div class="px-6 lg:px-16 pt-12 pb-20 max-w-7xl mx-auto w-full">
+<!-- Page Header & Internal Sub-Nav -->
+<div class="mb-12">
+<h2 class="font-headline text-5xl font-medium tracking-tight text-on-surface mb-8">The Template Library</h2>
+<!-- Internal Page Tabs -->
+<div class="flex gap-8 border-b border-surface-container/50 pb-[1px]">
+<a class="font-label text-base text-on-surface-variant hover:text-primary transition-colors pb-3 px-1" href="#">Week</a>
+<a class="font-label text-base text-on-surface-variant hover:text-primary transition-colors pb-3 px-1" href="#">Month</a>
+<a class="font-label text-base font-bold text-primary border-b-2 border-primary pb-3 px-1 relative top-[2px]" href="#">Templates</a>
+</div>
+</div>
+<!-- Templates Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1: Featured (Spans 2 cols on lg) -->
+<article class="bg-surface-container-lowest rounded-xl p-8 flex flex-col group lg:col-span-2 relative overflow-hidden transition-all duration-500 hover:shadow-[0_24px_48px_rgba(15,82,56,0.04)]">
+<div class="h-64 w-full mb-8 rounded-lg bg-surface-container-low overflow-hidden relative">
+<img alt="" class="object-cover w-full h-full transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 mix-blend-multiply" data-alt="A stunning, top-down editorial food photography composition featuring a vibrant vegetarian feast. Colorful salads, roasted vegetables, and rustic grains are arranged asymmetrically on a matte white ceramic plate resting on a linen cloth. The scene is bathed in soft, diffused natural daylight that enhances the rich earthy tones and fresh greens, embodying a high-end, organic culinary lifestyle aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlGYBSmXR3qyuJRETm6Kb9PJjBnn1OWAx4e0xJH0ivPJ6Z0vQTdaAAb19U88y-s4HSRpY1Yavvo6UXbEw12N4YiYRhGNsCqFkrfvIlqP2j4PUatsZuE3xU7E04VZLxT_ZOgmQ5wKTFYKGIdDiiBp12eQeypYY-QAOGPIMteqp6RIWtEq0mhOEYkuaBFdBvgKclntjR2y22owyVm-kBz8gh3i9E1k3hmAiSEOI10UK1RSeRhul-2bUn21VX02gvlsRbmgC-H6VovTU"/>
+</div>
+<div class="flex flex-col flex-1 z-10">
+<div class="flex justify-between items-start mb-3">
+<h3 class="font-headline text-3xl font-medium text-on-surface">Vegetarian Feast</h3>
+<span class="bg-surface-container text-on-surface-variant font-label text-xs px-3 py-1 rounded-full">7 Days</span>
+</div>
+<p class="font-body text-sm text-on-surface-variant mb-10 flex-1 opacity-80">Last updated: Nov 12, 2023</p>
+<div class="flex items-center justify-between mt-auto">
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-sm font-medium px-6 py-3 rounded-lg hover:opacity-90 transition-opacity shadow-[0_8px_16px_rgba(15,82,56,0.15)] hover:shadow-[0_12px_24px_rgba(15,82,56,0.2)]">
+                                Load into Week
+                            </button>
+<div class="flex gap-1">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container">
+<span class="material-symbols-outlined text-[22px]">edit</span>
+</button>
+<button class="text-on-surface-variant hover:text-error transition-colors p-2 rounded-full hover:bg-error-container/40">
+<span class="material-symbols-outlined text-[22px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="bg-surface-container-lowest rounded-xl p-8 flex flex-col group relative overflow-hidden transition-all duration-500 hover:shadow-[0_24px_48px_rgba(15,82,56,0.04)]">
+<div class="h-48 w-full mb-8 rounded-lg bg-surface-container-low overflow-hidden relative">
+<img alt="" class="object-cover w-full h-full transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 mix-blend-multiply" data-alt="A clean, minimalist editorial shot of quick and easy meal prep ingredients. Freshly chopped greens, sliced avocados, and neatly arranged proteins sit in sleek glass containers on a cool marble countertop. The lighting is crisp and cool, casting faint, elegant shadows, creating a highly organized, modern lifestyle aesthetic suitable for a premium culinary journal." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJDnAlSaBhrWjOs9TJRMnBtxekExnabbTDSG6uFigkCFKvQI0huP2OpUIq9XDtrSt8xKo6Jk3pfwoe8IpUZLp8gaDUSkP6fLvaGXGP9eAM0tn1SKtVoHW0OZAaAupJWOKaZBVLtspYUnpIgDVrlj9rLlI9x64Gno_lhV-17O3DuZ0ap7UvkKPZ3-CSW6F28Y9D0IrQd9QFg-5oNcxFtTU0SxEhUe5q0FXbi5RMEsr3lrRukFMrFJ-vaum7cI1QKVX55Dtjm0abpns"/>
+</div>
+<div class="flex flex-col flex-1 z-10">
+<div class="flex justify-between items-start mb-3">
+<h3 class="font-headline text-2xl font-medium text-on-surface pr-4">Quick &amp; Easy Work Week</h3>
+</div>
+<p class="font-body text-sm text-on-surface-variant mb-10 flex-1 opacity-80">Last updated: Oct 24, 2023</p>
+<div class="flex items-center justify-between mt-auto">
+<button class="bg-surface-container-high text-primary font-label text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-surface-container-highest transition-colors">
+                                Load into Week
+                            </button>
+<div class="flex gap-1">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="bg-surface-container-lowest rounded-xl p-8 flex flex-col group relative overflow-hidden transition-all duration-500 hover:shadow-[0_24px_48px_rgba(15,82,56,0.04)]">
+<div class="h-48 w-full mb-8 rounded-lg bg-surface-container-low overflow-hidden relative">
+<img alt="" class="object-cover w-full h-full transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 mix-blend-multiply" data-alt="An appetizing, high-contrast flat lay of a Mediterranean diet meal prep. Olives, feta cheese, vibrant citrus fruits, and grilled fish are presented on textured ceramic plates against a deeply toned slate background. The lighting highlights the glistening textures of the olive oil and fresh herbs, evoking a rich, savory, and sophisticated culinary narrative." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA59-XyGb_T3H0udNr8V5dNkmDZERW8ddyPiz2WTUz7TJU1AT8l9qLeWmRy-ffhlBizq9bmEY2a3u9U6Iu8v0xZM3ehxqPjQ64rTWahyx-ejl_djmlOWJX7GMPIG3YTWC-KWJCZ03vRa6A8kRHfi25Tl6ggB51HgGc5L_SfZ6JKs2CRv1dZVzJGVFdcNuEWt9hWeC_LukAvHHYZr7lwucpd3lKH5zMh8zoGB4Xey6Fp1z7DPi5jQjE5i054ua7qlGe_0-M8Lxz9xII"/>
+</div>
+<div class="flex flex-col flex-1 z-10">
+<div class="flex justify-between items-start mb-3">
+<h3 class="font-headline text-2xl font-medium text-on-surface pr-4">Mediterranean Staples</h3>
+</div>
+<p class="font-body text-sm text-on-surface-variant mb-10 flex-1 opacity-80">Last updated: Sep 05, 2023</p>
+<div class="flex items-center justify-between mt-auto">
+<button class="bg-surface-container-high text-primary font-label text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-surface-container-highest transition-colors">
+                                Load into Week
+                            </button>
+<div class="flex gap-1">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 4 (List style variant for contrast, visually appealing in bento) -->
+<article class="bg-surface-container-lowest rounded-xl p-8 flex items-center gap-6 group relative overflow-hidden transition-all duration-500 hover:shadow-[0_24px_48px_rgba(15,82,56,0.04)] lg:col-span-3">
+<div class="h-24 w-24 rounded-lg bg-surface-container-low overflow-hidden relative shrink-0">
+<img alt="" class="object-cover w-full h-full transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 mix-blend-multiply" data-alt="A macro, beautifully lit shot of a high-protein power bowl. Quinoa, perfectly sliced avocado, and a soft-boiled egg with a bright orange yolk are framed tightly. The shallow depth of field creates a soft, creamy background, emphasizing the freshness and vitality of the ingredients in a clean, bright, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQnk38dP6uscReXUx8lMsnJw5PppuqXfckn7cW89DnSaZ70EiF54Ehgyln5koWTVV-KdJ4-9f7tBX32RES_vAkFMKUVpeAv_P9qW7Sf97XqmMPRQfWNnPIevo4AyLNbDRbTWvEBSQxni5h6S2zc3-wCRaIE8KSqzGswmQ_TMmtnulTTLaoX2PXCewgJujYNaWphO-O3V7UiypDxpGeG0sd92FoabeR6K-whQmmROFs95_jbOE_Q1Q_jtuFLmTHWwHmPz6rvCpP_4"/>
+</div>
+<div class="flex flex-col flex-1 py-1 z-10">
+<h3 class="font-headline text-2xl font-medium text-on-surface mb-1">High Protein Power</h3>
+<p class="font-body text-sm text-on-surface-variant opacity-80">Last updated: Aug 18, 2023</p>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<div class="flex gap-1 mr-4 border-r border-surface-container pr-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="text-on-surface-variant hover:text-error transition-colors p-2 rounded-full hover:bg-error-container/40">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+<button class="bg-surface-container-high text-primary font-label text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-surface-container-highest transition-colors">
+                            Load into Week
+                        </button>
+</div>
+</article>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Hidden on Desktop, Fixed on Mobile) -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-[#fbf9f8]/90 dark:bg-[#1b1c1c]/90 backdrop-blur-md z-50 rounded-t-3xl shadow-[0_-4px_24px_rgba(15,82,56,0.06)] shadow-xl transition-all duration-300 ease-spring">
+<!-- Planner - ACTIVE -->
+<a class="flex flex-col items-center justify-center bg-[#2d6a4f] text-white rounded-full w-14 h-14 -translate-y-4 shadow-lg active:scale-95 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-weight="fill">calendar_month</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest mt-1 hidden">Planner</span>
+</a>
+<!-- Recipes - INACTIVE -->
+<a class="flex flex-col items-center justify-center text-[#1b1c1c]/50 dark:text-[#fbf9f8]/50 active:scale-95 transition-all duration-300 pt-2" href="#">
+<span class="material-symbols-outlined text-[28px] mb-1">menu_book</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest">Recipes</span>
+</a>
+<!-- Pantry - INACTIVE -->
+<a class="flex flex-col items-center justify-center text-[#1b1c1c]/50 dark:text-[#fbf9f8]/50 active:scale-95 transition-all duration-300 pt-2" href="#">
+<span class="material-symbols-outlined text-[28px] mb-1">shopping_basket</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest">Pantry</span>
+</a>
+<!-- Discover - INACTIVE -->
+<a class="flex flex-col items-center justify-center text-[#1b1c1c]/50 dark:text-[#fbf9f8]/50 active:scale-95 transition-all duration-300 pt-2" href="#">
+<span class="material-symbols-outlined text-[28px] mb-1">auto_awesome</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest">Discover</span>
+</a>
+</nav>
+</body></html>

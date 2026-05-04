@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Culinary Atelier - Monthly Horizon</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#efeded",
+                        "primary": "#0f5238",
+                        "outline-variant": "#bfc9c1",
+                        "primary-container": "#2d6a4f",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e4e2e2",
+                        "inverse-primary": "#95d4b3",
+                        "secondary-container": "#fc8f34",
+                        "tertiary-container": "#655f4a",
+                        "surface-variant": "#e4e2e2",
+                        "primary-fixed-dim": "#95d4b3",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#713700",
+                        "surface-dim": "#dbd9d9",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#ffdcc5",
+                        "on-tertiary-fixed-variant": "#4c4733",
+                        "on-background": "#1b1c1c",
+                        "surface": "#fbf9f8",
+                        "tertiary-fixed-dim": "#cec6ad",
+                        "on-secondary-fixed": "#301400",
+                        "surface-bright": "#fbf9f8",
+                        "on-tertiary-container": "#e2d9bf",
+                        "surface-tint": "#2c694e",
+                        "surface-container-low": "#f5f3f3",
+                        "error": "#ba1a1a",
+                        "outline": "#707973",
+                        "on-tertiary-fixed": "#1f1c0b",
+                        "on-primary-container": "#a8e7c5",
+                        "secondary": "#944a00",
+                        "on-surface": "#1b1c1c",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#303030",
+                        "tertiary-fixed": "#ebe2c8",
+                        "on-surface-variant": "#404943",
+                        "secondary-fixed-dim": "#ffb783",
+                        "on-tertiary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#663100",
+                        "surface-container-high": "#eae8e7",
+                        "primary-fixed": "#b1f0ce",
+                        "on-primary-fixed": "#002114",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#4c4734",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "inverse-on-surface": "#f2f0f0",
+                        "background": "#fbf9f8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Newsreader", "serif"],
+                        "display": ["Newsreader", "serif"],
+                        "body": ["Plus Jakarta Sans", "sans-serif"],
+                        "label": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    "fontSize": {}
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        body { background-color: theme('colors.surface'); color: theme('colors.on-surface'); }
+    </style>
+</head>
+<body class="font-body text-on-surface bg-surface min-h-screen flex flex-col md:flex-row antialiased">
+<!-- TopAppBar (Hidden on desktop, visible on mobile) -->
+<header class="md:hidden bg-[#fbf9f8]/80 dark:bg-[#1b1c1c]/80 backdrop-blur-xl docked full-width top-0 z-50 sticky no-border tonal-shift bg-surface-container-low flat no-shadows flex justify-between items-center px-8 py-4 max-w-[1920px] mx-auto">
+<div class="font-serif italic text-2xl text-[#0f5238] dark:text-[#fbf9f8]">Culinary Atelier</div>
+<div class="flex gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:text-[#0f5238] transition-colors duration-300 text-[#1b1c1c]/60 dark:text-[#fbf9f8]/60" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-[#0f5238] transition-colors duration-300 text-[#1b1c1c]/60 dark:text-[#fbf9f8]/60" data-icon="settings">settings</span>
+</div>
+</header>
+<!-- SideNavBar (Hidden on mobile, visible on desktop) -->
+<nav class="hidden lg:flex flex-col h-full py-8 pl-6 h-screen w-64 border-r-0 bg-[#f5f3f3] dark:bg-[#1b1c1c] fixed left-0 top-0 tonal-shift using bg-[#f5f3f3] flat no-shadows z-40">
+<div class="mb-12 pr-6">
+<h1 class="font-serif text-xl font-bold text-[#0f5238]">The Atelier</h1>
+<p class="font-sans font-medium text-sm tracking-wide text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70">Your Kitchen, Curated</p>
+</div>
+<div class="flex-1 space-y-2 relative pr-4">
+<a class="flex items-center gap-3 px-4 py-3 text-[#0f5238] bg-[#fbf9f8] rounded-l-full font-bold translate-x-2 transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_month" data-weight="fill" style="font-variation-settings: 'FILL' 1;">calendar_month</span>
+<span class="font-sans font-medium text-sm tracking-wide">Planner</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out group rounded-l-full" href="#">
+<span class="material-symbols-outlined group-hover:text-[#0f5238]" data-icon="menu_book">menu_book</span>
+<span class="font-sans font-medium text-sm tracking-wide">Recipes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out group rounded-l-full" href="#">
+<span class="material-symbols-outlined group-hover:text-[#0f5238]" data-icon="inventory_2">inventory_2</span>
+<span class="font-sans font-medium text-sm tracking-wide">Pantry</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out group rounded-l-full" href="#">
+<span class="material-symbols-outlined group-hover:text-[#0f5238]" data-icon="explore">explore</span>
+<span class="font-sans font-medium text-sm tracking-wide">Discover</span>
+</a>
+</div>
+<div class="pr-6 mt-8">
+<button class="w-full py-3 px-4 rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary font-medium text-sm flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(15,82,56,0.15)] hover:shadow-[0_12px_32px_rgba(15,82,56,0.2)] transition-shadow">
+<span class="material-symbols-outlined text-lg">add</span>
+                New Recipe
+            </button>
+</div>
+<div class="mt-auto pr-6 mb-8">
+<a class="flex items-center gap-3 px-4 py-3 text-[#1b1c1c]/70 dark:text-[#fbf9f8]/70 hover:bg-[#fbf9f8]/50 hover:text-[#0f5238] transition-transform duration-200 ease-in-out group rounded-l-full" href="#">
+<span class="material-symbols-outlined group-hover:text-[#0f5238]" data-icon="logout">logout</span>
+<span class="font-sans font-medium text-sm tracking-wide">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 lg:ml-64 px-6 md:px-12 lg:px-20 py-10 pb-32 lg:pb-10 max-w-[1600px] w-full mx-auto">
+<!-- Header Section -->
+<div class="mb-12">
+<h1 class="font-headline text-5xl md:text-6xl text-primary tracking-tight mb-6">Monthly Horizon</h1>
+<!-- Tab Navigation (Bespoke Pill Design) -->
+<div class="inline-flex items-center p-1 bg-surface-container-low rounded-full">
+<a class="px-6 py-2 rounded-full text-on-surface-variant font-label text-sm hover:bg-surface-container transition-colors" href="#">Week</a>
+<a class="px-6 py-2 rounded-full bg-primary-fixed text-on-primary-fixed font-label text-sm shadow-sm transition-colors" href="#">Month</a>
+<a class="px-6 py-2 rounded-full text-on-surface-variant font-label text-sm hover:bg-surface-container transition-colors" href="#">Templates</a>
+</div>
+</div>
+<!-- 2x2 Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+<!-- Week 1 Card -->
+<article class="bg-surface-container-lowest rounded-xl p-8 transition-transform hover:-translate-y-1 duration-300 relative overflow-hidden group">
+<!-- Tonal shift definition instead of borders -->
+<div class="absolute inset-0 ring-1 ring-inset ring-outline-variant/20 rounded-xl pointer-events-none"></div>
+<header class="mb-6 flex justify-between items-start">
+<div>
+<span class="font-headline text-primary/60 text-lg block mb-1">Week 01</span>
+<h2 class="font-headline text-3xl text-on-surface">Autumn Warmth</h2>
+</div>
+</header>
+<div class="flex items-center gap-4 mb-8">
+<div class="flex -space-x-4">
+<img alt="Thumbnail 1" class="w-16 h-16 rounded-full object-cover border-4 border-surface-container-lowest shadow-sm z-30" data-alt="A close-up, highly detailed shot of a rustic autumn squash soup served in a handcrafted ceramic bowl. The lighting is soft and warm, casting gentle shadows that emphasize the rich orange tones of the soup and the earthy textures of the bowl. Set against a clean, light-mode background typical of a premium culinary magazine, the mood is cozy yet refined. Garnishes of fresh herbs and toasted seeds provide vibrant color contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAS6INekv6jjjz6cp8FmfAEn6UW9sUamWUi0X01JahEllAt51valQey62q5Z1ujGGYL9S3UngQ-vgjBXi7XHyI3STWwXm4D54aJXum85ihBhnD05tUs_k3gmbVfgDVThENw2gzJxOaLVFU24GUiZLubtz3ZbABZ-7MaU3SmxoWtiLWhQfbPrrdGhBdDoE6izRy-8S4-pdUiUuSDhWzopRPx2WH8bOerCxx_b-uv4J8TWCLtiyETiYoqdbjBgGWkz0FtLLbGaPMSKVw"/>
+<img alt="Thumbnail 2" class="w-16 h-16 rounded-full object-cover border-4 border-surface-container-lowest shadow-sm z-20" data-alt="An elegant, top-down photograph of slow-roasted root vegetables arranged artfully on a pristine white plate. The vegetables feature deep caramelized edges, contrasting beautifully with the bright, high-key lighting of the scene. The aesthetic is modern and editorial, focusing on the natural textures and earthy colors of the ingredients. A sprig of rosemary adds a touch of organic green to the warm, inviting composition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXfmfQfedtxavm2j5IdekJJCcqmmpzLi-QvBOrk9jGGX5qfdOYjfOs3-YUt1t_IfVJG9T7kX7OooUfXZQF_fA_lt9Xp5nO-8rcNDmqgK3WJdUAkCIyZUJuZoxte-HjiUTnC5gWaISQph4dLeJHSWL8TxOB76db549_5SS7MLnTwAs_9nhvTuV58oQSGIEkP_9wc3WYlj1lni2NfaUc2wjel3HikJtRAvHs7b1pcl92oMiPwetRqtNAPGHs06_OMbfuxvo8WC-NNMI"/>
+<img alt="Thumbnail 3" class="w-16 h-16 rounded-full object-cover border-4 border-surface-container-lowest shadow-sm z-10" data-alt="A beautifully styled shot of a freshly baked, artisanal sourdough bread sitting on a light, textural linen cloth. The golden-brown crust catches the soft, diffused morning light, highlighting the intricate scoring pattern. The setting is minimal and bright, adhering to a sophisticated editorial style. The overall mood evokes warmth, comfort, and the rustic charm of homemade baking within a modern kitchen context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJylGSnBOUZ-KBArZMGdWNjiyqxIyEPOCGPcty5V5y83AM4MZblmPiDYV-VuNVTP2owV_Nh7vFjhASGwryw9IxjPjkdh2FzoIAjh8JEYD8jPFCHR9v2KAPEsIjBKhCmz3Q5-d_qXFWh-16H1rgHrd0BPUa2vCnCrFMteFx7gi9QtBJLD6Ff7pwfwKG6HiwZTaJdcQNQBryLu9y7Zvt5GENhDPxNbrC-45Ya4HwedC7xkna4rLMtl0mGPlJUFqlDIQSuFlxynUWaok"/>
+</div>
+<div class="text-sm font-label text-on-surface-variant flex flex-col justify-center">
+<span class="font-semibold text-primary">14 recipes</span>
+<span>planned</span>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-high hover:bg-surface-container text-primary font-label text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                    Open in Editor
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</article>
+<!-- Week 2 Card -->
+<article class="bg-surface-container-lowest rounded-xl p-8 transition-transform hover:-translate-y-1 duration-300 relative overflow-hidden group">
+<div class="absolute inset-0 ring-1 ring-inset ring-outline-variant/20 rounded-xl pointer-events-none"></div>
+<header class="mb-6 flex justify-between items-start">
+<div>
+<span class="font-headline text-primary/60 text-lg block mb-1">Week 02</span>
+<h2 class="font-headline text-3xl text-on-surface">Coastal Light</h2>
+</div>
+</header>
+<div class="flex items-center gap-4 mb-8">
+<div class="flex -space-x-4">
+<img alt="Thumbnail 4" class="w-16 h-16 rounded-full object-cover border-4 border-surface-container-lowest shadow-sm z-30" data-alt="A bright, editorial-style photograph of a Mediterranean seafood salad served on a pure white, shallow dish. The scene is bathed in brilliant, natural sunlight, enhancing the vibrant colors of fresh shrimp, cherry tomatoes, and crisp greens. The background is a soft, out-of-focus white marble, maintaining a clean, high-end light-mode aesthetic. The mood is fresh, vibrant, and evocative of a breezy coastal lunch." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBQZNlc8kDz_C-PgELZj6HKArM_YZ1Tt7oyce159gjIYF6gkuAjfVI_Qc2wKOrkz5oHBRVyETKNI_ws7mi_Fl2vaMFbc80l83WbrxT_Nj4tKeRAibZ5O0EwLWIwzSZ9T5XLHn6z3uQcTzhjIKoRgnxVfN23c7zQO54rq24ZTF0DsNw7qofBouxxn-0GJL4H_j0B0rErIJ9Ka-qex5dZtfmspoLeNr4hQ403UgKY5I-XH9tVMMJ3LRGdwIqfGF6AyLCBvySLMVwme8"/>
+<img alt="Thumbnail 5" class="w-16 h-16 rounded-full object-cover border-4 border-surface-container-lowest shadow-sm z-20" data-alt="A crisp, vibrant image of a colorful quinoa bowl bursting with fresh greens, sliced avocado, and citrus dressing. The lighting is bright and even, casting minimal shadows to emphasize the clean, healthy aesthetic. Set against a light, neutral background typical of modern culinary magazines, the dish looks appetizing and nutritious. The composition is balanced, showcasing the fresh ingredients with high clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0NQ2b7qr1S6tqw6fmtmGqFUIW9wTh5nA8bGPoZ2YzUvysKVYt6buuziX-DUto8dt5zeoHhTnXz4ouscu5KcB-h4vlIftKONiQoJpWG8YBrQKNiiaiR3hou9qzmSesbezzNb7YuJsSau-eTehosnOmQFPqk1592tp5CmtySS4cGrdJocuT7Z76mm5xnHHFxpRR-IIKv871fz0dR8UZoYoe4LWwvFwRlDTuRlrSjDltqJx2ZV1GSBD-eLawefdv-NlkHVFT7nnTKdY"/>
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border-4 border-surface-container-lowest shadow-sm z-10">
+<span class="material-symbols-outlined text-outline-variant">restaurant</span>
+</div>
+</div>
+<div class="text-sm font-label text-on-surface-variant flex flex-col justify-center">
+<span class="font-semibold text-primary">10 recipes</span>
+<span>planned</span>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-high hover:bg-surface-container text-primary font-label text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                    Open in Editor
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</article>
+<!-- Week 3 Card -->
+<article class="bg-surface-container-lowest rounded-xl p-8 transition-transform hover:-translate-y-1 duration-300 relative overflow-hidden group">
+<div class="absolute inset-0 ring-1 ring-inset ring-outline-variant/20 rounded-xl pointer-events-none"></div>
+<header class="mb-6 flex justify-between items-start">
+<div>
+<span class="font-headline text-primary/60 text-lg block mb-1">Week 03</span>
+<h2 class="font-headline text-3xl text-on-surface">Pantry Staples</h2>
+</div>
+</header>
+<div class="flex items-center gap-4 mb-8">
+<div class="flex -space-x-4">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border-4 border-surface-container-lowest shadow-sm z-30">
+<span class="material-symbols-outlined text-outline-variant">inventory_2</span>
+</div>
+</div>
+<div class="text-sm font-label text-on-surface-variant flex flex-col justify-center">
+<span class="font-semibold text-primary">0 recipes</span>
+<span>planned</span>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-lowest border border-dashed border-outline-variant hover:border-primary text-primary font-label text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Start Planning
+                </button>
+</article>
+<!-- Week 4 Card -->
+<article class="bg-surface-container-lowest rounded-xl p-8 transition-transform hover:-translate-y-1 duration-300 relative overflow-hidden group opacity-60 hover:opacity-100">
+<div class="absolute inset-0 ring-1 ring-inset ring-outline-variant/20 rounded-xl pointer-events-none"></div>
+<header class="mb-6 flex justify-between items-start">
+<div>
+<span class="font-headline text-primary/60 text-lg block mb-1">Week 04</span>
+<h2 class="font-headline text-3xl text-on-surface">Seasonal Endings</h2>
+</div>
+</header>
+<div class="flex items-center gap-4 mb-8">
+<div class="flex -space-x-4">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border-4 border-surface-container-lowest shadow-sm z-30">
+<span class="material-symbols-outlined text-outline-variant">calendar_month</span>
+</div>
+</div>
+<div class="text-sm font-label text-on-surface-variant flex flex-col justify-center">
+<span class="font-semibold text-primary">0 recipes</span>
+<span>planned</span>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-lowest border border-dashed border-outline-variant hover:border-primary text-primary font-label text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Start Planning
+                </button>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Hidden on desktop, visible on mobile) -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-[#fbf9f8]/90 dark:bg-[#1b1c1c]/90 backdrop-blur-md rounded-t-3xl shadow-xl z-50 no-border shadow-[0_-4px_24px_rgba(15,82,56,0.06)]">
+<a class="flex flex-col items-center justify-center bg-[#2d6a4f] text-white rounded-full w-14 h-14 -translate-y-4 shadow-lg active:scale-95 transition-all duration-300 ease-spring" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="calendar_month" data-weight="fill" style="font-variation-settings: 'FILL' 1;">calendar_month</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest hidden">Planner</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#1b1c1c]/50 dark:text-[#fbf9f8]/50 active:scale-95 transition-all duration-300 ease-spring" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest">Recipes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#1b1c1c]/50 dark:text-[#fbf9f8]/50 active:scale-95 transition-all duration-300 ease-spring" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="shopping_basket">shopping_basket</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest">Pantry</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#1b1c1c]/50 dark:text-[#fbf9f8]/50 active:scale-95 transition-all duration-300 ease-spring" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-sans text-[10px] font-semibold uppercase tracking-widest">Discover</span>
+</a>
+</nav>
+</body></html>
