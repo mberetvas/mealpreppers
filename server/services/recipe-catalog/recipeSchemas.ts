@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export { recipePreviewRequestSchema, type RecipePreviewRequest } from '../../../types/recipe-preview.schema'
+
 const optionalPositiveIntSchema = z.number().int().positive().optional()
 const optionalNonNegativeIntSchema = z.number().int().nonnegative().optional()
 
@@ -30,10 +32,6 @@ export const recipeCreatePayloadSchema = z.object({
   tags: z.array(z.string().trim().min(1)).default([]),
   ingredients: z.array(recipeIngredientInputSchema).min(1),
   steps: z.array(recipeStepInputSchema).default([]),
-})
-
-export const recipePreviewRequestSchema = z.object({
-  url: z.string().url(),
 })
 
 export const recipeUpdatePayloadSchema = recipeCreatePayloadSchema

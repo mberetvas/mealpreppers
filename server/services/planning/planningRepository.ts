@@ -7,6 +7,7 @@ import type {
   WeekTemplateCreateInput,
   WeekTemplatePatchInput,
 } from '../../../types/planning'
+import { fail, ok, type PlanningResult } from './planningResult'
 
 export interface WeekTemplateListItem {
   id: string
@@ -46,24 +47,24 @@ interface MonthPlanDbRow {
   updated_at: string
 }
 
-export async function listWeekTemplates(client: SupabaseClient): Promise<WeekTemplateListItem[]> {
+export async function listWeekTemplates(client: SupabaseClient): Promise<PlanningResult<WeekTemplateListItem[]>> {
   const { data, error } = await client
     .from('meal_week_templates')
     .select('id, name, updated_at')
     .order('updated_at', { ascending: false })
 
   if (error || !data) {
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Week templates could not be loaded.' })
+    return fail(storageError(error?.message, 'Week templates could not be loaded.'))
   }
 
-  return (data as Pick<WeekTemplateDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
+  return ok((data as Pick<WeekTemplateDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
     id: row.id,
     name: row.name,
     updatedAt: row.updated_at,
-  }))
+  })))
 }
 
-export async function getWeekTemplateById(client: SupabaseClient, id: string): Promise<WeekTemplateRow | null> {
+export async function getWeekTemplateById(client: SupabaseClient, id: string): Promise<PlanningResult<WeekTemplateRow>> {
   const { data, error } = await client
     .from('meal_week_templates')
     .select('*')
@@ -71,22 +72,24 @@ export async function getWeekTemplateById(client: SupabaseClient, id: string): P
     .maybeSingle()
 
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Week template could not be loaded.' })
+    return fail(storageError(error.message, 'Week template could not be loaded.'))
   }
 
-  if (!data) return null
+  if (!data) {
+    return fail(notFoundError('week_template', 'Week template not found.'))
+  }
 
   const row = data as WeekTemplateDbRow
-  return {
+  return ok({
     id: row.id,
     name: row.name,
     body: row.body,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  }
+  })
 }
 
-export async function createWeekTemplate(client: SupabaseClient, input: WeekTemplateCreateInput): Promise<WeekTemplateRow> {
+export async function createWeekTemplate(client: SupabaseClient, input: WeekTemplateCreateInput): Promise<PlanningResult<WeekTemplateRow>> {
   const { data, error } = await client
     .from('meal_week_templates')
     .insert({ name: input.name, body: input.body })
@@ -94,13 +97,13 @@ export async function createWeekTemplate(client: SupabaseClient, input: WeekTemp
     .single()
 
   if (error || !data) {
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Week template could not be created.' })
+    return fail(storageError(error?.message, 'Week template could not be created.'))
   }
 
-  return mapWeekTemplateRow(data as WeekTemplateDbRow)
+  return ok(mapWeekTemplateRow(data as WeekTemplateDbRow))
 }
 
-export async function updateWeekTemplate(client: SupabaseClient, id: string, input: WeekTemplatePatchInput): Promise<WeekTemplateRow> {
+export async function updateWeekTemplate(client: SupabaseClient, id: string, input: WeekTemplatePatchInput): Promise<PlanningResult<WeekTemplateRow>> {
   const patch: Record<string, unknown> = {}
   if (input.name !== undefined) patch.name = input.name
   if (input.body !== undefined) patch.body = input.body
@@ -114,15 +117,15 @@ export async function updateWeekTemplate(client: SupabaseClient, id: string, inp
 
   if (error || !data) {
     if (error?.code === 'PGRST116') {
-      throw createError({ statusCode: 404, statusMessage: 'Week template not found.' })
+      return fail(notFoundError('week_template', 'Week template not found.'))
     }
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Week template could not be updated.' })
+    return fail(storageError(error?.message, 'Week template could not be updated.'))
   }
 
-  return mapWeekTemplateRow(data as WeekTemplateDbRow)
+  return ok(mapWeekTemplateRow(data as WeekTemplateDbRow))
 }
 
-export async function deleteWeekTemplate(client: SupabaseClient, id: string): Promise<boolean> {
+export async function deleteWeekTemplate(client: SupabaseClient, id: string): Promise<PlanningResult<{ ok: true }>> {
   const { data, error } = await client
     .from('meal_week_templates')
     .delete()
@@ -131,30 +134,34 @@ export async function deleteWeekTemplate(client: SupabaseClient, id: string): Pr
     .maybeSingle()
 
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Week template could not be deleted.' })
+    return fail(storageError(error.message, 'Week template could not be deleted.'))
   }
 
-  return !!data
+  if (!data) {
+    return fail(notFoundError('week_template', 'Week template not found.'))
+  }
+
+  return ok({ ok: true })
 }
 
-export async function listMonthPlans(client: SupabaseClient): Promise<MonthPlanListItem[]> {
+export async function listMonthPlans(client: SupabaseClient): Promise<PlanningResult<MonthPlanListItem[]>> {
   const { data, error } = await client
     .from('meal_month_plans')
     .select('id, name, updated_at')
     .order('updated_at', { ascending: false })
 
   if (error || !data) {
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Month plans could not be loaded.' })
+    return fail(storageError(error?.message, 'Month plans could not be loaded.'))
   }
 
-  return (data as Pick<MonthPlanDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
+  return ok((data as Pick<MonthPlanDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
     id: row.id,
     name: row.name,
     updatedAt: row.updated_at,
-  }))
+  })))
 }
 
-export async function getMonthPlanById(client: SupabaseClient, id: string): Promise<MonthPlanRow | null> {
+export async function getMonthPlanById(client: SupabaseClient, id: string): Promise<PlanningResult<MonthPlanRow>> {
   const { data, error } = await client
     .from('meal_month_plans')
     .select('*')
@@ -162,22 +169,24 @@ export async function getMonthPlanById(client: SupabaseClient, id: string): Prom
     .maybeSingle()
 
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Month plan could not be loaded.' })
+    return fail(storageError(error.message, 'Month plan could not be loaded.'))
   }
 
-  if (!data) return null
+  if (!data) {
+    return fail(notFoundError('month_plan', 'Month plan not found.'))
+  }
 
   const row = data as MonthPlanDbRow
-  return {
+  return ok({
     id: row.id,
     name: row.name,
     body: row.body,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  }
+  })
 }
 
-export async function createMonthPlan(client: SupabaseClient, input: MonthPlanCreateInput): Promise<MonthPlanRow> {
+export async function createMonthPlan(client: SupabaseClient, input: MonthPlanCreateInput): Promise<PlanningResult<MonthPlanRow>> {
   const { data, error } = await client
     .from('meal_month_plans')
     .insert({
@@ -188,13 +197,13 @@ export async function createMonthPlan(client: SupabaseClient, input: MonthPlanCr
     .single()
 
   if (error || !data) {
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Month plan could not be created.' })
+    return fail(storageError(error?.message, 'Month plan could not be created.'))
   }
 
-  return mapMonthPlanRow(data as MonthPlanDbRow)
+  return ok(mapMonthPlanRow(data as MonthPlanDbRow))
 }
 
-export async function updateMonthPlan(client: SupabaseClient, id: string, input: MonthPlanPatchInput): Promise<MonthPlanRow> {
+export async function updateMonthPlan(client: SupabaseClient, id: string, input: MonthPlanPatchInput): Promise<PlanningResult<MonthPlanRow>> {
   const patch: Record<string, unknown> = {}
   if (input.name !== undefined) patch.name = input.name
   if (input.body !== undefined) patch.body = input.body
@@ -208,15 +217,15 @@ export async function updateMonthPlan(client: SupabaseClient, id: string, input:
 
   if (error || !data) {
     if (error?.code === 'PGRST116') {
-      throw createError({ statusCode: 404, statusMessage: 'Month plan not found.' })
+      return fail(notFoundError('month_plan', 'Month plan not found.'))
     }
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Month plan could not be updated.' })
+    return fail(storageError(error?.message, 'Month plan could not be updated.'))
   }
 
-  return mapMonthPlanRow(data as MonthPlanDbRow)
+  return ok(mapMonthPlanRow(data as MonthPlanDbRow))
 }
 
-export async function deleteMonthPlan(client: SupabaseClient, id: string): Promise<boolean> {
+export async function deleteMonthPlan(client: SupabaseClient, id: string): Promise<PlanningResult<{ ok: true }>> {
   const { data, error } = await client
     .from('meal_month_plans')
     .delete()
@@ -225,10 +234,14 @@ export async function deleteMonthPlan(client: SupabaseClient, id: string): Promi
     .maybeSingle()
 
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Month plan could not be deleted.' })
+    return fail(storageError(error.message, 'Month plan could not be deleted.'))
   }
 
-  return !!data
+  if (!data) {
+    return fail(notFoundError('month_plan', 'Month plan not found.'))
+  }
+
+  return ok({ ok: true })
 }
 
 /**
@@ -257,10 +270,10 @@ export function collectRecipeIdsFromMonthPlan(plan: MonthPlanV1): string[] {
 }
 
 /**
- * Ensures every non-null recipe id exists in `recipes`. Throws 400 when any are missing.
+ * Ensures every non-null recipe id exists in `recipes`.
  */
-export async function assertRecipeIdsExist(client: SupabaseClient, recipeIds: string[]): Promise<void> {
-  if (recipeIds.length === 0) return
+export async function assertRecipeIdsExist(client: SupabaseClient, recipeIds: string[]): Promise<PlanningResult<void>> {
+  if (recipeIds.length === 0) return ok(undefined)
 
   const { data, error } = await client
     .from('recipes')
@@ -268,18 +281,20 @@ export async function assertRecipeIdsExist(client: SupabaseClient, recipeIds: st
     .in('id', recipeIds)
 
   if (error || !data) {
-    throw createError({ statusCode: 500, statusMessage: error?.message ?? 'Recipe validation failed.' })
+    return fail(storageError(error?.message, 'Recipe validation failed.'))
   }
 
   const found = new Set((data as { id: string }[]).map(r => r.id))
   const missing = recipeIds.filter(id => !found.has(id))
   if (missing.length > 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'One or more recipe ids are not in the catalog.',
-      data: { missingRecipeIds: missing },
+    return fail({
+      kind: 'invalid_recipe_ids',
+      message: 'One or more recipe ids are not in the catalog.',
+      missingRecipeIds: missing,
     })
   }
+
+  return ok(undefined)
 }
 
 function mapWeekTemplateRow(row: WeekTemplateDbRow): WeekTemplateRow {
@@ -299,5 +314,20 @@ function mapMonthPlanRow(row: MonthPlanDbRow): MonthPlanRow {
     body: row.body,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  }
+}
+
+function storageError(message: string | undefined, fallback: string) {
+  return {
+    kind: 'storage_error' as const,
+    message: message ?? fallback,
+  }
+}
+
+function notFoundError(entity: 'week_template' | 'month_plan', message: string) {
+  return {
+    kind: 'not_found' as const,
+    entity,
+    message,
   }
 }

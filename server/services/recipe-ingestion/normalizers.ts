@@ -1,9 +1,6 @@
-export interface RecipeIngredientDraft {
-  rawText: string
-  name: string
-  quantity?: number
-  unit?: string
-}
+import type { RecipeIngredientDraft } from '../../../types/recipe-draft'
+
+export type { RecipeIngredientDraft } from '../../../types/recipe-draft'
 
 const FRACTION_VALUES: Record<string, number> = {
   '¼': 0.25,

@@ -1,5 +1,6 @@
 import { chromium, errors, type Browser } from 'playwright'
 import type { FetchRecipePageHtmlResult } from './fetchRecipePageHtml'
+import { RecipeBrowserAutomationError } from './recipePreview/recipePreviewErrors'
 
 let sharedBrowser: Browser | undefined
 let browserPromise: Promise<Browser> | undefined
@@ -44,11 +45,12 @@ export async function fetchLibelleRecipePagePlaywright(url: string): Promise<Fet
     }
   }
   catch (error) {
-    const timeoutHint = error instanceof errors.TimeoutError ? ' (navigation timed out)' : ''
-    throw createError({
-      statusCode: 502,
-      statusMessage: `The recipe page could not be fetched with browser automation${timeoutHint}.`,
-    })
+    const timedOut = error instanceof errors.TimeoutError
+    const timeoutHint = timedOut ? ' (navigation timed out)' : ''
+    throw new RecipeBrowserAutomationError(
+      `The recipe page could not be fetched with browser automation${timeoutHint}.`,
+      timedOut,
+    )
   }
   finally {
     await page.close()

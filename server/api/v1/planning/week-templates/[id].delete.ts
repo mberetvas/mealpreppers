@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
 import { deleteWeekTemplate } from '../../../../services/planning/planningRepository'
-import { handlePlanningUnexpected } from '../../../../utils/planningErrors'
+import { handlePlanningUnexpected, toPlanningHttpError } from '../../../../utils/planningErrors'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -9,11 +9,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Template id is required.' })
     }
 
-    const removed = await deleteWeekTemplate(getSupabaseServerClient(), id)
-    if (!removed) {
-      throw createError({ statusCode: 404, statusMessage: 'Week template not found.' })
+    const result = await deleteWeekTemplate(getSupabaseServerClient(), id)
+    if (!result.ok) {
+      throw createError(toPlanningHttpError(result.error))
     }
-    return { ok: true as const }
+    return result.value
   }
   catch (err) {
     handlePlanningUnexpected(err, 'planning-week-templates', 'delete week template')

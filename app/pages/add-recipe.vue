@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from 'vue'
+import type { RecipePreviewRequest, RecipePreviewResponse } from '~~/types/recipe-preview'
 import { validateRecipeImageFile } from '~/utils/recipeImageValidation'
 
 definePageMeta({
@@ -18,42 +19,6 @@ interface IngredientFormRow {
 
 interface StepFormRow {
   text: string
-}
-
-interface PreviewIngredient {
-  rawText: string
-  name: string
-  quantity?: number
-  unit?: string
-}
-
-interface PreviewStep {
-  position: number
-  text: string
-}
-
-interface PreviewDraft {
-  source: {
-    url: string
-    host: string
-  }
-  title: string
-  description?: string
-  imageUrl?: string
-  servings?: number
-  totalTimeMinutes?: number
-  prepTimeMinutes?: number
-  cookTimeMinutes?: number
-  difficulty?: string
-  categories: string[]
-  tags: string[]
-  ingredients: PreviewIngredient[]
-  steps: PreviewStep[]
-}
-
-interface PreviewResponse {
-  draft: PreviewDraft
-  warnings: string[]
 }
 
 const router = useRouter()
@@ -99,9 +64,10 @@ async function importRecipe(): Promise<void> {
   isImporting.value = true
 
   try {
-    const result = await $fetch<PreviewResponse>('/api/v1/recipes/preview', {
+    const body: RecipePreviewRequest = { url: importUrl.value.trim() }
+    const result = await $fetch<RecipePreviewResponse>('/api/v1/recipes/preview', {
       method: 'POST',
-      body: { url: importUrl.value.trim() },
+      body,
     })
 
     applyPreviewDraft(result.draft)
@@ -142,7 +108,7 @@ async function saveRecipe(): Promise<void> {
   }
 }
 
-function applyPreviewDraft(draft: PreviewDraft): void {
+function applyPreviewDraft(draft: RecipePreviewResponse['draft']): void {
   if (localPreviewUrl.value) {
     URL.revokeObjectURL(localPreviewUrl.value)
     localPreviewUrl.value = null
