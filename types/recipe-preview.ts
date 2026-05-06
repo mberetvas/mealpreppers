@@ -2,13 +2,10 @@
  * Request/response contract for POST /api/v1/recipes/preview; shared by Nitro handler and client.
  */
 
-import type { RecipeDraft } from './recipe-draft'
+import type { RecipeScrapeResult } from './recipe-draft'
 
-export interface RecipePreviewRequest {
-  url: string
-}
+export type { RecipePreviewRequest } from './recipe-preview.schema'
+export { recipePreviewRequestSchema } from './recipe-preview.schema'
 
-export interface RecipePreviewResponse {
-  draft: RecipeDraft
-  warnings: string[]
-}
+/** Response body; alias of scrape result so preview and ingestion stay aligned. */
+export type RecipePreviewResponse = RecipeScrapeResult

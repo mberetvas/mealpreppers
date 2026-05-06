@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from 'vue'
-import type { RecipePreviewResponse } from '~~/types/recipe-preview'
+import type { RecipePreviewRequest, RecipePreviewResponse } from '~~/types/recipe-preview'
 import { validateRecipeImageFile } from '~/utils/recipeImageValidation'
 
 definePageMeta({
@@ -64,9 +64,10 @@ async function importRecipe(): Promise<void> {
   isImporting.value = true
 
   try {
+    const body: RecipePreviewRequest = { url: importUrl.value.trim() }
     const result = await $fetch<RecipePreviewResponse>('/api/v1/recipes/preview', {
       method: 'POST',
-      body: { url: importUrl.value.trim() },
+      body,
     })
 
     applyPreviewDraft(result.draft)
