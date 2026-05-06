@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { consola } from 'consola'
 import type { RecipeFailure } from '../services/recipe-catalog/recipeResult'
+import { appLogger } from '../utils/logger'
+import { useStructuredLogger } from '../utils/structuredLogger'
 
 interface HttpErrorPayload {
   statusCode: number
@@ -26,7 +27,7 @@ export function handleRecipeUnexpected(err: unknown, tag: string, operation: str
     throw err
   }
   const errorId = randomUUID()
-  consola.withTag(tag).error(operation, { errorId, err })
+  useStructuredLogger(appLogger.withTag(tag)).error('recipe.unexpected_error', { operation, errorId, err })
   throw createError({
     statusCode: 500,
     statusMessage: 'The recipe service could not complete this request.',

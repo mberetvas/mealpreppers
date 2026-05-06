@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import consola from 'consola'
 import type { PlanningFailure } from '../services/planning/planningResult'
+import { appLogger } from '../utils/logger'
+import { useStructuredLogger } from '../utils/structuredLogger'
 
 interface HttpErrorPayload {
   statusCode: number
@@ -37,7 +38,7 @@ export function handlePlanningUnexpected(err: unknown, tag: string, operation: s
     throw err
   }
   const errorId = randomUUID()
-  consola.withTag(tag).error(operation, { errorId, err })
+  useStructuredLogger(appLogger.withTag(tag)).error('planning.unexpected_error', { operation, errorId, err })
   throw createError({
     statusCode: 500,
     statusMessage: 'The planner could not complete this request.',

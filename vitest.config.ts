@@ -16,6 +16,13 @@ export default defineConfig({
           environment: 'node',
         },
       },
+      {
+        test: {
+          name: 'integration',
+          include: ['test/integration/*.{test,spec}.ts'],
+          environment: 'node',
+        },
+      },
     ],
     coverage: {
       enabled: true,
