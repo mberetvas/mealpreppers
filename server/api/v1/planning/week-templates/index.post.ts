@@ -5,7 +5,7 @@ import {
   createWeekTemplate,
 } from '../../../../services/planning/planningRepository'
 import { weekTemplateCreateSchema } from '../../../../../types/planning'
-import { handlePlanningUnexpected } from '../../../../utils/planningErrors'
+import { handlePlanningUnexpected, toPlanningHttpError } from '../../../../utils/planningErrors'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,8 +15,17 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseServerClient()
-    await assertRecipeIdsExist(supabase, collectRecipeIdsFromWeekPlan(parsed.data.body))
-    return await createWeekTemplate(supabase, parsed.data)
+    const recipeCheck = await assertRecipeIdsExist(supabase, collectRecipeIdsFromWeekPlan(parsed.data.body))
+    if (!recipeCheck.ok) {
+      throw createError(toPlanningHttpError(recipeCheck.error))
+    }
+
+    const result = await createWeekTemplate(supabase, parsed.data)
+    if (!result.ok) {
+      throw createError(toPlanningHttpError(result.error))
+    }
+
+    return result.value
   }
   catch (err) {
     handlePlanningUnexpected(err, 'planning-week-templates', 'create week template')

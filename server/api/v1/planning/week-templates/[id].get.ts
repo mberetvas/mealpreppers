@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
 import { getWeekTemplateById } from '../../../../services/planning/planningRepository'
-import { handlePlanningUnexpected } from '../../../../utils/planningErrors'
+import { handlePlanningUnexpected, toPlanningHttpError } from '../../../../utils/planningErrors'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -9,11 +9,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Template id is required.' })
     }
 
-    const row = await getWeekTemplateById(getSupabaseServerClient(), id)
-    if (!row) {
-      throw createError({ statusCode: 404, statusMessage: 'Week template not found.' })
+    const result = await getWeekTemplateById(getSupabaseServerClient(), id)
+    if (!result.ok) {
+      throw createError(toPlanningHttpError(result.error))
     }
-    return row
+    return result.value
   }
   catch (err) {
     handlePlanningUnexpected(err, 'planning-week-templates', 'get week template')

@@ -5,7 +5,7 @@ import {
   createMonthPlan,
 } from '../../../../services/planning/planningRepository'
 import { monthPlanCreateSchema } from '../../../../../types/planning'
-import { handlePlanningUnexpected } from '../../../../utils/planningErrors'
+import { handlePlanningUnexpected, toPlanningHttpError } from '../../../../utils/planningErrors'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,8 +15,17 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseServerClient()
-    await assertRecipeIdsExist(supabase, collectRecipeIdsFromMonthPlan(parsed.data.body))
-    return await createMonthPlan(supabase, parsed.data)
+    const recipeCheck = await assertRecipeIdsExist(supabase, collectRecipeIdsFromMonthPlan(parsed.data.body))
+    if (!recipeCheck.ok) {
+      throw createError(toPlanningHttpError(recipeCheck.error))
+    }
+
+    const result = await createMonthPlan(supabase, parsed.data)
+    if (!result.ok) {
+      throw createError(toPlanningHttpError(result.error))
+    }
+
+    return result.value
   }
   catch (err) {
     handlePlanningUnexpected(err, 'planning-month-plans', 'create month plan')

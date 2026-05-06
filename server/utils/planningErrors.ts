@@ -1,5 +1,33 @@
 import { randomUUID } from 'node:crypto'
 import consola from 'consola'
+import type { PlanningFailure } from '../services/planning/planningResult'
+
+interface HttpErrorPayload {
+  statusCode: number
+  statusMessage: string
+  data?: Record<string, unknown>
+}
+
+export function toPlanningHttpError(error: PlanningFailure): HttpErrorPayload {
+  switch (error.kind) {
+    case 'invalid_recipe_ids':
+      return {
+        statusCode: 400,
+        statusMessage: error.message,
+        data: { missingRecipeIds: error.missingRecipeIds },
+      }
+    case 'not_found':
+      return {
+        statusCode: 404,
+        statusMessage: error.message,
+      }
+    case 'storage_error':
+      return {
+        statusCode: 500,
+        statusMessage: error.message,
+      }
+  }
+}
 
 /**
  * Rethrows H3 errors from `createError`; logs and wraps unknown failures for planning APIs.
