@@ -3,6 +3,7 @@ import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
 import { deepCloneWeek, emptyMonthPlan, emptyWeekPlan, getDuplicateRecipeIds, isWeekPlanValid } from '~~/utils/weekPlan'
 import { duplicatePlannerMessage } from '~~/utils/plannerDuplicateMessages'
+import { fetchMonthPlanBodyForPlanner, fetchWeekTemplateRowForPlanner } from '~~/utils/planningHydration'
 
 type Tab = 'week' | 'month' | 'templates'
 type Meal = 'breakfast' | 'lunch' | 'dinner'
@@ -19,8 +20,9 @@ const activeTemplateId = ref<string | null>(null)
 const activeMonthId = ref<string | null>(null)
 
 const saveStatus = ref<'saved' | 'saving' | 'dirty' | 'error'>('saved')
-let saveTimer: ReturnType<typeof setTimeout> | undefined
-let monthSaveTimer: ReturnType<typeof setTimeout> | undefined
+
+usePlanningWeekAutosave(weekPlan, activeTemplateId, saveStatus)
+usePlanningMonthAutosave(monthPlan, activeMonthId)
 
 const pickerOpen = ref(false)
 const pickerTarget = ref<{ day: DayKey, meal: Meal } | null>(null)
@@ -76,15 +78,14 @@ async function hydrateTemplateFromRoute(): Promise<void> {
   if (!tid) {
     return
   }
-  try {
-    const row = await $fetch<{ id: string, body: WeekPlanV1 }>(`/api/v1/planning/week-templates/${tid}`)
-    weekPlan.value = row.body
-    activeTemplateId.value = row.id
-    saveStatus.value = 'saved'
-  }
-  catch {
+  const loaded = await fetchWeekTemplateRowForPlanner($fetch, tid)
+  if (!loaded.ok) {
     saveStatus.value = 'error'
+    return
   }
+  weekPlan.value = loaded.body
+  activeTemplateId.value = loaded.id
+  saveStatus.value = 'saved'
 }
 
 onMounted(() => {
@@ -94,45 +95,6 @@ onMounted(() => {
 watch(() => route.query.template, () => {
   void hydrateTemplateFromRoute()
 })
-
-watch(weekPlan, () => {
-  if (!activeTemplateId.value) {
-    saveStatus.value = 'dirty'
-    return
-  }
-  saveStatus.value = 'saving'
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(async () => {
-    try {
-      await $fetch(`/api/v1/planning/week-templates/${activeTemplateId.value}`, {
-        method: 'PATCH',
-        body: { body: weekPlan.value },
-      })
-      saveStatus.value = 'saved'
-    }
-    catch {
-      saveStatus.value = 'error'
-    }
-  }, 700)
-}, { deep: true })
-
-watch(monthPlan, () => {
-  if (!activeMonthId.value) {
-    return
-  }
-  clearTimeout(monthSaveTimer)
-  monthSaveTimer = setTimeout(async () => {
-    try {
-      await $fetch(`/api/v1/planning/month-plans/${activeMonthId.value}`, {
-        method: 'PATCH',
-        body: { body: monthPlan.value },
-      })
-    }
-    catch {
-      /* saved locally only until retry */
-    }
-  }, 800)
-}, { deep: true })
 
 watch(activeTab, async (t) => {
   if (t === 'templates') {
@@ -147,12 +109,17 @@ watch(activeTab, async (t) => {
       return
     }
     const first = list[0]
-    activeMonthId.value = first.id
-    try {
-      const row = await $fetch<{ body: MonthPlanV1 }>(`/api/v1/planning/month-plans/${first.id}`)
-      monthPlan.value = row.body
+    if (!first) {
+      activeMonthId.value = null
+      monthPlan.value = emptyMonthPlan()
+      return
     }
-    catch {
+    activeMonthId.value = first.id
+    const loaded = await fetchMonthPlanBodyForPlanner($fetch, first.id)
+    if (loaded.ok) {
+      monthPlan.value = loaded.body
+    }
+    else {
       monthPlan.value = emptyMonthPlan()
     }
   }

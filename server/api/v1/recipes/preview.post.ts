@@ -1,6 +1,6 @@
 import { consola } from 'consola'
 import { recipePreviewRequestSchema } from '../../../services/recipe-catalog/recipeSchemas'
-import { previewRecipeFromUrl } from '../../../services/recipe-ingestion/recipePreview/previewRecipeFromUrl'
+import { previewRecipeFromUrl } from '../../../services/recipe-ingestion/recipePreviewApp'
 import { RecipePublisherAuthWallError, RecipePreviewDomainError } from '../../../services/recipe-ingestion/recipePreview/recipePreviewErrors'
 
 const previewLogger = consola.withTag('recipe-preview')

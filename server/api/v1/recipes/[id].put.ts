@@ -1,20 +1,29 @@
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
 import { updateRecipe } from '../../../services/recipe-catalog/recipeRepository'
 import { recipeUpdatePayloadSchema } from '../../../services/recipe-catalog/recipeSchemas'
+import { handleRecipeUnexpected, toRecipeHttpError } from '../../../utils/recipeErrors'
 
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')?.trim()
-  if (!id) {
-    throw createError({ statusCode: 400, statusMessage: 'Recipe id is required.' })
+  try {
+    const id = getRouterParam(event, 'id')?.trim()
+    if (!id) {
+      throw createError({ statusCode: 400, statusMessage: 'Recipe id is required.' })
+    }
+
+    const parsedPayload = recipeUpdatePayloadSchema.safeParse(await readBody(event))
+
+    if (!parsedPayload.success) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid recipe payload.', data: parsedPayload.error.flatten() })
+    }
+
+    const supabase = getSupabaseServerClient()
+    const result = await updateRecipe(supabase, id, parsedPayload.data)
+    if (!result.ok) {
+      throw createError(toRecipeHttpError(result.error))
+    }
+    return result.value
   }
-
-  const parsedPayload = recipeUpdatePayloadSchema.safeParse(await readBody(event))
-
-  if (!parsedPayload.success) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid recipe payload.', data: parsedPayload.error.flatten() })
+  catch (err) {
+    handleRecipeUnexpected(err, 'recipes', 'update recipe')
   }
-
-  const supabase = getSupabaseServerClient()
-
-  return updateRecipe(supabase, id, parsedPayload.data)
 })

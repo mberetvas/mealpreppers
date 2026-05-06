@@ -34,3 +34,13 @@ export class RecipePublisherAuthWallError extends RecipePreviewDomainError {
     )
   }
 }
+
+/** Playwright/Chromium fetch failed; HTTP layer maps to 502. */
+export class RecipeBrowserAutomationError extends RecipePreviewDomainError {
+  constructor(
+    message: string,
+    readonly timedOut: boolean,
+  ) {
+    super(message, 502)
+  }
+}

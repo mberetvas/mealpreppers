@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { canonicalRecipeHost } from '../../server/services/recipe-ingestion/recipeScraper'
 import type { RecipePreviewResponse } from '../../types/recipe-preview'
 import { recipePreviewRequestSchema } from '../../types/recipe-preview.schema'
 import type { RecipeScrapeResult } from '../../types/recipe-draft'
+import { SUPPORTED_RECIPE_HOSTS } from '../../types/recipe-draft'
 
 describe('recipe preview API contract', () => {
   describe('recipePreviewRequestSchema', () => {
@@ -23,6 +25,13 @@ describe('recipe preview API contract', () => {
       const parsed = recipePreviewRequestSchema.safeParse({})
       expect(parsed.success).toBe(false)
     })
+  })
+
+  it('canonicalRecipeHost recognizes every supported host constant', () => {
+    for (const host of SUPPORTED_RECIPE_HOSTS) {
+      expect(canonicalRecipeHost(`https://${host}/recept/demo`)).toBe(host)
+      expect(canonicalRecipeHost(`https://www.${host}/recept/demo`)).toBe(host)
+    }
   })
 
   it('RecipePreviewResponse matches RecipeScrapeResult shape', () => {

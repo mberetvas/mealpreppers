@@ -1,5 +1,6 @@
 import { load } from 'cheerio'
 import type { RecipeDraft, RecipeScrapeResult, RecipeSource, SupportedRecipeHost } from '../../../types/recipe-draft'
+import { SUPPORTED_RECIPE_HOSTS } from '../../../types/recipe-draft'
 import { parseFifteenGramRecipe } from './fifteenGramScraper'
 import { parseColruytRecipe } from './colruytScraper'
 import { parseDagelijksekostRecipe } from './dagelijksekostScraper'
@@ -15,13 +16,7 @@ export type {
   SupportedRecipeHost,
 } from '../../../types/recipe-draft'
 
-const SUPPORTED_HOSTS: SupportedRecipeHost[] = [
-  '15gram.be',
-  'colruyt.be',
-  'dagelijksekost.vrt.be',
-  'delhaize.be',
-  'libelle-lekker.be',
-]
+export { SUPPORTED_RECIPE_HOSTS } from '../../../types/recipe-draft'
 
 const PROVIDER_PARSERS: Record<SupportedRecipeHost, typeof parseFifteenGramRecipe> = {
   '15gram.be': parseFifteenGramRecipe,
@@ -44,7 +39,7 @@ export function canonicalRecipeHost(value: string): SupportedRecipeHost | undefi
     }
 
     const host = url.hostname.toLowerCase().replace(/^www\./, '')
-    return SUPPORTED_HOSTS.find(supportedHost => supportedHost === host)
+    return SUPPORTED_RECIPE_HOSTS.find(supportedHost => supportedHost === host)
   }
   catch {
     return undefined

@@ -2,7 +2,16 @@
  * Parsed recipe shape used by scrapers and recipe preview API; shared by server ingestion and Nuxt UI.
  */
 
-export type SupportedRecipeHost = '15gram.be' | 'colruyt.be' | 'dagelijksekost.vrt.be' | 'delhaize.be' | 'libelle-lekker.be'
+/** Hostnames we can scrape (https only); single source for parsers and URL checks. */
+export const SUPPORTED_RECIPE_HOSTS = [
+  '15gram.be',
+  'colruyt.be',
+  'dagelijksekost.vrt.be',
+  'delhaize.be',
+  'libelle-lekker.be',
+] as const
+
+export type SupportedRecipeHost = (typeof SUPPORTED_RECIPE_HOSTS)[number]
 
 export interface RecipeIngredientDraft {
   rawText: string

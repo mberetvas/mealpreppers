@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import type { RecipeCreatePayload, RecipeUpdatePayload } from './recipeSchemas'
+import type { RecipeFailure, RecipeResult } from './recipeResult'
+import { recipeFail, recipeOk } from './recipeResult'
 
 interface RecipeRow {
   id: string
@@ -39,7 +41,8 @@ interface StepRow {
 
 export type { RecipeCatalogItem }
 
-export async function createRecipe(client: SupabaseClient, payload: RecipeCreatePayload): Promise<RecipeCatalogItem> {
+/** Inserts a recipe with ingredients and optional steps. */
+export async function createRecipe(client: SupabaseClient, payload: RecipeCreatePayload): Promise<RecipeResult<RecipeCatalogItem>> {
   const recipeInsert = {
     title: payload.title,
     description: payload.description,
@@ -62,7 +65,7 @@ export async function createRecipe(client: SupabaseClient, payload: RecipeCreate
     .single()
 
   if (recipeError || !recipe) {
-    throw createError({ statusCode: 500, statusMessage: recipeError?.message ?? 'Recipe could not be saved.' })
+    return recipeFail(storageError(recipeError?.message, 'Recipe could not be saved.'))
   }
 
   const recipeRow = recipe as RecipeRow
@@ -87,7 +90,7 @@ export async function createRecipe(client: SupabaseClient, payload: RecipeCreate
 
   if (ingredientsError || !ingredients) {
     await client.from('recipes').delete().eq('id', recipeRow.id)
-    throw createError({ statusCode: 500, statusMessage: ingredientsError?.message ?? 'Recipe ingredients could not be saved.' })
+    return recipeFail(storageError(ingredientsError?.message, 'Recipe ingredients could not be saved.'))
   }
 
   let steps: unknown[] = []
@@ -100,30 +103,31 @@ export async function createRecipe(client: SupabaseClient, payload: RecipeCreate
 
     if (stepsError || !savedSteps) {
       await client.from('recipes').delete().eq('id', recipeRow.id)
-      throw createError({ statusCode: 500, statusMessage: stepsError?.message ?? 'Recipe steps could not be saved.' })
+      return recipeFail(storageError(stepsError?.message, 'Recipe steps could not be saved.'))
     }
 
     steps = savedSteps
   }
 
-  return mapRecipe(recipeRow, ingredients as IngredientRow[], steps as StepRow[])
+  return recipeOk(mapRecipe(recipeRow, ingredients as IngredientRow[], steps as StepRow[]))
 }
 
-export async function listRecipes(client: SupabaseClient): Promise<RecipeCatalogItem[]> {
+/** Lists all recipes with nested ingredients and steps. */
+export async function listRecipes(client: SupabaseClient): Promise<RecipeResult<RecipeCatalogItem[]>> {
   const { data: recipes, error: recipeError } = await client
     .from('recipes')
     .select('*')
     .order('created_at', { ascending: false })
 
   if (recipeError || !recipes) {
-    throw createError({ statusCode: 500, statusMessage: recipeError?.message ?? 'Recipes could not be loaded.' })
+    return recipeFail(storageError(recipeError?.message, 'Recipes could not be loaded.'))
   }
 
   const recipeRows = recipes as RecipeRow[]
   const recipeIds = recipeRows.map(recipe => recipe.id)
 
   if (recipeIds.length === 0) {
-    return []
+    return recipeOk([])
   }
 
   const [{ data: ingredients, error: ingredientsError }, { data: steps, error: stepsError }] = await Promise.all([
@@ -132,27 +136,27 @@ export async function listRecipes(client: SupabaseClient): Promise<RecipeCatalog
   ])
 
   if (ingredientsError || !ingredients) {
-    throw createError({ statusCode: 500, statusMessage: ingredientsError?.message ?? 'Recipe ingredients could not be loaded.' })
+    return recipeFail(storageError(ingredientsError?.message, 'Recipe ingredients could not be loaded.'))
   }
 
   if (stepsError || !steps) {
-    throw createError({ statusCode: 500, statusMessage: stepsError?.message ?? 'Recipe steps could not be loaded.' })
+    return recipeFail(storageError(stepsError?.message, 'Recipe steps could not be loaded.'))
   }
 
   const ingredientsByRecipe = groupByRecipeId(ingredients as IngredientRow[])
   const stepsByRecipe = groupByRecipeId(steps as StepRow[])
 
-  return recipeRows.map(recipe => mapRecipe(
+  return recipeOk(recipeRows.map(recipe => mapRecipe(
     recipe,
     ingredientsByRecipe.get(recipe.id) ?? [],
     stepsByRecipe.get(recipe.id) ?? [],
-  ))
+  )))
 }
 
 /**
- * Loads a single recipe with ingredients and steps, or `null` if the id does not exist.
+ * Loads a single recipe with ingredients and steps, or `not_found` if the id does not exist.
  */
-export async function getRecipeById(client: SupabaseClient, id: string): Promise<RecipeCatalogItem | null> {
+export async function getRecipeById(client: SupabaseClient, id: string): Promise<RecipeResult<RecipeCatalogItem>> {
   const { data: recipe, error: recipeError } = await client
     .from('recipes')
     .select('*')
@@ -160,11 +164,11 @@ export async function getRecipeById(client: SupabaseClient, id: string): Promise
     .maybeSingle()
 
   if (recipeError) {
-    throw createError({ statusCode: 500, statusMessage: recipeError.message ?? 'Recipe could not be loaded.' })
+    return recipeFail(storageError(recipeError.message, 'Recipe could not be loaded.'))
   }
 
   if (!recipe) {
-    return null
+    return recipeFail(notFoundError('Recipe not found.'))
   }
 
   const recipeRow = recipe as RecipeRow
@@ -182,25 +186,25 @@ export async function getRecipeById(client: SupabaseClient, id: string): Promise
   ])
 
   if (ingredientsRes.error || !ingredientsRes.data) {
-    throw createError({ statusCode: 500, statusMessage: ingredientsRes.error?.message ?? 'Recipe ingredients could not be loaded.' })
+    return recipeFail(storageError(ingredientsRes.error?.message, 'Recipe ingredients could not be loaded.'))
   }
 
   if (stepsRes.error) {
-    throw createError({ statusCode: 500, statusMessage: stepsRes.error.message ?? 'Recipe steps could not be loaded.' })
+    return recipeFail(storageError(stepsRes.error.message, 'Recipe steps could not be loaded.'))
   }
 
-  return mapRecipe(
+  return recipeOk(mapRecipe(
     recipeRow,
     ingredientsRes.data as IngredientRow[],
     (stepsRes.data ?? []) as StepRow[],
-  )
+  ))
 }
 
 /**
  * Replaces all recipe fields, ingredients, and steps for the given recipe ID.
- * Throws 404 if the recipe does not exist.
+ * Returns `not_found` if the recipe does not exist.
  */
-export async function updateRecipe(client: SupabaseClient, id: string, payload: RecipeUpdatePayload): Promise<RecipeCatalogItem> {
+export async function updateRecipe(client: SupabaseClient, id: string, payload: RecipeUpdatePayload): Promise<RecipeResult<RecipeCatalogItem>> {
   const recipeUpdate = {
     title: payload.title,
     description: payload.description ?? null,
@@ -225,14 +229,13 @@ export async function updateRecipe(client: SupabaseClient, id: string, payload: 
 
   if (recipeError || !recipe) {
     if (recipeError?.code === 'PGRST116') {
-      throw createError({ statusCode: 404, statusMessage: 'Recipe not found.' })
+      return recipeFail(notFoundError('Recipe not found.'))
     }
-    throw createError({ statusCode: 500, statusMessage: recipeError?.message ?? 'Recipe could not be updated.' })
+    return recipeFail(storageError(recipeError?.message, 'Recipe could not be updated.'))
   }
 
   const recipeRow = recipe as RecipeRow
 
-  // Replace ingredients: delete existing, insert new
   await client.from('recipe_ingredients').delete().eq('recipe_id', id)
 
   const ingredientRows = payload.ingredients.map((ingredient, index) => ({
@@ -250,10 +253,9 @@ export async function updateRecipe(client: SupabaseClient, id: string, payload: 
     .select('*')
 
   if (ingredientsError || !ingredients) {
-    throw createError({ statusCode: 500, statusMessage: ingredientsError?.message ?? 'Recipe ingredients could not be saved.' })
+    return recipeFail(storageError(ingredientsError?.message, 'Recipe ingredients could not be saved.'))
   }
 
-  // Replace steps: delete existing, insert new
   await client.from('recipe_steps').delete().eq('recipe_id', id)
 
   let steps: unknown[] = []
@@ -270,22 +272,22 @@ export async function updateRecipe(client: SupabaseClient, id: string, payload: 
       .select('*')
 
     if (stepsError || !savedSteps) {
-      throw createError({ statusCode: 500, statusMessage: stepsError?.message ?? 'Recipe steps could not be saved.' })
+      return recipeFail(storageError(stepsError?.message, 'Recipe steps could not be saved.'))
     }
 
     steps = savedSteps
   }
 
-  return mapRecipe(recipeRow, ingredients as IngredientRow[], steps as StepRow[])
+  return recipeOk(mapRecipe(recipeRow, ingredients as IngredientRow[], steps as StepRow[]))
 }
 
 /**
  * Deletes recipes by id. Child rows cascade in the database. Returns the number of rows removed.
  */
-export async function deleteRecipesByIds(client: SupabaseClient, ids: string[]): Promise<number> {
+export async function deleteRecipesByIds(client: SupabaseClient, ids: string[]): Promise<RecipeResult<number>> {
   const unique = [...new Set(ids.map(id => id.trim()).filter(Boolean))]
   if (unique.length === 0) {
-    return 0
+    return recipeOk(0)
   }
 
   const { data, error } = await client
@@ -295,10 +297,10 @@ export async function deleteRecipesByIds(client: SupabaseClient, ids: string[]):
     .select('id')
 
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Recipes could not be deleted.' })
+    return recipeFail(storageError(error.message, 'Recipes could not be deleted.'))
   }
 
-  return data?.length ?? 0
+  return recipeOk(data?.length ?? 0)
 }
 
 function groupByRecipeId<Row extends { recipe_id: string }>(rows: Row[]): Map<string, Row[]> {
@@ -342,4 +344,12 @@ function mapRecipe(recipe: RecipeRow, ingredients: IngredientRow[], steps: StepR
     createdAt: recipe.created_at,
     updatedAt: recipe.updated_at,
   }
+}
+
+function storageError(message: string | undefined, fallback: string): RecipeFailure {
+  return { kind: 'storage_error', message: message ?? fallback }
+}
+
+function notFoundError(message: string): RecipeFailure {
+  return { kind: 'not_found', message }
 }

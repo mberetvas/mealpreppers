@@ -3,6 +3,11 @@ import { defineConfig } from 'vitest/config'
 import { defineVitestProject } from '@nuxt/test-utils/config'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      'bun:test': fileURLToPath(new URL('./test/stubs/bun-test-shim.ts', import.meta.url)),
+    },
+  },
   test: {
     projects: [
       {
@@ -13,6 +18,12 @@ export default defineConfig({
         },
       },
       await defineVitestProject({
+        resolve: {
+          alias: {
+            'bun:test': fileURLToPath(new URL('./test/stubs/bun-test-shim.ts', import.meta.url)),
+            'magic-string': fileURLToPath(new URL('./node_modules/magic-string/dist/magic-string.cjs.js', import.meta.url)),
+          },
+        },
         test: {
           name: 'nuxt',
           include: ['test/nuxt/*.{test,spec}.ts'],
