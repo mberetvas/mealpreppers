@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { computed, ref, toRef, watch } from 'vue'
 import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
+import { useAccessibleOverlayInteraction } from '~/composables/useAccessibleOverlayInteraction'
+import { LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS } from '~/constants/listImageLoadingStrategy'
 import { filterRecipesForPlanner } from '~~/utils/recipeFiltering'
 
 const props = withDefaults(defineProps<{
@@ -85,14 +88,14 @@ function confirmDuplicateAnyway(): void {
     <div
       v-if="open"
       ref="overlayRootRef"
-      class="fixed inset-0 z-50 flex items-end justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm md:items-center"
+      class="fixed inset-0 z-50 flex items-end justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm motion-reduce:backdrop-blur-none md:items-center"
       role="dialog"
       aria-modal="true"
       aria-label="Choose recipe"
       @click.self="emit('close')"
     >
       <div
-        class="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-2xl bg-surface-container-lowest shadow-[0_24px_48px_rgba(15,82,56,0.15)] md:max-h-[80vh] md:w-[400px]"
+        class="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-2xl bg-surface-container-lowest shadow-atelier-panel ring-1 ring-outline-variant/15 md:max-h-[80vh] md:w-[400px]"
       >
         <div class="bg-surface-container-low p-4">
           <div class="flex items-center justify-between gap-2">
@@ -101,11 +104,11 @@ function confirmDuplicateAnyway(): void {
             </h3>
             <button
               type="button"
-              class="rounded-full p-2 text-on-surface-variant hover:bg-surface-container-low"
+              class="inline-flex min-h-touch min-w-touch items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low"
               aria-label="Close"
               @click="emit('close')"
             >
-              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              <span class="material-symbols-outlined text-[22px]" aria-hidden="true">close</span>
             </button>
           </div>
           <input
@@ -126,7 +129,7 @@ function confirmDuplicateAnyway(): void {
             <p>{{ duplicateBanner }}</p>
             <button
               type="button"
-              class="mt-2 text-sm font-semibold text-secondary underline-offset-2 hover:underline"
+              class="mt-2 inline-flex min-h-11 items-center justify-center text-sm font-semibold text-secondary underline-offset-2 hover:underline"
               @click="confirmDuplicateAnyway"
             >
               Assign anyway
@@ -138,7 +141,7 @@ function confirmDuplicateAnyway(): void {
           <div class="mb-4 flex gap-2 overflow-x-auto pb-1">
             <button
               type="button"
-              class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition"
+              class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition motion-reduce:transition-none"
               :class="category === '' ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant'"
               @click="category = ''"
             >
@@ -148,7 +151,7 @@ function confirmDuplicateAnyway(): void {
               v-for="c in categories"
               :key="c"
               type="button"
-              class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition"
+              class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition motion-reduce:transition-none"
               :class="category === c ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant'"
               @click="category = category === c ? '' : c"
             >
@@ -164,7 +167,7 @@ function confirmDuplicateAnyway(): void {
               v-for="m in timeChips"
               :key="m"
               type="button"
-              class="rounded-full px-3 py-1.5 text-xs font-semibold transition"
+              class="inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition motion-reduce:transition-none"
               :class="maxTime === m ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant'"
               @click="toggleTime(m)"
             >
@@ -172,7 +175,7 @@ function confirmDuplicateAnyway(): void {
             </button>
             <button
               type="button"
-              class="rounded-full px-3 py-1.5 text-xs font-semibold text-on-surface-variant transition hover:bg-surface-container-low"
+              class="inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-xs font-semibold text-on-surface-variant transition motion-reduce:transition-none hover:bg-surface-container-low"
               @click="maxTime = null"
             >
               Any
@@ -187,11 +190,18 @@ function confirmDuplicateAnyway(): void {
               <li v-for="r in recentRecipes" :key="`r-${r.id}`">
                 <button
                   type="button"
-                  class="flex w-full items-center gap-3 rounded-xl bg-surface-container-low p-2 text-left transition hover:bg-primary-fixed/30"
+                  class="flex min-h-11 w-full items-center gap-3 rounded-xl bg-surface-container-low p-3 text-left transition motion-reduce:transition-none hover:bg-primary-fixed/30"
                   @click="pick(r.id)"
                 >
                   <div class="h-12 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container">
-                    <img v-if="r.imageUrl" :src="r.imageUrl" alt="" class="h-full w-full object-cover">
+                    <img
+                      v-if="r.imageUrl"
+                      v-bind="LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS"
+                      :src="r.imageUrl"
+                      alt=""
+                      aria-hidden="true"
+                      class="h-full w-full object-cover"
+                    >
                   </div>
                   <span class="line-clamp-2 font-body text-sm font-semibold text-on-surface">{{ r.title }}</span>
                 </button>
@@ -206,11 +216,18 @@ function confirmDuplicateAnyway(): void {
             <li v-for="r in filtered" :key="r.id">
               <button
                 type="button"
-                class="flex w-full items-center gap-3 rounded-xl bg-surface-container p-2 text-left transition hover:bg-surface-container-high"
+                class="flex min-h-11 w-full items-center gap-3 rounded-xl bg-surface-container p-3 text-left transition motion-reduce:transition-none hover:bg-surface-container-high"
                 @click="pick(r.id)"
               >
                 <div class="h-12 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container-lowest">
-                  <img v-if="r.imageUrl" :src="r.imageUrl" alt="" class="h-full w-full object-cover">
+                  <img
+                    v-if="r.imageUrl"
+                    v-bind="LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS"
+                    :src="r.imageUrl"
+                    alt=""
+                    aria-hidden="true"
+                    class="h-full w-full object-cover"
+                  >
                 </div>
                 <span class="line-clamp-2 font-body text-sm font-semibold text-on-surface">{{ r.title }}</span>
               </button>

@@ -1,9 +1,10 @@
 import type { Ref } from 'vue'
+import { nextTick, onBeforeUnmount, watch } from 'vue'
 import {
   collectFocusableElements,
   handleFocusTrapKeydown,
   pushAppRootInert,
-} from '~~/utils/accessibleOverlayContract'
+} from '../../utils/accessibleOverlayContract'
 
 export interface UseAccessibleOverlayInteractionOptions {
   /** When true, the Nuxt app root is marked inert while the overlay is open. */

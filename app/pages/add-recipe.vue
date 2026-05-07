@@ -28,6 +28,7 @@ const isImporting = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 const warnings = ref<string[]>([])
+const importSuccessMessage = ref('')
 
 const { data: recipeOptions } = await useFetch<{ categories: string[], tags: string[] }>('/api/v1/recipes/options', {
   default: () => ({ categories: [], tags: [] }),
@@ -61,6 +62,7 @@ const canSave = computed(() => form.title.trim().length > 0 && normalizedIngredi
 async function importRecipe(): Promise<void> {
   errorMessage.value = ''
   warnings.value = []
+  importSuccessMessage.value = ''
   isImporting.value = true
 
   try {
@@ -73,6 +75,7 @@ async function importRecipe(): Promise<void> {
     applyPreviewDraft(result.draft)
     warnings.value = result.warnings
     entryMode.value = 'manual'
+    importSuccessMessage.value = 'Recipe imported from the URL. Review the form below, then save.'
   }
   catch (error) {
     errorMessage.value = toErrorMessage(error, 'Recipe could not be imported.')
@@ -82,8 +85,15 @@ async function importRecipe(): Promise<void> {
   }
 }
 
+function setEntryMode(mode: EntryMode): void {
+  entryMode.value = mode
+  if (mode === 'url')
+    importSuccessMessage.value = ''
+}
+
 async function saveRecipe(): Promise<void> {
   errorMessage.value = ''
+  importSuccessMessage.value = ''
 
   if (!canSave.value) {
     errorMessage.value = 'Title and ingredients are required.'
@@ -322,107 +332,91 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f7f2e8] px-4 pb-24 pt-8 text-[#1e261f] sm:px-6 lg:px-10">
+  <div class="min-h-screen bg-atelier-canvas px-4 pb-24 pt-8 text-atelier-ink sm:px-6 lg:px-10">
     <form class="mx-auto grid max-w-7xl gap-8" @submit.prevent="saveRecipe">
       <header class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div class="max-w-3xl">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7662f]">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-atelier-warm-accent">
             Recipe Atelier
           </p>
-          <h1 class="mt-3 font-['Newsreader'] text-5xl font-semibold leading-tight text-[#123628] sm:text-6xl">
+          <h1 class="mt-3 font-['Newsreader'] text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
             Add Recipe
           </h1>
         </div>
 
-        <div class="inline-grid grid-cols-2 rounded-full bg-white/75 p-1 shadow-[0_12px_40px_rgba(15,82,56,0.10)]">
-          <button
-            type="button"
-            class="rounded-full px-5 py-3 text-sm font-semibold transition"
-            :class="entryMode === 'url' ? 'bg-[#0f5238] text-white shadow-[0_10px_24px_rgba(15,82,56,0.22)]' : 'text-[#526458] hover:bg-[#f3eadb]'"
-            @click="entryMode = 'url'"
-          >
+        <AtelierSegmentRail>
+          <AtelierSegmentButton :active="entryMode === 'url'" @click="setEntryMode('url')">
             URL
-          </button>
-          <button
-            type="button"
-            class="rounded-full px-5 py-3 text-sm font-semibold transition"
-            :class="entryMode === 'manual' ? 'bg-[#0f5238] text-white shadow-[0_10px_24px_rgba(15,82,56,0.22)]' : 'text-[#526458] hover:bg-[#f3eadb]'"
-            @click="entryMode = 'manual'"
-          >
+          </AtelierSegmentButton>
+          <AtelierSegmentButton :active="entryMode === 'manual'" @click="setEntryMode('manual')">
             Manual
-          </button>
-        </div>
+          </AtelierSegmentButton>
+        </AtelierSegmentRail>
       </header>
 
-      <section v-if="entryMode === 'url'" class="rounded-[28px] bg-[#fffaf0] p-5 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-6">
-        <label class="grid gap-3 text-sm font-semibold text-[#31463a]">
+      <AtelierParchmentSection v-if="entryMode === 'url'" density="compact">
+        <label class="grid gap-3 text-sm font-semibold text-atelier-field-label">
           Recipe URL
           <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
             <input
               v-model="importUrl"
               type="url"
-              class="min-h-14 rounded-2xl bg-white px-4 text-base font-medium text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+              class="design-input"
               placeholder="https://..."
             >
-            <button
-              type="button"
-              class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-6 text-sm font-bold text-white shadow-[0_14px_30px_rgba(15,82,56,0.22)] transition hover:bg-[#174d38] disabled:cursor-not-allowed disabled:bg-[#8aa092]"
+            <AtelierBlockButton
               :disabled="isImporting || importUrl.trim().length === 0"
               @click="importRecipe"
             >
               <span class="material-symbols-outlined text-[20px]">download</span>
               {{ isImporting ? 'Importing' : 'Import' }}
-            </button>
+            </AtelierBlockButton>
           </div>
         </label>
-      </section>
+      </AtelierParchmentSection>
 
-      <div v-if="errorMessage" class="rounded-2xl bg-[#fff1e8] px-5 py-4 text-sm font-semibold text-[#9c3d16] shadow-[0_10px_30px_rgba(156,61,22,0.08)]">
-        {{ errorMessage }}
-      </div>
-
-      <div v-if="warnings.length > 0" class="rounded-2xl bg-[#fff8d9] px-5 py-4 text-sm font-semibold text-[#735a08] shadow-[0_10px_30px_rgba(115,90,8,0.08)]">
-        <p v-for="warning in warnings" :key="warning">
-          {{ warning }}
-        </p>
-      </div>
+      <FormFlowStatusSurfaces
+        :error-message="errorMessage"
+        :warnings="warnings"
+        :success-message="importSuccessMessage"
+      />
 
       <div v-if="entryMode === 'manual'" class="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <main class="grid min-w-0 gap-8">
-          <section class="rounded-[28px] bg-[#fffaf0] p-5 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-7">
+          <AtelierParchmentSection>
             <div class="grid gap-5">
-              <label class="grid gap-3 text-sm font-semibold text-[#31463a]">
+              <label class="grid gap-3 text-sm font-semibold text-atelier-field-label">
                 Title
                 <input
                   v-model="form.title"
                   type="text"
-                  class="min-h-14 rounded-2xl bg-white px-4 text-base font-medium text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+                  class="design-input"
                 >
               </label>
 
-              <label class="grid gap-3 text-sm font-semibold text-[#31463a]">
+              <label class="grid gap-3 text-sm font-semibold text-atelier-field-label">
                 Description
                 <textarea
                   v-model="form.description"
                   rows="4"
-                  class="rounded-2xl bg-white px-4 py-3 text-base text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+                  class="design-textarea"
                 />
               </label>
 
-              <label class="grid gap-3 text-sm font-semibold text-[#31463a]">
+              <label class="grid gap-3 text-sm font-semibold text-atelier-field-label">
                 Image URL
                 <input
                   v-model="form.imageUrl"
                   type="url"
-                  class="min-h-14 rounded-2xl bg-white px-4 text-base text-[#1e261f] shadow-inner shadow-[#0f5238]/5 outline-none ring-1 ring-[#0f5238]/10 transition focus:ring-2 focus:ring-[#0f5238]/45"
+                  class="design-input"
                 >
               </label>
 
-              <div class="grid gap-3 rounded-2xl bg-white/60 p-4 ring-1 ring-[#0f5238]/10">
-                <p class="text-sm font-semibold text-[#31463a]">
+              <AtelierInsetWell>
+                <p class="text-sm font-semibold text-atelier-field-label">
                   Or upload a photo
                 </p>
-                <p class="text-xs leading-relaxed text-[#526458]">
+                <p class="text-xs leading-relaxed text-atelier-muted">
                   JPEG, PNG, WebP, or GIF, up to 5MB. Saves to your library and fills the image URL.
                 </p>
                 <input
@@ -433,115 +427,111 @@ onBeforeUnmount(() => {
                   @change="onRecipeImageSelected"
                 >
                 <div class="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#f0e4d2] px-5 text-sm font-bold text-[#0f5238] transition hover:bg-[#e6d6bd] disabled:cursor-not-allowed disabled:opacity-60"
-                    :disabled="isUploadingImage"
-                    @click="triggerRecipeImagePicker"
-                  >
+                  <AtelierPillChipButton :disabled="isUploadingImage" @click="triggerRecipeImagePicker">
                     <span class="material-symbols-outlined text-[20px]">upload</span>
                     {{ isUploadingImage ? 'Uploading' : 'Choose image file' }}
-                  </button>
+                  </AtelierPillChipButton>
                   <button
                     v-if="imagePreviewSource"
                     type="button"
-                    class="text-sm font-semibold text-[#8d4b2b] underline-offset-2 hover:underline"
+                    class="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-atelier-destructive underline-offset-2 hover:underline"
                     @click="clearRecipeImage"
                   >
                     Remove image
                   </button>
                 </div>
-              </div>
+              </AtelierInsetWell>
             </div>
-          </section>
+          </AtelierParchmentSection>
 
-          <section class="rounded-[28px] bg-[#fffaf0] p-5 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-7">
+          <AtelierParchmentSection>
             <div class="mb-5 flex items-center justify-between gap-4">
-              <h2 class="font-['Newsreader'] text-3xl font-semibold text-[#123628]">
+              <h2 class="font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
                 Ingredients
               </h2>
-              <button type="button" class="inline-flex size-11 items-center justify-center rounded-full bg-[#f0e4d2] text-[#0f5238] transition hover:bg-[#e6d6bd]" aria-label="Add ingredient" @click="addIngredient">
+              <AtelierCircleIconButton aria-label="Add ingredient" @click="addIngredient">
                 <span class="material-symbols-outlined text-[22px]">add</span>
-              </button>
+              </AtelierCircleIconButton>
             </div>
 
-            <p class="mb-4 text-xs leading-relaxed text-[#526458]">
+            <p class="mb-4 text-xs leading-relaxed text-atelier-muted">
               Type ingredients as you'd write them on a shopping list. Expand a row to split quantity, unit, and name for structured data.
             </p>
 
             <div class="grid gap-4">
-              <div v-for="(ingredient, index) in form.ingredients" :key="index" class="grid min-w-0 gap-3 rounded-3xl bg-white/80 p-4 shadow-inner shadow-[#0f5238]/5">
+              <AtelierDenseFormRow v-for="(ingredient, index) in form.ingredients" :key="index">
                 <div class="flex min-w-0 items-end gap-3">
-                  <label class="grid min-w-0 flex-1 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  <label class="grid min-w-0 flex-1 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-atelier-subtle">
                     As on your list
                     <input v-model="ingredient.rawText" type="text" placeholder="e.g. 2 tbsp olive oil" class="design-input-sm min-w-0 normal-case tracking-normal">
                   </label>
-                  <button
-                    type="button"
-                    class="mb-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#526458] transition hover:bg-[#f0e4d2]"
-                    :aria-label="ingredient.showDetails ? 'Collapse details' : 'Split quantity'"
-                    @click="ingredient.showDetails = !ingredient.showDetails"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">{{ ingredient.showDetails ? 'unfold_less' : 'unfold_more' }}</span>
-                  </button>
-                  <button type="button" class="mb-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove ingredient" @click="removeIngredient(index)">
-                    <span class="material-symbols-outlined text-[19px]">delete</span>
-                  </button>
+                  <span class="mb-0.5 inline-flex">
+                    <AtelierCircleIconButton
+                      variant="ghost"
+                      :aria-label="ingredient.showDetails ? 'Collapse details' : 'Split quantity'"
+                      @click="ingredient.showDetails = !ingredient.showDetails"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">{{ ingredient.showDetails ? 'unfold_less' : 'unfold_more' }}</span>
+                    </AtelierCircleIconButton>
+                  </span>
+                  <span class="mb-0.5 inline-flex">
+                    <AtelierCircleIconButton variant="danger" aria-label="Remove ingredient" @click="removeIngredient(index)">
+                      <span class="material-symbols-outlined text-[19px]">delete</span>
+                    </AtelierCircleIconButton>
+                  </span>
                 </div>
 
                 <div v-if="ingredient.showDetails" class="grid min-w-0 gap-3 pt-1 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,2fr)]">
-                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-atelier-subtle">
                     Qty
                     <input v-model="ingredient.quantity" type="text" inputmode="decimal" class="design-input-sm min-w-0 normal-case tracking-normal">
                   </label>
-                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-atelier-subtle">
                     Unit
                     <input v-model="ingredient.unit" type="text" class="design-input-sm min-w-0 normal-case tracking-normal">
                   </label>
-                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#708071]">
+                  <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-atelier-subtle">
                     Name
                     <input v-model="ingredient.name" type="text" class="design-input-sm min-w-0 normal-case tracking-normal">
                   </label>
                 </div>
-              </div>
+              </AtelierDenseFormRow>
             </div>
-          </section>
+          </AtelierParchmentSection>
 
-          <section class="rounded-[28px] bg-[#fffaf0] p-5 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-7">
+          <AtelierParchmentSection>
             <div class="mb-5 flex items-center justify-between gap-4">
-              <h2 class="font-['Newsreader'] text-3xl font-semibold text-[#123628]">
+              <h2 class="font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
                 Preparation
               </h2>
-              <button type="button" class="inline-flex size-11 items-center justify-center rounded-full bg-[#f0e4d2] text-[#0f5238] transition hover:bg-[#e6d6bd]" aria-label="Add step" @click="addStep">
+              <AtelierCircleIconButton no-shrink aria-label="Add step" @click="addStep">
                 <span class="material-symbols-outlined text-[22px]">add</span>
-              </button>
+              </AtelierCircleIconButton>
             </div>
 
             <div class="grid gap-4">
-              <div v-for="(step, index) in form.steps" :key="index" class="grid gap-3 rounded-3xl bg-white/80 p-4 shadow-inner shadow-[#0f5238]/5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start">
-                <div class="flex size-10 items-center justify-center rounded-full bg-[#0f5238] font-bold text-white">
-                  {{ index + 1 }}
-                </div>
+              <AtelierDenseFormRow v-for="(step, index) in form.steps" :key="index" layout="step">
+                <AtelierStepIndexBadge :index="index + 1" />
                 <textarea v-model="step.text" rows="3" class="design-textarea" />
-                <button type="button" class="inline-flex size-10 items-center justify-center rounded-full text-[#8d4b2b] transition hover:bg-[#f7e0d2]" aria-label="Remove step" @click="removeStep(index)">
+                <AtelierCircleIconButton no-shrink variant="danger" aria-label="Remove step" @click="removeStep(index)">
                   <span class="material-symbols-outlined text-[21px]">delete</span>
-                </button>
-              </div>
+                </AtelierCircleIconButton>
+              </AtelierDenseFormRow>
             </div>
-          </section>
+          </AtelierParchmentSection>
         </main>
 
         <aside class="grid min-w-0 content-start gap-6">
-          <section class="min-w-0 rounded-[28px] bg-[#123628] p-5 text-white shadow-[0_22px_70px_rgba(15,82,56,0.20)] sm:p-6">
+          <AtelierInversePanel>
             <div class="grid min-w-0 gap-4">
               <div class="grid min-w-0 grid-cols-2 gap-4">
-                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-atelier-inverse-on-muted">
                   Servings
-                  <input v-model="form.servings" type="number" min="1" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                  <input v-model="form.servings" type="number" min="1" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-atelier-ink outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-atelier-focus-ring">
                 </label>
-                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-atelier-inverse-on-muted">
                   Difficulty
-                  <select v-model="form.difficulty" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                  <select v-model="form.difficulty" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-atelier-ink outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-atelier-focus-ring">
                     <option value="">
                       —
                     </option>
@@ -558,46 +548,42 @@ onBeforeUnmount(() => {
                 </label>
               </div>
               <div class="grid min-w-0 grid-cols-3 gap-4">
-                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-atelier-inverse-on-muted">
                   Prep
-                  <input v-model="form.prepTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                  <input v-model="form.prepTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-atelier-ink outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-atelier-focus-ring">
                 </label>
-                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-atelier-inverse-on-muted">
                   Cook
-                  <input v-model="form.cookTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                  <input v-model="form.cookTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-atelier-ink outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-atelier-focus-ring">
                 </label>
-                <label class="grid min-w-0 gap-2 text-sm font-semibold text-[#d8e4db]">
+                <label class="grid min-w-0 gap-2 text-sm font-semibold text-atelier-inverse-on-muted">
                   Total
-                  <input v-model="form.totalTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-[#1e261f] outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-[#f09b54]">
+                  <input v-model="form.totalTimeMinutes" type="number" min="0" class="min-h-12 w-full min-w-0 rounded-2xl bg-white/95 px-4 text-atelier-ink outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-atelier-focus-ring">
                 </label>
               </div>
               <MultiSelect
                 v-model="form.categories"
                 :options="recipeOptions.categories"
                 label="Categories"
-                class="text-[#d8e4db]"
+                class="text-atelier-inverse-on-muted"
               />
               <MultiSelect
                 v-model="form.tags"
                 :options="recipeOptions.tags"
                 label="Tags"
-                class="text-[#d8e4db]"
+                class="text-atelier-inverse-on-muted"
               />
             </div>
-          </section>
+          </AtelierInversePanel>
 
-          <section v-if="imagePreviewSource" class="overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_22px_70px_rgba(15,82,56,0.10)]">
+          <AtelierParchmentSection v-if="imagePreviewSource" bleed>
             <img :src="imagePreviewSource" :alt="form.title || 'Recipe image'" class="aspect-[4/3] w-full object-cover">
-          </section>
+          </AtelierParchmentSection>
 
-          <button
-            type="submit"
-            class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#b7662f] px-6 text-sm font-bold text-white shadow-[0_16px_34px_rgba(183,102,47,0.24)] transition hover:bg-[#9f5526] disabled:cursor-not-allowed disabled:bg-[#c7aa93]"
-            :disabled="!canSave"
-          >
+          <AtelierBlockButton variant="cta" native-type="submit" :disabled="!canSave">
             <span class="material-symbols-outlined text-[20px]">save</span>
             {{ isSaving ? 'Saving' : 'Save Recipe' }}
-          </button>
+          </AtelierBlockButton>
         </aside>
       </div>
     </form>

@@ -10,11 +10,11 @@ Introduce a **visual cost budget** for repeated list and card UI: reduce repeate
 
 ## Acceptance criteria
 
-- [ ] List and card grids on scoped recipe/planner surfaces avoid redundant heavy shadows or stacked expensive effects documented as problematic in the audit.
-- [ ] Hierarchy remains clear at a glance (tonal or limited elevation tiers), including legibility at small card sizes.
-- [ ] Reduced-motion mode minimizes non-essential movement on optional animations in touched surfaces.
+- [x] List and card grids on scoped recipe/planner surfaces avoid redundant heavy shadows or stacked expensive effects documented as problematic in the audit.
+- [x] Hierarchy remains clear at a glance (tonal or limited elevation tiers), including legibility at small card sizes.
+- [x] Reduced-motion mode minimizes non-essential movement on optional animations in touched surfaces.
 - [ ] User-outcome oriented check: scrolling representative lists remains smooth on a mid-range device profile (manual smoke or agreed lightweight benchmark); no new telemetry product required.
-- [ ] Builds on semantic tokens for surfaces touched in the token compliance slice.
+- [x] Builds on semantic tokens for surfaces touched in the token compliance slice.
 
 ## Blocked by
 

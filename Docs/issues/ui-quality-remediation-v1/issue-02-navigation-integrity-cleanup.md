@@ -10,9 +10,9 @@ Clean up **navigation integrity** so every affordance surfaced in primary naviga
 
 ## Acceptance criteria
 
-- [ ] All primary navigation entries lead to working screens or documented redirects; no broken or stub-only destinations from primary nav.
-- [ ] Automated test (or scripted check) asserts primary nav targets resolve without 404 or empty placeholder for the defined route set.
-- [ ] No backend API changes.
+- [x] All primary navigation entries lead to working screens or documented redirects; no broken or stub-only destinations from primary nav.
+- [x] Automated test (or scripted check) asserts primary nav targets resolve without 404 or empty placeholder for the defined route set.
+- [x] No backend API changes.
 
 ## Blocked by
 

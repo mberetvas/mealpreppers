@@ -182,13 +182,13 @@ async function executeBulkDelete(): Promise<void> {
 }
 
 const cardFrameClass =
-  'group w-full overflow-hidden rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.10)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]'
-const cardLinkClass = `${cardFrameClass} block transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(15,82,56,0.14)]`
-const cardSelectClass = `${cardFrameClass} text-left ring-offset-2 ring-offset-[#f7f2e8]`
+  'group w-full overflow-hidden rounded-[28px] bg-atelier-parchment ring-1 ring-primary/10 shadow-atelier-grid-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+const cardLinkClass = `${cardFrameClass} block transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transition-none motion-reduce:hover:shadow-atelier-grid-card hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:shadow-atelier-grid-card-hover hover:ring-primary/15`
+const cardSelectClass = `${cardFrameClass} text-left ring-offset-2 ring-offset-atelier-canvas`
 
 /** DESIGN.md chips: pill shape, token backgrounds; min 44px hit target for kitchen / mobile. */
 const filterTriggerClass
-  = 'group inline-flex min-h-12 min-w-0 items-center justify-between gap-3 rounded-2xl bg-white px-4 text-left text-sm font-bold text-[#123628] shadow-[0_8px_22px_rgba(15,82,56,0.08)] ring-1 ring-[#0f5238]/10 transition hover:bg-[#fffaf0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]'
+  = 'group inline-flex min-h-12 min-w-0 items-center justify-between gap-3 rounded-2xl bg-atelier-parchment px-4 text-left text-sm font-bold text-atelier-heading shadow-atelier-float ring-1 ring-primary/10 transition motion-reduce:transition-none hover:bg-atelier-parchment focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
 </script>
 
 <template>
@@ -207,7 +207,7 @@ const filterTriggerClass
         <div class="flex flex-wrap items-center gap-3 lg:justify-end">
           <button
             type="button"
-            class="inline-flex min-h-14 min-w-[7.5rem] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-bold shadow-[0_10px_26px_rgba(15,82,56,0.12)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+            class="inline-flex min-h-14 min-w-[7.5rem] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-bold shadow-atelier-float transition motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
             :class="selectionMode ? 'bg-[#f0e4d2] text-[#123628] ring-2 ring-[#0f5238]/25' : 'bg-white text-[#123628] ring-1 ring-[#0f5238]/15'"
             @click="toggleSelectionMode"
           >
@@ -215,7 +215,7 @@ const filterTriggerClass
             {{ selectionMode ? 'Done' : 'Select' }}
           </button>
 
-          <NuxtLink to="/add-recipe" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-6 text-sm font-bold text-white shadow-[0_14px_30px_rgba(15,82,56,0.22)] transition hover:bg-[#174d38]">
+          <NuxtLink to="/add-recipe" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-6 text-sm font-bold text-white shadow-atelier-primary-btn transition motion-reduce:transition-none hover:bg-[#174d38]">
             <span class="material-symbols-outlined text-[20px]">add</span>
             Add Recipe
           </NuxtLink>
@@ -223,7 +223,7 @@ const filterTriggerClass
       </header>
 
       <section
-        class="grid gap-5 rounded-[28px] bg-[#fffaf0] p-4 shadow-[0_22px_70px_rgba(15,82,56,0.10)] sm:p-5"
+        class="grid gap-5 rounded-[28px] bg-atelier-parchment p-4 shadow-atelier-float ring-1 ring-primary/8 sm:p-5"
         aria-label="Search and filter recipes"
       >
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
@@ -336,10 +336,10 @@ const filterTriggerClass
       </section>
 
       <div v-if="pending" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        <div v-for="index in 6" :key="index" class="h-80 animate-pulse rounded-[28px] bg-[#fffaf0] shadow-[0_18px_54px_rgba(15,82,56,0.08)]" />
+        <div v-for="index in 6" :key="index" class="h-80 animate-pulse rounded-[28px] bg-atelier-parchment shadow-atelier-grid-card ring-1 ring-primary/10 motion-reduce:animate-none" />
       </div>
 
-      <section v-else-if="error" class="rounded-[28px] bg-[#fff1e8] p-6 text-[#9c3d16] shadow-[0_18px_54px_rgba(156,61,22,0.08)]">
+      <section v-else-if="error" class="rounded-[28px] bg-[#fff1e8] p-6 text-[#9c3d16] shadow-atelier-status-error">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <p class="font-semibold">
             Recipes could not be loaded.
@@ -352,7 +352,7 @@ const filterTriggerClass
       </section>
 
       <!-- Empty state: no recipes in library -->
-      <section v-else-if="!hasAnyRecipes" class="rounded-[28px] bg-[#fffaf0] p-8 text-center shadow-[0_22px_70px_rgba(15,82,56,0.10)]">
+      <section v-else-if="!hasAnyRecipes" class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10">
         <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-[#f0e4d2] text-[#0f5238]">
           <span class="material-symbols-outlined text-[28px]">menu_book</span>
         </div>
@@ -362,14 +362,14 @@ const filterTriggerClass
         <p class="mt-2 text-sm text-[#5d6c60]">
           Add your first recipe to get started.
         </p>
-        <NuxtLink to="/add-recipe" class="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(15,82,56,0.18)]">
+        <NuxtLink to="/add-recipe" class="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#0f5238] px-5 text-sm font-bold text-white shadow-atelier-primary-btn transition motion-reduce:transition-none">
           <span class="material-symbols-outlined text-[20px]">add</span>
           Add Recipe
         </NuxtLink>
       </section>
 
       <!-- Empty state: no matches for filters/search -->
-      <section v-else-if="filteredRecipes.length === 0" class="rounded-[28px] bg-[#fffaf0] p-8 text-center shadow-[0_22px_70px_rgba(15,82,56,0.10)]">
+      <section v-else-if="filteredRecipes.length === 0" class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10">
         <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-[#f0e4d2] text-[#0f5238]">
           <span class="material-symbols-outlined text-[28px]">filter_list_off</span>
         </div>
@@ -415,7 +415,7 @@ const filterTriggerClass
     <!-- Bulk actions bar -->
     <div
       v-if="selectionMode"
-      class="fixed inset-x-0 bottom-0 z-[60] border-t border-[#0f5238]/10 bg-[#fffaf0]/95 px-4 py-4 shadow-[0_-12px_40px_rgba(15,82,56,0.12)] backdrop-blur-md pb-[max(1rem,env(safe-area-inset-bottom))]"
+      class="fixed inset-x-0 bottom-0 z-[60] border-t border-[#0f5238]/10 bg-[#fffaf0]/95 px-4 py-4 shadow-atelier-dock backdrop-blur-md motion-reduce:backdrop-blur-none pb-[max(1rem,env(safe-area-inset-bottom))]"
       role="region"
       aria-label="Bulk actions"
     >

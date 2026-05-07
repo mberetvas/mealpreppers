@@ -1,12 +1,9 @@
 <script setup lang="ts">
+import { primaryNavBrandTo, topNavItems } from '~/constants/primaryNavigation'
+
 const route = useRoute()
 
-const navItems = [
-  { label: 'Recipes', to: '/recipes' },
-  { label: 'Weekly Plan', to: '/weekly-plan' },
-  { label: 'Shopping List', to: '/shopping-list' },
-  { label: 'Add Recipe', to: '/add-recipe' },
-]
+const navItems = topNavItems
 
 function isActive(to: string): boolean {
   return route.path === to
@@ -17,7 +14,7 @@ function isActive(to: string): boolean {
   <nav
     class="fixed top-0 w-full z-50 bg-stone-50/80 dark:bg-stone-900/80 backdrop-blur-md shadow-sm dark:shadow-none h-20 flex justify-between items-center px-8"
   >
-    <NuxtLink to="/recipes" class="font-headline italic text-2xl font-bold text-emerald-900 dark:text-emerald-400">
+    <NuxtLink :to="primaryNavBrandTo" class="font-headline italic text-2xl font-bold text-emerald-900 dark:text-emerald-400">
       Culinary Atelier
     </NuxtLink>
 

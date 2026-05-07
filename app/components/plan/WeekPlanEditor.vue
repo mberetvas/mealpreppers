@@ -10,8 +10,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:selectedDay': [value: keyof WeekPlanV1['days']]
-  choose: [{ day: keyof WeekPlanV1['days'], meal: 'breakfast' | 'lunch' | 'dinner' }]
-  remove: [{ day: keyof WeekPlanV1['days'], meal: 'breakfast' | 'lunch' | 'dinner' }]
+  choose: [{ day: keyof WeekPlanV1['days'], meal: 'breakfast' | 'lunch' | 'dinner', invoker?: HTMLElement | null }]
+  remove: [{ day: keyof WeekPlanV1['days'], meal: 'breakfast' | 'lunch' | 'dinner', invoker?: HTMLElement | null }]
 }>()
 
 const { primaryMeta } = useRecipeTimeFormat()
@@ -50,7 +50,7 @@ function slotMeta(recipe: RecipeCatalogItem | null): { time?: string, tag?: stri
           v-for="d in DAYS"
           :key="d.key"
           type="button"
-          class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left font-body text-sm font-medium transition"
+          class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left font-body text-sm font-medium transition motion-reduce:transition-none"
           :class="selectedDay === d.key
             ? 'bg-surface-container-low text-primary'
             : 'text-on-surface-variant hover:bg-surface-container-low/60'"
@@ -84,8 +84,8 @@ function slotMeta(recipe: RecipeCatalogItem | null): { time?: string, tag?: stri
           :recipe="recipeForSlot(selectedDay, 'breakfast')"
           :time-label="slotMeta(recipeForSlot(selectedDay, 'breakfast')).time"
           :tag-line="slotMeta(recipeForSlot(selectedDay, 'breakfast')).tag"
-          @choose="emit('choose', { day: selectedDay, meal: 'breakfast' })"
-          @remove="emit('remove', { day: selectedDay, meal: 'breakfast' })"
+          @choose="(invoker) => emit('choose', { day: selectedDay, meal: 'breakfast', invoker })"
+          @remove="(invoker) => emit('remove', { day: selectedDay, meal: 'breakfast', invoker })"
         />
         <PlanMealSlotCard
           title="Lunch"
@@ -93,8 +93,8 @@ function slotMeta(recipe: RecipeCatalogItem | null): { time?: string, tag?: stri
           :recipe="recipeForSlot(selectedDay, 'lunch')"
           :time-label="slotMeta(recipeForSlot(selectedDay, 'lunch')).time"
           :tag-line="slotMeta(recipeForSlot(selectedDay, 'lunch')).tag"
-          @choose="emit('choose', { day: selectedDay, meal: 'lunch' })"
-          @remove="emit('remove', { day: selectedDay, meal: 'lunch' })"
+          @choose="(invoker) => emit('choose', { day: selectedDay, meal: 'lunch', invoker })"
+          @remove="(invoker) => emit('remove', { day: selectedDay, meal: 'lunch', invoker })"
         />
         <PlanMealSlotCard
           title="Dinner"
@@ -102,8 +102,8 @@ function slotMeta(recipe: RecipeCatalogItem | null): { time?: string, tag?: stri
           :recipe="recipeForSlot(selectedDay, 'dinner')"
           :time-label="slotMeta(recipeForSlot(selectedDay, 'dinner')).time"
           :tag-line="slotMeta(recipeForSlot(selectedDay, 'dinner')).tag"
-          @choose="emit('choose', { day: selectedDay, meal: 'dinner' })"
-          @remove="emit('remove', { day: selectedDay, meal: 'dinner' })"
+          @choose="(invoker) => emit('choose', { day: selectedDay, meal: 'dinner', invoker })"
+          @remove="(invoker) => emit('remove', { day: selectedDay, meal: 'dinner', invoker })"
         />
       </div>
     </section>

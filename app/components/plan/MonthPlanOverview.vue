@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
+import { LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS } from '~/constants/listImageLoadingStrategy'
 import { countAssignedRecipes, deepCloneWeek } from '~~/utils/weekPlan'
 
 const props = defineProps<{
@@ -90,8 +91,10 @@ function openWeekInEditor(index: number): void {
           <img
             v-for="(url, ti) in thumbUrls(modelValue.weeks[i])"
             :key="ti"
+            v-bind="LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS"
             :src="url"
             alt=""
+            aria-hidden="true"
             class="relative size-14 rounded-full border-2 border-surface-container-lowest object-cover ring-1 ring-outline-variant/20"
             :style="{ zIndex: 4 - ti }"
           >

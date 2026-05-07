@@ -4,6 +4,7 @@ import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
 import { deepCloneWeek, emptyMonthPlan, emptyWeekPlan, getDuplicateRecipeIds, isWeekPlanValid } from '~~/utils/weekPlan'
 import { duplicatePlannerMessage } from '~~/utils/plannerDuplicateMessages'
 import { fetchMonthPlanBodyForPlanner, fetchWeekTemplateRowForPlanner } from '~~/utils/planningHydration'
+import { ariaForPlannerWeekSaveStatus } from '~~/utils/stateMessagingContract'
 
 type Tab = 'week' | 'month' | 'templates'
 type Meal = 'breakfast' | 'lunch' | 'dinner'
@@ -25,11 +26,15 @@ usePlanningWeekAutosave(weekPlan, activeTemplateId, saveStatus)
 usePlanningMonthAutosave(monthPlan, activeMonthId)
 
 const pickerOpen = ref(false)
+const pickerRestoreTarget = shallowRef<HTMLElement | null>(null)
 const pickerTarget = ref<{ day: DayKey, meal: Meal } | null>(null)
 const duplicateHint = ref<string | null>(null)
 const pendingPickId = ref<string | null>(null)
 
 const removeTarget = ref<{ day: DayKey, meal: Meal } | null>(null)
+const removeOverlayRef = ref<HTMLElement | null>(null)
+const removeRestoreTarget = shallowRef<HTMLElement | null>(null)
+const removeDialogOpen = computed(() => removeTarget.value !== null)
 
 const { data: recipes, pending: recipesPending } = await useFetch<RecipeCatalogItem[]>('/api/v1/recipes')
 const { data: options } = await useFetch<{ categories: string[], tags: string[] }>('/api/v1/recipes/options')
@@ -65,13 +70,22 @@ function closePicker(): void {
   pendingPickId.value = null
 }
 
-function requestRemove(target: { day: DayKey, meal: Meal }): void {
-  removeTarget.value = target
+function requestRemove(target: { day: DayKey, meal: Meal, invoker?: HTMLElement | null }): void {
+  removeRestoreTarget.value = target.invoker ?? (document.activeElement as HTMLElement | null)
+  removeTarget.value = { day: target.day, meal: target.meal }
 }
 
 function cancelRemove(): void {
   removeTarget.value = null
 }
+
+useAccessibleOverlayInteraction({
+  open: removeDialogOpen,
+  scopeRef: removeOverlayRef,
+  restoreFocusRef: removeRestoreTarget,
+  lockBackground: true,
+  onRequestClose: cancelRemove,
+})
 
 async function hydrateTemplateFromRoute(): Promise<void> {
   const tid = typeof route.query.template === 'string' ? route.query.template.trim() : ''
@@ -129,8 +143,9 @@ function setTab(t: Tab): void {
   activeTab.value = t
 }
 
-function openPicker(target: { day: DayKey, meal: Meal }): void {
-  pickerTarget.value = target
+function openPicker(target: { day: DayKey, meal: Meal, invoker?: HTMLElement | null }): void {
+  pickerRestoreTarget.value = target.invoker ?? (document.activeElement as HTMLElement | null)
+  pickerTarget.value = { day: target.day, meal: target.meal }
   duplicateHint.value = null
   pendingPickId.value = null
   pickerOpen.value = true
@@ -273,6 +288,8 @@ const savePillText = computed(() => {
   return 'All changes saved'
 })
 
+const weekSaveStatusAria = computed(() => ariaForPlannerWeekSaveStatus(saveStatus.value))
+
 const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
 
 const categoryOptions = computed(() => options.value?.categories ?? [])
@@ -320,6 +337,9 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         <span
           v-if="activeTab === 'week'"
           class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          :role="weekSaveStatusAria.role"
+          :aria-live="weekSaveStatusAria.ariaLive"
+          aria-atomic="true"
         >
           <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">check_circle</span>
           {{ savePillText }}
@@ -327,6 +347,9 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         <span
           v-if="activeTab === 'week' && !weekValid"
           class="rounded-full bg-error-container/60 px-3 py-1 font-body text-xs font-semibold text-on-error-container"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
         >
           Add at least one recipe
         </span>
@@ -359,11 +382,22 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         </button>
       </nav>
       <div v-if="activeTab === 'week'" class="mt-2 flex flex-wrap items-center gap-2">
-        <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant">
+        <span
+          class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          :role="weekSaveStatusAria.role"
+          :aria-live="weekSaveStatusAria.ariaLive"
+          aria-atomic="true"
+        >
           <span class="material-symbols-outlined text-[14px] text-primary" aria-hidden="true">check_circle</span>
           {{ savePillText }}
         </span>
-        <span v-if="!weekValid" class="rounded-full bg-error-container/50 px-2 py-0.5 text-[11px] font-semibold text-on-error-container">
+        <span
+          v-if="!weekValid"
+          class="rounded-full bg-error-container/50 px-2 py-0.5 text-[11px] font-semibold text-on-error-container"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           Need 1+ recipe
         </span>
       </div>
@@ -428,6 +462,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
 
     <PlanRecipePickerModal
       :open="pickerOpen"
+      :focus-restore-target="pickerRestoreTarget"
       :recipes="recipes ?? []"
       :categories="categoryOptions"
       :recently-used-ids="recentlyUsedIds"
@@ -440,12 +475,13 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
     <Teleport to="body">
       <div
         v-if="removeTarget"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm"
+        ref="removeOverlayRef"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm motion-reduce:backdrop-blur-none"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="remove-meal-title"
       >
-        <div class="max-w-md rounded-2xl bg-surface-container-lowest p-6 shadow-[0_24px_48px_rgba(15,82,56,0.15)] ring-1 ring-outline-variant/20">
+        <div class="max-w-md rounded-2xl bg-surface-container-lowest p-6 shadow-atelier-panel ring-1 ring-outline-variant/20">
           <h2 id="remove-meal-title" class="font-headline text-xl font-semibold text-on-surface">
             Remove this meal?
           </h2>
