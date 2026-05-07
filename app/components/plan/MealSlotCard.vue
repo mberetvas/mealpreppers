@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
+import { useAccessibleOverlayInteraction } from '~/composables/useAccessibleOverlayInteraction'
+import {
+  LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS,
+  recipeIdentityListImageAlt,
+} from '~/constants/listImageLoadingStrategy'
 
 defineProps<{
   title: string
@@ -10,11 +16,14 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  choose: []
-  remove: []
+  choose: [invoker?: HTMLElement | null]
+  remove: [invoker?: HTMLElement | null]
 }>()
 
 const menuOpen = ref(false)
+
+const menuButtonRef = ref<HTMLButtonElement | null>(null)
+const menuPanelRef = ref<HTMLElement | null>(null)
 
 function toggleMenu(): void {
   menuOpen.value = !menuOpen.value
@@ -24,7 +33,19 @@ function closeMenu(): void {
   menuOpen.value = false
 }
 
-function onDocClick(e: MouseEvent): void {
+async function pickChangeRecipe(): Promise<void> {
+  closeMenu()
+  await nextTick()
+  emit('choose', menuButtonRef.value)
+}
+
+async function pickRemove(): Promise<void> {
+  closeMenu()
+  await nextTick()
+  emit('remove', menuButtonRef.value)
+}
+
+function onDocMousedown(e: MouseEvent): void {
   if (!menuOpen.value) return
   const t = e.target as Node
   const root = menuRoot.value
@@ -33,8 +54,17 @@ function onDocClick(e: MouseEvent): void {
 
 const menuRoot = ref<HTMLElement | null>(null)
 
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+onMounted(() => document.addEventListener('mousedown', onDocMousedown))
+onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown))
+
+useAccessibleOverlayInteraction({
+  open: menuOpen,
+  scopeRef: menuPanelRef,
+  restoreFocusRef: menuButtonRef,
+  lockBackground: false,
+  onRequestClose: closeMenu,
+  getInitialFocus: () => menuPanelRef.value?.querySelector<HTMLElement>('[role="menuitem"]') ?? null,
+})
 </script>
 
 <template>
@@ -48,14 +78,15 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 
     <div
       v-if="recipe"
-      class="rounded-2xl bg-surface-container-lowest p-3 shadow-[0_8px_24px_rgba(15,82,56,0.06)] ring-1 ring-outline-variant/20"
+      class="rounded-2xl bg-surface-container-lowest p-3 ring-1 ring-outline-variant/25"
     >
       <div class="flex gap-4">
         <div class="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container">
           <img
             v-if="recipe.imageUrl"
+            v-bind="LIST_RECIPE_NON_CRITICAL_IMAGE_ATTRS"
             :src="recipe.imageUrl"
-            :alt="`Photo of ${recipe.title}`"
+            :alt="recipeIdentityListImageAlt(recipe.title)"
             class="h-full w-full object-cover"
           >
           <div v-else class="flex h-full items-center justify-center text-primary">
@@ -74,31 +105,36 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
         </div>
         <div ref="menuRoot" class="relative shrink-0 self-start">
           <button
+            ref="menuButtonRef"
             type="button"
-            class="rounded-full p-2 text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
+            class="inline-flex min-h-touch min-w-touch items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
             aria-label="Meal actions"
+            aria-haspopup="true"
+            :aria-expanded="menuOpen"
             @click.stop="toggleMenu"
           >
             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">more_horiz</span>
           </button>
           <div
             v-if="menuOpen"
-            class="absolute right-0 z-20 mt-1 min-w-[9rem] rounded-xl bg-surface-container-lowest py-1 shadow-[0_12px_32px_rgba(15,82,56,0.12)] ring-1 ring-outline-variant/20"
+            ref="menuPanelRef"
+            class="absolute right-0 z-20 mt-1 min-w-[9rem] rounded-xl bg-surface-container-lowest py-1 shadow-atelier-menu ring-1 ring-outline-variant/20"
             role="menu"
+            :aria-label="`${title} actions`"
           >
             <button
               type="button"
-              class="block w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-low"
+              class="flex min-h-11 w-full items-center px-4 text-left text-sm text-on-surface hover:bg-surface-container-low"
               role="menuitem"
-              @click="emit('choose'); closeMenu()"
+              @click="pickChangeRecipe"
             >
               Change recipe
             </button>
             <button
               type="button"
-              class="block w-full px-4 py-2 text-left text-sm text-error hover:bg-error-container/30"
+              class="flex min-h-11 w-full items-center px-4 text-left text-sm text-error hover:bg-error-container/30"
               role="menuitem"
-              @click="emit('remove'); closeMenu()"
+              @click="pickRemove"
             >
               Remove
             </button>
@@ -110,8 +146,8 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
     <button
       v-else
       type="button"
-      class="flex w-full flex-col items-center justify-center gap-2 rounded-2xl bg-surface-container-low py-10 text-center transition hover:bg-primary-fixed/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      @click="emit('choose')"
+      class="flex w-full flex-col items-center justify-center gap-2 rounded-2xl bg-surface-container-low py-10 text-center transition motion-reduce:transition-none hover:bg-primary-fixed/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      @click="emit('choose', $event.currentTarget as HTMLElement)"
     >
       <span class="material-symbols-outlined text-3xl text-primary/80" aria-hidden="true">add_circle</span>
       <span class="font-body text-sm font-semibold text-primary">Choose recipe</span>

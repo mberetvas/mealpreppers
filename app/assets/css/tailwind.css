@@ -2,6 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Culinary Atelier semantic roles (light / `.dark`). Consumed as Tailwind
+ * `atelier/*` colors — see `app/constants/designTokenCompliance.ts`.
+ */
+:root {
+  --atelier-canvas: 247 242 232;
+  --atelier-parchment: 255 250 240;
+  --atelier-cream-error: 255 241 232;
+  --atelier-cream-warning: 255 248 217;
+  --atelier-mint-success: 227 242 230;
+  --atelier-ink: 30 38 31;
+  --atelier-heading: 18 54 40;
+  --atelier-muted: 82 100 88;
+  --atelier-field-label: 49 70 58;
+  --atelier-subtle: 112 128 113;
+  --atelier-chip: 240 228 210;
+  --atelier-chip-hover: 230 214 189;
+  --atelier-image-well: 230 214 189;
+  --atelier-destructive: 141 75 43;
+  --atelier-destructive-soft: 247 224 210;
+  --atelier-warm-accent: 183 102 47;
+  --atelier-inverse-surface: 18 54 40;
+  --atelier-inverse-on-muted: 216 228 219;
+  --atelier-focus-ring: 240 155 84;
+  --atelier-cta: 183 102 47;
+  --atelier-cta-hover: 159 85 38;
+  --atelier-cta-disabled: 199 170 147;
+  --atelier-primary-hover: 23 77 56;
+  --atelier-primary-disabled: 138 160 146;
+  --atelier-error-foreground: 156 61 22;
+  --atelier-warning-foreground: 115 90 8;
+  --atelier-success-foreground: 27 77 47;
+  --atelier-neutral-action: 72 87 70;
+  --atelier-icon-muted: 107 123 110;
+  --atelier-meta: 106 120 107;
+  --atelier-description: 93 108 96;
+  --atelier-entry-hover: 243 234 219;
+  --atelier-skeleton: 255 250 240;
+  --atelier-shadow: 15 82 56;
+  --atelier-cta-shadow: 183 102 47;
+}
+
+.dark {
+  --atelier-canvas: 17 22 19;
+  --atelier-parchment: 28 32 30;
+  --atelier-cream-error: 48 32 28;
+  --atelier-cream-warning: 42 38 24;
+  --atelier-mint-success: 24 36 30;
+  --atelier-ink: 229 231 228;
+  --atelier-heading: 200 220 208;
+  --atelier-muted: 160 170 162;
+  --atelier-field-label: 180 190 182;
+  --atelier-subtle: 130 140 132;
+  --atelier-chip: 45 50 47;
+  --atelier-chip-hover: 55 62 58;
+  --atelier-image-well: 40 45 42;
+  --atelier-destructive: 255 160 140;
+  --atelier-destructive-soft: 60 40 36;
+  --atelier-warm-accent: 230 170 120;
+  --atelier-inverse-surface: 38 52 44;
+  --atelier-inverse-on-muted: 200 210 205;
+  --atelier-focus-ring: 255 190 120;
+  --atelier-cta: 210 150 100;
+  --atelier-cta-hover: 230 175 130;
+  --atelier-cta-disabled: 90 80 72;
+  --atelier-primary-hover: 130 190 160;
+  --atelier-primary-disabled: 80 95 88;
+  --atelier-error-foreground: 255 170 150;
+  --atelier-warning-foreground: 230 210 140;
+  --atelier-success-foreground: 160 210 175;
+  --atelier-neutral-action: 170 180 172;
+  --atelier-icon-muted: 140 150 142;
+  --atelier-meta: 130 140 132;
+  --atelier-description: 150 160 154;
+  --atelier-entry-hover: 45 48 46;
+  --atelier-skeleton: 32 36 34;
+  --atelier-shadow: 0 0 0;
+  --atelier-cta-shadow: 0 0 0;
+}
+
 @layer base {
   body {
     @apply bg-surface text-on-surface font-body antialiased;
@@ -17,8 +97,7 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #bfc9c1;
-    border-radius: 10px;
+    @apply bg-outline-variant rounded-full;
   }
 }
 
@@ -58,6 +137,89 @@
       transition-[border-color] duration-200
       focus:border-b-2 focus:border-primary focus:pb-[calc(theme(spacing.[0.5])-1px)];
   }
+
+  /** Tokenized elevation for recipe/planner surfaces (primary-tinted shadow). */
+  .shadow-atelier-card {
+    box-shadow: 0 22px 70px rgb(var(--atelier-shadow) / 0.1);
+  }
+
+  .shadow-atelier-card-deep {
+    box-shadow: 0 22px 70px rgb(var(--atelier-shadow) / 0.2);
+  }
+
+  .shadow-atelier-panel {
+    box-shadow: 0 22px 70px rgb(var(--atelier-shadow) / 0.18);
+  }
+
+  .shadow-atelier-float {
+    box-shadow: 0 10px 30px rgb(var(--atelier-shadow) / 0.08);
+  }
+
+  /**
+   * Issue 06 — scroll-heavy grids: small blur radius per cell vs stacked `shadow-atelier-card`.
+   * Pair with `ring-1 ring-primary/10` on light parchment for tonal hierarchy.
+   */
+  .shadow-atelier-grid-card {
+    box-shadow: 0 4px 14px rgb(var(--atelier-shadow) / 0.06);
+  }
+
+  .shadow-atelier-grid-card-hover {
+    box-shadow: 0 8px 22px rgb(var(--atelier-shadow) / 0.09);
+  }
+
+  /** Fixed bottom chrome (bulk bar): upward shadow without huge blur spread. */
+  .shadow-atelier-dock {
+    box-shadow: 0 -8px 28px rgb(var(--atelier-shadow) / 0.08);
+  }
+
+  .shadow-atelier-status-error {
+    box-shadow: 0 10px 30px rgb(var(--atelier-error-foreground) / 0.08);
+  }
+
+  .shadow-atelier-status-warn {
+    box-shadow: 0 10px 30px rgb(var(--atelier-warning-foreground) / 0.08);
+  }
+
+  .shadow-atelier-status-success {
+    box-shadow: 0 10px 30px rgb(var(--atelier-success-foreground) / 0.1);
+  }
+
+  .shadow-atelier-primary-btn {
+    box-shadow: 0 14px 30px rgb(var(--atelier-shadow) / 0.22);
+  }
+
+  .shadow-atelier-cta-btn {
+    box-shadow: 0 16px 34px rgb(var(--atelier-cta-shadow) / 0.24);
+  }
+
+  .shadow-atelier-checkbox {
+    box-shadow: 0 8px 22px rgb(var(--atelier-shadow) / 0.12);
+  }
+
+  .shadow-atelier-slot {
+    box-shadow: 0 8px 24px rgb(var(--atelier-shadow) / 0.06);
+  }
+
+  .shadow-atelier-menu {
+    box-shadow: 0 12px 32px rgb(var(--atelier-shadow) / 0.12);
+  }
+
+  .shadow-atelier-segment-active {
+    box-shadow: 0 10px 24px rgb(var(--atelier-shadow) / 0.22);
+  }
+
+  .shadow-atelier-segment-rail {
+    box-shadow: 0 12px 40px rgb(var(--atelier-shadow) / 0.1);
+  }
+
+  .thin-scrollbar-atelier {
+    scrollbar-color: rgb(var(--atelier-shadow) / 0.35) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+.dark .shadow-atelier-cta-btn {
+  box-shadow: 0 16px 34px rgb(0 0 0 / 0.45);
 }
 
 .material-symbols-outlined {

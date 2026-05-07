@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FILTER_CHIP_BUTTON_BASE_CLASS } from '~/constants/componentVocabulary'
+
 /**
  * Animated popover/sheet picker for a single-select chip filter.
  * Owns: panel chrome, inline search, chip grid, dismissal (outside click + Escape),
@@ -53,40 +55,34 @@ function onDocumentMousedown(event: MouseEvent): void {
   }
 }
 
-function onKeydown(event: KeyboardEvent): void {
-  if (!props.open) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    emit('close')
-  }
-}
-
 onMounted(() => {
   document.addEventListener('mousedown', onDocumentMousedown)
-  window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', onDocumentMousedown)
-  window.removeEventListener('keydown', onKeydown)
 })
 
-watch(() => props.open, async (isOpen) => {
+watch(() => props.open, (isOpen) => {
   if (!isOpen) {
     panelQuery.value = ''
-    return
   }
-  await nextTick()
-  if (props.searchable && searchInputRef.value) {
-    searchInputRef.value.focus()
-    return
-  }
-  const firstChip = panelRef.value?.querySelector<HTMLButtonElement>('[data-filter-chip]')
-  firstChip?.focus()
 })
 
-const chipBaseClass
-  = 'inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold transition-colors duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238] motion-reduce:transition-none'
+useAccessibleOverlayInteraction({
+  open: toRef(props, 'open'),
+  scopeRef: panelRef,
+  lockBackground: false,
+  onRequestClose: () => emit('close'),
+  getInitialFocus: () => {
+    if (props.searchable && searchInputRef.value) {
+      return searchInputRef.value
+    }
+    return panelRef.value?.querySelector<HTMLElement>('[data-filter-chip]') ?? null
+  },
+})
+
+const chipBaseClass = FILTER_CHIP_BUTTON_BASE_CLASS
 </script>
 
 <template>
@@ -104,8 +100,9 @@ const chipBaseClass
         :id="panelId"
         ref="panelRef"
         role="dialog"
+        aria-modal="false"
         :aria-label="label"
-        class="filter-panel absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl bg-[#fffaf0] shadow-[0_22px_70px_rgba(15,82,56,0.18)] ring-1 ring-[#0f5238]/10"
+        class="filter-panel absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl bg-atelier-parchment shadow-atelier-panel ring-1 ring-primary/10"
       >
         <div class="flex items-center justify-between gap-3 px-4 pt-4">
           <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
@@ -115,14 +112,14 @@ const chipBaseClass
             <button
               v-if="modelValue"
               type="button"
-              class="inline-flex min-h-9 items-center justify-center rounded-full px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9c3d16] transition hover:bg-[#fff1e8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9c3d16]"
+              class="inline-flex min-h-touch items-center justify-center rounded-full px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-atelier-error-foreground transition hover:bg-atelier-cream-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-atelier-error-foreground"
               @click="clearSelection"
             >
               Clear
             </button>
             <button
               type="button"
-              class="inline-flex size-9 items-center justify-center rounded-full text-[#485746] transition hover:bg-[#f0e4d2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+              class="inline-flex min-h-touch min-w-touch items-center justify-center rounded-full text-atelier-neutral-action transition hover:bg-atelier-chip focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               :aria-label="`Close ${label.toLowerCase()} picker`"
               @click="$emit('close')"
             >
@@ -132,21 +129,21 @@ const chipBaseClass
         </div>
 
         <div v-if="searchable" class="px-4 pt-3">
-          <label class="flex min-h-11 items-center gap-2 rounded-full bg-white px-3 ring-1 ring-[#0f5238]/10 focus-within:ring-2 focus-within:ring-[#0f5238]/45">
-            <span class="material-symbols-outlined text-[18px] text-[#6b7b6e]" aria-hidden="true">search</span>
+          <label class="flex min-h-11 items-center gap-2 rounded-full bg-white px-3 ring-1 ring-primary/10 focus-within:ring-2 focus-within:ring-primary/45">
+            <span class="material-symbols-outlined text-[18px] text-atelier-icon-muted" aria-hidden="true">search</span>
             <input
               ref="searchInputRef"
               v-model="panelQuery"
               type="search"
-              class="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#1e261f] outline-none"
+              class="min-w-0 flex-1 bg-transparent text-sm font-medium text-atelier-ink outline-none"
               :placeholder="searchPlaceholder"
               autocomplete="off"
             >
           </label>
         </div>
 
-        <div class="max-h-[55vh] overflow-y-auto px-4 py-4 [scrollbar-color:rgba(15,82,56,0.35)_transparent] [scrollbar-width:thin]">
-          <div v-if="filteredOptions.length === 0" class="px-1 py-6 text-center text-xs font-medium text-[#6a786b]">
+        <div class="max-h-[55vh] overflow-y-auto px-4 py-4 thin-scrollbar-atelier">
+          <div v-if="filteredOptions.length === 0" class="px-1 py-6 text-center text-xs font-medium text-atelier-meta">
             {{ emptyLabel }}
           </div>
           <div v-else class="filter-panel-chips flex flex-wrap gap-2">

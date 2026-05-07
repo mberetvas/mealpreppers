@@ -4,6 +4,7 @@ import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
 import { deepCloneWeek, emptyMonthPlan, emptyWeekPlan, getDuplicateRecipeIds, isWeekPlanValid } from '~~/utils/weekPlan'
 import { duplicatePlannerMessage } from '~~/utils/plannerDuplicateMessages'
 import { fetchMonthPlanBodyForPlanner, fetchWeekTemplateRowForPlanner } from '~~/utils/planningHydration'
+import { ariaForPlannerWeekSaveStatus } from '~~/utils/stateMessagingContract'
 
 type Tab = 'week' | 'month' | 'templates'
 type Meal = 'breakfast' | 'lunch' | 'dinner'
@@ -25,11 +26,15 @@ usePlanningWeekAutosave(weekPlan, activeTemplateId, saveStatus)
 usePlanningMonthAutosave(monthPlan, activeMonthId)
 
 const pickerOpen = ref(false)
+const pickerRestoreTarget = shallowRef<HTMLElement | null>(null)
 const pickerTarget = ref<{ day: DayKey, meal: Meal } | null>(null)
 const duplicateHint = ref<string | null>(null)
 const pendingPickId = ref<string | null>(null)
 
 const removeTarget = ref<{ day: DayKey, meal: Meal } | null>(null)
+const removeOverlayRef = ref<HTMLElement | null>(null)
+const removeRestoreTarget = shallowRef<HTMLElement | null>(null)
+const removeDialogOpen = computed(() => removeTarget.value !== null)
 
 const { data: recipes, pending: recipesPending } = await useFetch<RecipeCatalogItem[]>('/api/v1/recipes')
 const { data: options } = await useFetch<{ categories: string[], tags: string[] }>('/api/v1/recipes/options')
@@ -65,13 +70,22 @@ function closePicker(): void {
   pendingPickId.value = null
 }
 
-function requestRemove(target: { day: DayKey, meal: Meal }): void {
-  removeTarget.value = target
+function requestRemove(target: { day: DayKey, meal: Meal, invoker?: HTMLElement | null }): void {
+  removeRestoreTarget.value = target.invoker ?? (document.activeElement as HTMLElement | null)
+  removeTarget.value = { day: target.day, meal: target.meal }
 }
 
 function cancelRemove(): void {
   removeTarget.value = null
 }
+
+useAccessibleOverlayInteraction({
+  open: removeDialogOpen,
+  scopeRef: removeOverlayRef,
+  restoreFocusRef: removeRestoreTarget,
+  lockBackground: true,
+  onRequestClose: cancelRemove,
+})
 
 async function hydrateTemplateFromRoute(): Promise<void> {
   const tid = typeof route.query.template === 'string' ? route.query.template.trim() : ''
@@ -129,8 +143,9 @@ function setTab(t: Tab): void {
   activeTab.value = t
 }
 
-function openPicker(target: { day: DayKey, meal: Meal }): void {
-  pickerTarget.value = target
+function openPicker(target: { day: DayKey, meal: Meal, invoker?: HTMLElement | null }): void {
+  pickerRestoreTarget.value = target.invoker ?? (document.activeElement as HTMLElement | null)
+  pickerTarget.value = { day: target.day, meal: target.meal }
   duplicateHint.value = null
   pendingPickId.value = null
   pickerOpen.value = true
@@ -273,13 +288,22 @@ const savePillText = computed(() => {
   return 'All changes saved'
 })
 
+const weekSaveStatusAria = computed(() => ariaForPlannerWeekSaveStatus(saveStatus.value))
+
+const savePillIcon = computed(() => {
+  if (saveStatus.value === 'saving') return 'sync'
+  if (saveStatus.value === 'error') return 'error_outline'
+  if (saveStatus.value === 'dirty') return 'pending'
+  return 'check_circle'
+})
+
 const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
 
 const categoryOptions = computed(() => options.value?.categories ?? [])
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl">
+  <div class="mx-auto min-w-0 max-w-7xl">
     <!-- Desktop header -->
     <header class="mb-6 hidden flex-col gap-4 md:flex md:flex-row md:items-start md:justify-between">
       <div class="flex flex-wrap items-end gap-8">
@@ -316,17 +340,23 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           </button>
         </nav>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="flex min-w-0 flex-wrap items-center gap-3">
         <span
           v-if="activeTab === 'week'"
-          class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          class="inline-flex max-w-full min-w-0 flex-wrap items-center gap-1 break-words rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          :role="weekSaveStatusAria.role"
+          :aria-live="weekSaveStatusAria.ariaLive"
+          aria-atomic="true"
         >
-          <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">check_circle</span>
+          <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">{{ savePillIcon }}</span>
           {{ savePillText }}
         </span>
         <span
           v-if="activeTab === 'week' && !weekValid"
-          class="rounded-full bg-error-container/60 px-3 py-1 font-body text-xs font-semibold text-on-error-container"
+          class="max-w-full min-w-0 break-words rounded-full bg-error-container/60 px-3 py-1 font-body text-xs font-semibold text-on-error-container"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
         >
           Add at least one recipe
         </span>
@@ -342,11 +372,11 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
     </header>
 
     <!-- Mobile header + tabs -->
-    <div class="mb-4 md:hidden">
-      <h1 class="font-headline text-2xl font-medium italic text-primary">
+    <div class="mb-4 min-w-0 md:hidden">
+      <h1 class="font-headline text-2xl font-medium text-primary" :class="activeTab === 'week' ? 'italic' : ''">
         {{ headerTitle }}
       </h1>
-      <nav class="mt-3 flex gap-6 overflow-x-auto pb-2" aria-label="Planner views">
+      <nav class="mt-3 -mx-1 flex min-w-0 gap-6 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]" aria-label="Planner views">
         <button
           v-for="t in (['week', 'month', 'templates'] as const)"
           :key="t"
@@ -358,19 +388,33 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           {{ t === 'week' ? 'Week' : t === 'month' ? 'Month' : 'Templates' }}
         </button>
       </nav>
-      <div v-if="activeTab === 'week'" class="mt-2 flex flex-wrap items-center gap-2">
-        <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant">
-          <span class="material-symbols-outlined text-[14px] text-primary" aria-hidden="true">check_circle</span>
+      <div v-if="activeTab === 'week'" class="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+        <span
+          class="inline-flex max-w-full min-w-0 flex-wrap items-center gap-1 break-words rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          :role="weekSaveStatusAria.role"
+          :aria-live="weekSaveStatusAria.ariaLive"
+          aria-atomic="true"
+        >
+          <span class="material-symbols-outlined text-[14px] text-primary" aria-hidden="true">{{ savePillIcon }}</span>
           {{ savePillText }}
         </span>
-        <span v-if="!weekValid" class="rounded-full bg-error-container/50 px-2 py-0.5 text-[11px] font-semibold text-on-error-container">
+        <span
+          v-if="!weekValid"
+          class="max-w-full min-w-0 break-words rounded-full bg-error-container/50 px-2 py-0.5 text-[11px] font-semibold text-on-error-container"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           Need 1+ recipe
         </span>
       </div>
     </div>
 
-    <div v-if="recipesPending" class="font-body text-on-surface-variant">
-      Loading recipes…
+    <div v-if="recipesPending" class="grid gap-4 rounded-2xl bg-surface-container p-4 md:p-8" aria-busy="true" aria-label="Loading recipes">
+      <div class="h-6 w-1/3 animate-pulse rounded-lg bg-surface-container-high motion-reduce:animate-none" />
+      <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div v-for="n in 7" :key="n" class="h-28 animate-pulse rounded-2xl bg-surface-container-high motion-reduce:animate-none" />
+      </div>
     </div>
 
     <template v-else>
@@ -385,13 +429,13 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
       </div>
 
       <div v-show="activeTab === 'month'" class="rounded-2xl bg-surface-container p-4 md:p-8">
-        <div v-if="!activeMonthId" class="mb-6 flex flex-wrap items-center gap-3">
-          <p class="font-body text-sm text-on-surface-variant">
+        <div v-if="!activeMonthId" class="mb-6 flex min-w-0 flex-wrap items-center gap-3">
+          <p class="min-w-0 max-w-full break-words font-body text-sm text-on-surface-variant">
             No month plans yet. Create one to store four weekly snapshots.
           </p>
           <button
             type="button"
-            class="rounded-full bg-gradient-to-br from-primary to-primary-container px-5 py-2 font-body text-sm font-semibold text-on-primary"
+            class="rounded-2xl bg-primary px-5 py-2 font-body text-sm font-semibold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
             @click="createNewMonthPlan"
           >
             New month plan
@@ -428,6 +472,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
 
     <PlanRecipePickerModal
       :open="pickerOpen"
+      :focus-restore-target="pickerRestoreTarget"
       :recipes="recipes ?? []"
       :categories="categoryOptions"
       :recently-used-ids="recentlyUsedIds"
@@ -440,12 +485,13 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
     <Teleport to="body">
       <div
         v-if="removeTarget"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm"
+        ref="removeOverlayRef"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm motion-reduce:backdrop-blur-none"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="remove-meal-title"
       >
-        <div class="max-w-md rounded-2xl bg-surface-container-lowest p-6 shadow-[0_24px_48px_rgba(15,82,56,0.15)] ring-1 ring-outline-variant/20">
+        <div class="max-w-md rounded-2xl bg-surface-container-lowest p-6 shadow-atelier-panel ring-1 ring-outline-variant/20">
           <h2 id="remove-meal-title" class="font-headline text-xl font-semibold text-on-surface">
             Remove this meal?
           </h2>

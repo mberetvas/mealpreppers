@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-07T12:00:00.000Z",
+  "title": "Design System: Mealprepper",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Leafy Green",
+        "canonical": "#0f5238",
+        "tonalRamp": ["#051810", "#0a281c", "#0f5238", "#1a6b4a", "#2d6a4f", "#4a8a6a", "#7ab898", "#c5e5d4"]
+      },
+      "atelier-canvas": {
+        "role": "neutral",
+        "displayName": "Atelier Canvas",
+        "canonical": "#f7f2e8",
+        "tonalRamp": ["#2a2824", "#45423a", "#6d6a62", "#9a958a", "#b8b3a8", "#d4cfc4", "#e8e3d8", "#f7f2e8"]
+      },
+      "atelier-parchment": {
+        "role": "neutral",
+        "displayName": "Parchment",
+        "canonical": "#fffaf0",
+        "tonalRamp": ["#3a3630", "#524d45", "#7a756a", "#9e988c", "#c4beb0", "#ddd7c8", "#f0ebe0", "#fffaf0"]
+      },
+      "atelier-warm-accent": {
+        "role": "accent",
+        "displayName": "Sun-Ripened Accent",
+        "canonical": "#b7662f",
+        "tonalRamp": ["#3d220f", "#5c3418", "#7a451f", "#9c3d16", "#b7662f", "#c97d45", "#db9a62", "#f2c090"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Catalog hero and large recipe titles (Newsreader)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Ingredients, steps, UI copy (Plus Jakarta Sans)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "atelier-grid-card",
+        "value": "0 4px 14px rgb(var(--atelier-shadow) / 0.06)",
+        "purpose": "Recipe grid cards at rest."
+      },
+      {
+        "name": "atelier-grid-card-hover",
+        "value": "0 8px 22px rgb(var(--atelier-shadow) / 0.09)",
+        "purpose": "Recipe grid cards on hover."
+      },
+      {
+        "name": "atelier-float",
+        "value": "0 10px 30px rgb(var(--atelier-shadow) / 0.08)",
+        "purpose": "Filter triggers and floating pills."
+      },
+      {
+        "name": "atelier-primary-btn",
+        "value": "0 14px 30px rgb(var(--atelier-shadow) / 0.22)",
+        "purpose": "Solid primary CTAs."
+      },
+      {
+        "name": "atelier-dock",
+        "value": "0 -8px 28px rgb(var(--atelier-shadow) / 0.08)",
+        "purpose": "Fixed bottom bulk bar."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-card",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Default 200ms transitions on catalog cards (with motion-reduce fallback)."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Top nav (target tokens)",
+      "kind": "nav",
+      "refersTo": "nav-top-bar-target",
+      "description": "Frosted bar: prefer surface/atelier text and primary active state; replace stone/emerald.",
+      "html": "<nav class=\"ds-topnav\"><a class=\"ds-topnav-brand\" href=\"/recipes\">Culinary Atelier</a><div class=\"ds-topnav-links\"><a class=\"ds-topnav-link is-active\" href=\"/recipes\">Recipes</a><a class=\"ds-topnav-link\" href=\"/plan\">Plan</a></div></nav>",
+      "css": ".ds-topnav { display: flex; align-items: center; justify-content: space-between; height: 5rem; padding: 0 2rem; background: rgba(251, 249, 248, 0.88); backdrop-filter: blur(12px); box-shadow: 0 1px 2px rgba(15, 82, 56, 0.06); } .ds-topnav-brand { font-family: Newsreader, Georgia, serif; font-size: 1.5rem; font-weight: 700; font-style: italic; color: #123628; text-decoration: none; } .ds-topnav-links { display: flex; gap: 2rem; } .ds-topnav-link { font-family: \"Plus Jakarta Sans\", system-ui, sans-serif; font-size: 1rem; font-weight: 500; color: #404943; text-decoration: none; padding-bottom: 0.25rem; border-bottom: 2px solid transparent; transition: color 0.2s ease, border-color 0.2s ease; } .ds-topnav-link:hover { color: #0f5238; } .ds-topnav-link.is-active { color: #0f5238; font-weight: 700; border-bottom-color: #0f5238; } .ds-topnav-link:focus-visible { outline: 2px solid #0f5238; outline-offset: 4px; }"
+    },
+    {
+      "name": "Primary CTA",
+      "kind": "button",
+      "refersTo": "primary-cta-button",
+      "description": "Add Recipe / solid actions on recipe flows.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\"><span class=\"ds-btn-primary-icon\" aria-hidden=\"true\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 -960 960 960\" fill=\"currentColor\"><path d=\"M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240z\"/></svg></span>Add Recipe</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3.5rem; padding: 0 1.5rem; border: none; border-radius: 1rem; font-family: \"Plus Jakarta Sans\", system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; color: #ffffff; background: #0f5238; box-shadow: 0 14px 30px rgba(15, 82, 56, 0.22); cursor: pointer; transition: background 0.2s ease, box-shadow 0.2s ease; } .ds-btn-primary:hover { background: #174d38; } .ds-btn-primary:focus-visible { outline: 2px solid #0f5238; outline-offset: 3px; } .ds-btn-primary-icon { display: flex; line-height: 0; }"
+    },
+    {
+      "name": "Recipe catalog card frame",
+      "kind": "card",
+      "refersTo": "recipe-catalog-card",
+      "description": "Parchment tile with primary ring and atelier grid shadow.",
+      "html": "<a href=\"#\" class=\"ds-recipe-card\"><div class=\"ds-recipe-card-media\"></div><div class=\"ds-recipe-card-body\"><h2 class=\"ds-recipe-card-title\">Roasted vegetable bowl</h2><p class=\"ds-recipe-card-desc\">A weeknight favorite with tahini.</p></div></a>",
+      "css": ".ds-recipe-card { display: block; overflow: hidden; border-radius: 1.75rem; background: #fffaf0; box-shadow: 0 4px 14px rgba(15, 82, 56, 0.06); outline: 1px solid rgba(15, 82, 56, 0.1); outline-offset: -1px; text-decoration: none; color: inherit; transition: transform 0.2s ease, box-shadow 0.2s ease; } .ds-recipe-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 82, 56, 0.09); } .ds-recipe-card-media { aspect-ratio: 4/3; background: #e6d6bd; } .ds-recipe-card-body { padding: 1.25rem; } .ds-recipe-card-title { font-family: Newsreader, Georgia, serif; font-size: 1.5rem; font-weight: 600; color: #123628; margin: 0; } .ds-recipe-card-desc { font-family: \"Plus Jakarta Sans\", system-ui, sans-serif; font-size: 0.875rem; color: #5d6c60; margin: 0.5rem 0 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Living Editorial",
+    "overview": "The interface reads like a high-end food magazine: generous space, serif-led hierarchy, and parchment-like surfaces so recipes stay the hero. The product rejects sterile dashboards and coupon-driven meal-kit chrome; depth comes from paper-like tones and soft shadows, not from stacking boxes. The codebase uses Material-aligned roles and Atelier semantic roles (CSS variables) together; recipe pages should replace hex literals with atelier Tailwind classes during the color pass. TopNavBar currently uses stone/emerald and should converge on the shared token set.",
+    "keyCharacteristics": [
+      "Serif display (Newsreader) for page titles and recipe names; Plus Jakarta Sans for UI labels and dense text.",
+      "Warm canvas (atelier-canvas) under catalog flows; global surface for system-wide baseline.",
+      "Large corner radius (28px) on catalog shells and cards.",
+      "shadow-atelier-* utilities for primary-tinted atmosphere."
+    ],
+    "rules": [
+      {
+        "name": "The Ring-Instead-Of Rule (for catalog)",
+        "body": "Section separation on recipe list uses ring-1 ring-primary/8–15 on parchment panels and cards, not harsh dividers.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dual-Surface Rule",
+        "body": "Global body uses surface; recipe flows often sit on atelier-canvas. Both are valid; do not collapse without an explicit decision.",
+        "section": "colors"
+      },
+      {
+        "name": "The Left-Align Body Rule",
+        "body": "Do not center-align body paragraphs except in dedicated empty-state blocks.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Layout-Animation Rule",
+        "body": "Prefer transitioning transform and box-shadow on cards, not width/height/margin animations.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use atelier/* or Material semantic colors from tailwind.config.ts instead of re-typing hex on stabilized surfaces.",
+      "Do keep touch targets at least 44px height on primary actions.",
+      "Do use Newsreader for recipe titles and step indices where the catalog already does.",
+      "Do respect prefers-reduced-motion on hover transitions."
+    ],
+    "donts": [
+      "Don't build new recipe UI on stone / emerald Tailwind defaults; align TopNavBar with the shared token set.",
+      "Don't let the product feel like industrial ERP systems.",
+      "Don't mimic generic meal-kit subscription apps.",
+      "Don't ship cluttered recipe-aggregator patterns.",
+      "Don't use pure #000 / #fff for large text or page backgrounds.",
+      "Don't use gradient text for core content."
+    ]
+  }
+}

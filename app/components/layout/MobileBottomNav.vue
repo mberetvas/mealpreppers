@@ -1,12 +1,9 @@
 <script setup lang="ts">
+import { mobileBottomNavTabs, primaryNavFabTo } from '~/constants/primaryNavigation'
+
 const route = useRoute()
 
-const tabs = [
-  { label: 'Recipes', icon: 'restaurant_menu', to: '/recipes' },
-  { label: 'Plan', icon: 'calendar_month', to: '/weekly-plan' },
-  { label: 'Shop', icon: 'shopping_basket', to: '/shopping-list' },
-  { label: 'Profile', icon: 'account_circle', to: '#' },
-]
+const tabs = mobileBottomNavTabs
 
 function isActive(to: string): boolean {
   return route.path === to
@@ -26,28 +23,32 @@ function isActive(to: string): boolean {
       v-for="tab in tabs.slice(0, 2)"
       :key="tab.to"
       :to="tab.to"
-      class="pointer-events-auto flex min-h-11 min-w-11 flex-col items-center justify-end"
+      class="pointer-events-auto flex min-h-touch min-w-touch flex-col items-center justify-end"
       :class="isActive(tab.to) ? 'text-primary' : 'text-stone-400'"
+      :aria-current="isActive(tab.to) ? 'page' : undefined"
     >
-      <span class="material-symbols-outlined">{{ tab.icon }}</span>
+      <span class="material-symbols-outlined" aria-hidden="true">{{ tab.icon }}</span>
       <span class="mt-1 text-[10px] font-bold">{{ tab.label }}</span>
     </NuxtLink>
 
     <NuxtLink
-      to="/add-recipe"
+      :to="primaryNavFabTo"
       class="pointer-events-auto -translate-y-4 rounded-full bg-primary p-4 text-on-primary shadow-xl"
+      aria-label="Add Recipe"
+      :aria-current="isActive(primaryNavFabTo) ? 'page' : undefined"
     >
-      <span class="material-symbols-outlined">add</span>
+      <span class="material-symbols-outlined" aria-hidden="true">add</span>
     </NuxtLink>
 
     <NuxtLink
       v-for="tab in tabs.slice(2)"
       :key="tab.to"
       :to="tab.to"
-      class="pointer-events-auto flex min-h-11 min-w-11 flex-col items-center justify-end"
+      class="pointer-events-auto flex min-h-touch min-w-touch flex-col items-center justify-end"
       :class="isActive(tab.to) ? 'text-primary' : 'text-stone-400'"
+      :aria-current="isActive(tab.to) ? 'page' : undefined"
     >
-      <span class="material-symbols-outlined">{{ tab.icon }}</span>
+      <span class="material-symbols-outlined" aria-hidden="true">{{ tab.icon }}</span>
       <span class="mt-1 text-[10px] font-bold">{{ tab.label }}</span>
     </NuxtLink>
   </div>
