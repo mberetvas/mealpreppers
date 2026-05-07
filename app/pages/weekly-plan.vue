@@ -290,6 +290,13 @@ const savePillText = computed(() => {
 
 const weekSaveStatusAria = computed(() => ariaForPlannerWeekSaveStatus(saveStatus.value))
 
+const savePillIcon = computed(() => {
+  if (saveStatus.value === 'saving') return 'sync'
+  if (saveStatus.value === 'error') return 'error_outline'
+  if (saveStatus.value === 'dirty') return 'pending'
+  return 'check_circle'
+})
+
 const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
 
 const categoryOptions = computed(() => options.value?.categories ?? [])
@@ -341,7 +348,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           :aria-live="weekSaveStatusAria.ariaLive"
           aria-atomic="true"
         >
-          <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">check_circle</span>
+          <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">{{ savePillIcon }}</span>
           {{ savePillText }}
         </span>
         <span
@@ -366,7 +373,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
 
     <!-- Mobile header + tabs -->
     <div class="mb-4 min-w-0 md:hidden">
-      <h1 class="font-headline text-2xl font-medium italic text-primary">
+      <h1 class="font-headline text-2xl font-medium text-primary" :class="activeTab === 'week' ? 'italic' : ''">
         {{ headerTitle }}
       </h1>
       <nav class="mt-3 -mx-1 flex min-w-0 gap-6 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]" aria-label="Planner views">
@@ -388,7 +395,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           :aria-live="weekSaveStatusAria.ariaLive"
           aria-atomic="true"
         >
-          <span class="material-symbols-outlined text-[14px] text-primary" aria-hidden="true">check_circle</span>
+          <span class="material-symbols-outlined text-[14px] text-primary" aria-hidden="true">{{ savePillIcon }}</span>
           {{ savePillText }}
         </span>
         <span
@@ -403,8 +410,11 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
       </div>
     </div>
 
-    <div v-if="recipesPending" class="font-body text-on-surface-variant">
-      Loading recipes…
+    <div v-if="recipesPending" class="grid gap-4 rounded-2xl bg-surface-container p-4 md:p-8" aria-busy="true" aria-label="Loading recipes">
+      <div class="h-6 w-1/3 animate-pulse rounded-lg bg-surface-container-high motion-reduce:animate-none" />
+      <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div v-for="n in 7" :key="n" class="h-28 animate-pulse rounded-2xl bg-surface-container-high motion-reduce:animate-none" />
+      </div>
     </div>
 
     <template v-else>
@@ -425,7 +435,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           </p>
           <button
             type="button"
-            class="rounded-full bg-gradient-to-br from-primary to-primary-container px-5 py-2 font-body text-sm font-semibold text-on-primary"
+            class="rounded-2xl bg-primary px-5 py-2 font-body text-sm font-semibold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
             @click="createNewMonthPlan"
           >
             New month plan

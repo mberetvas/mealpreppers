@@ -141,7 +141,7 @@ function confirmDuplicateAnyway(): void {
           <div class="mb-4 flex gap-2 overflow-x-auto pb-1">
             <button
               type="button"
-              class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition motion-reduce:transition-none"
+              class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
               :class="category === '' ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant'"
               @click="category = ''"
             >
@@ -151,7 +151,7 @@ function confirmDuplicateAnyway(): void {
               v-for="c in categories"
               :key="c"
               type="button"
-              class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition motion-reduce:transition-none"
+              class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
               :class="category === c ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant'"
               @click="category = category === c ? '' : c"
             >
@@ -167,7 +167,7 @@ function confirmDuplicateAnyway(): void {
               v-for="m in timeChips"
               :key="m"
               type="button"
-              class="inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition motion-reduce:transition-none"
+              class="inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
               :class="maxTime === m ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container-low text-on-surface-variant'"
               @click="toggleTime(m)"
             >
@@ -175,7 +175,7 @@ function confirmDuplicateAnyway(): void {
             </button>
             <button
               type="button"
-              class="inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-xs font-semibold text-on-surface-variant transition motion-reduce:transition-none hover:bg-surface-container-low"
+              class="inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-xs font-semibold text-on-surface-variant transition hover:bg-surface-container-low focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
               @click="maxTime = null"
             >
               Any

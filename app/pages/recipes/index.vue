@@ -239,7 +239,7 @@ const filterTriggerClass
             <select
               id="recipe-catalog-sort"
               v-model="sortBy"
-              class="min-h-11 w-full cursor-pointer rounded-full bg-surface-container-low px-3.5 text-xs font-bold text-on-surface-variant outline-none transition-colors duration-200 ease-out focus-visible:ring-2 focus-visible:ring-primary/40 motion-reduce:transition-none"
+              class="min-h-11 w-full cursor-pointer rounded-full bg-surface-container-low px-3.5 text-xs font-bold text-on-surface-variant outline-none transition-colors duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
             >
               <option value="updatedAt">
                 Recently updated
