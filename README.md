@@ -5,6 +5,7 @@ bun install          # deps
 bun run dev          # http://localhost:3000
 bun run build        # production
 bun run preview      # local prod preview
+bun run test         # Run tests
 ```
 
 Libelle recipe URL import uses Playwright (Chromium):

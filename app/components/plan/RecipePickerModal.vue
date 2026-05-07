@@ -4,6 +4,8 @@ import { filterRecipesForPlanner } from '~~/utils/recipeFiltering'
 
 const props = withDefaults(defineProps<{
   open: boolean
+  /** Element to return focus to after close (e.g. the control that opened the modal). */
+  focusRestoreTarget?: HTMLElement | null
   recipes: RecipeCatalogItem[]
   categories: string[]
   recentlyUsedIds: string[]
@@ -14,6 +16,7 @@ const props = withDefaults(defineProps<{
   recentlyUsedIds: () => [],
   duplicateBanner: null,
   stagedRecipeId: null,
+  focusRestoreTarget: null,
 })
 
 const emit = defineEmits<{
@@ -25,8 +28,9 @@ const query = ref('')
 const category = ref('')
 const maxTime = ref<number | null>(null)
 
-const panelRef = ref<HTMLElement | null>(null)
+const overlayRootRef = ref<HTMLElement | null>(null)
 const searchRef = ref<HTMLInputElement | null>(null)
+const restoreFocusRef = computed(() => props.focusRestoreTarget ?? undefined)
 
 const filtered = computed(() =>
   filterRecipesForPlanner(props.recipes, {
@@ -48,27 +52,22 @@ function toggleTime(mins: number): void {
   maxTime.value = maxTime.value === mins ? null : mins
 }
 
-function onKeydown(e: KeyboardEvent): void {
-  if (!props.open) return
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    emit('close')
-  }
-}
-
-watch(() => props.open, async (o) => {
+watch(() => props.open, (o) => {
   if (!o) {
     query.value = ''
     category.value = ''
     maxTime.value = null
-    return
   }
-  await nextTick()
-  searchRef.value?.focus()
 })
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+useAccessibleOverlayInteraction({
+  open: toRef(props, 'open'),
+  scopeRef: overlayRootRef,
+  restoreFocusRef,
+  lockBackground: true,
+  onRequestClose: () => emit('close'),
+  getInitialFocus: () => searchRef.value,
+})
 
 function pick(id: string, force = false): void {
   emit('pick', id, force)
@@ -85,6 +84,7 @@ function confirmDuplicateAnyway(): void {
   <Teleport to="body">
     <div
       v-if="open"
+      ref="overlayRootRef"
       class="fixed inset-0 z-50 flex items-end justify-center bg-inverse-surface/40 p-4 backdrop-blur-sm md:items-center"
       role="dialog"
       aria-modal="true"
@@ -92,7 +92,6 @@ function confirmDuplicateAnyway(): void {
       @click.self="emit('close')"
     >
       <div
-        ref="panelRef"
         class="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-2xl bg-surface-container-lowest shadow-[0_24px_48px_rgba(15,82,56,0.15)] md:max-h-[80vh] md:w-[400px]"
       >
         <div class="bg-surface-container-low p-4">
