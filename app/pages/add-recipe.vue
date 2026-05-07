@@ -2,6 +2,7 @@
 import { onBeforeUnmount } from 'vue'
 import type { RecipePreviewRequest, RecipePreviewResponse } from '~~/types/recipe-preview'
 import { validateRecipeImageFile } from '~/utils/recipeImageValidation'
+import { SUPPORTED_RECIPE_SOURCES } from '~/constants/supportedRecipeSources'
 
 definePageMeta({
   layout: 'fullwidth',
@@ -373,6 +374,24 @@ onBeforeUnmount(() => {
             </AtelierBlockButton>
           </div>
         </label>
+        <div class="mt-4 grid gap-1.5">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-atelier-meta">
+            Supported websites
+          </p>
+          <div v-if="SUPPORTED_RECIPE_SOURCES.length > 0" class="flex flex-wrap gap-x-3 gap-y-1">
+            <a
+              v-for="source in SUPPORTED_RECIPE_SOURCES"
+              :key="source.host"
+              :href="source.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-xs text-atelier-description underline-offset-2 transition-colors hover:text-atelier-heading hover:underline"
+            >{{ source.host }}</a>
+          </div>
+          <p v-else class="text-xs text-atelier-error-foreground">
+            Supported website list is currently unavailable.
+          </p>
+        </div>
       </AtelierParchmentSection>
 
       <FormFlowStatusSurfaces
