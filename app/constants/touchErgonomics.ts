@@ -22,6 +22,7 @@ export const TOUCH_ERGONOMICS_CONTRACT_LABEL = 'Touch ergonomics rule set' as co
 export const TOUCH_ERGONOMICS_COMPLIANCE_SOURCE_FILES = [
   'app/components/layout/MobileBottomNav.vue',
   'app/components/plan/MealSlotCard.vue',
+  'app/components/plan/MonthPlanOverview.vue',
   'app/components/plan/RecipePickerModal.vue',
   'app/components/recipe/RecipeFilterPicker.vue',
   'app/pages/add-recipe.vue',

@@ -49,4 +49,11 @@ describe(TOUCH_ERGONOMICS_CONTRACT_LABEL, () => {
     expect(closeIdx).toBeGreaterThan(-1)
     expect(filterPicker.slice(closeIdx - 400, closeIdx + 60)).toMatch(/min-h-touch/)
   })
+
+  it('anchors month plan week preview toggle to min-h-touch in source', () => {
+    const monthOverview = readFileSync(join(repoRoot, 'app/components/plan/MonthPlanOverview.vue'), 'utf8')
+    const idx = monthOverview.indexOf(':aria-expanded="expanded === i"')
+    expect(idx).toBeGreaterThan(-1)
+    expect(monthOverview.slice(idx - 220, idx + 80)).toMatch(/min-h-touch/)
+  })
 })

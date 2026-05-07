@@ -296,7 +296,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl">
+  <div class="mx-auto min-w-0 max-w-7xl">
     <!-- Desktop header -->
     <header class="mb-6 hidden flex-col gap-4 md:flex md:flex-row md:items-start md:justify-between">
       <div class="flex flex-wrap items-end gap-8">
@@ -333,10 +333,10 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           </button>
         </nav>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="flex min-w-0 flex-wrap items-center gap-3">
         <span
           v-if="activeTab === 'week'"
-          class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          class="inline-flex max-w-full min-w-0 flex-wrap items-center gap-1 break-words rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
           :role="weekSaveStatusAria.role"
           :aria-live="weekSaveStatusAria.ariaLive"
           aria-atomic="true"
@@ -346,7 +346,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         </span>
         <span
           v-if="activeTab === 'week' && !weekValid"
-          class="rounded-full bg-error-container/60 px-3 py-1 font-body text-xs font-semibold text-on-error-container"
+          class="max-w-full min-w-0 break-words rounded-full bg-error-container/60 px-3 py-1 font-body text-xs font-semibold text-on-error-container"
           role="status"
           aria-live="polite"
           aria-atomic="true"
@@ -365,11 +365,11 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
     </header>
 
     <!-- Mobile header + tabs -->
-    <div class="mb-4 md:hidden">
+    <div class="mb-4 min-w-0 md:hidden">
       <h1 class="font-headline text-2xl font-medium italic text-primary">
         {{ headerTitle }}
       </h1>
-      <nav class="mt-3 flex gap-6 overflow-x-auto pb-2" aria-label="Planner views">
+      <nav class="mt-3 -mx-1 flex min-w-0 gap-6 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]" aria-label="Planner views">
         <button
           v-for="t in (['week', 'month', 'templates'] as const)"
           :key="t"
@@ -381,9 +381,9 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           {{ t === 'week' ? 'Week' : t === 'month' ? 'Month' : 'Templates' }}
         </button>
       </nav>
-      <div v-if="activeTab === 'week'" class="mt-2 flex flex-wrap items-center gap-2">
+      <div v-if="activeTab === 'week'" class="mt-2 flex min-w-0 flex-wrap items-center gap-2">
         <span
-          class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
+          class="inline-flex max-w-full min-w-0 flex-wrap items-center gap-1 break-words rounded-full bg-surface-container-low px-3 py-1 font-body text-xs text-on-surface-variant"
           :role="weekSaveStatusAria.role"
           :aria-live="weekSaveStatusAria.ariaLive"
           aria-atomic="true"
@@ -393,7 +393,7 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         </span>
         <span
           v-if="!weekValid"
-          class="rounded-full bg-error-container/50 px-2 py-0.5 text-[11px] font-semibold text-on-error-container"
+          class="max-w-full min-w-0 break-words rounded-full bg-error-container/50 px-2 py-0.5 text-[11px] font-semibold text-on-error-container"
           role="status"
           aria-live="polite"
           aria-atomic="true"
@@ -419,8 +419,8 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
       </div>
 
       <div v-show="activeTab === 'month'" class="rounded-2xl bg-surface-container p-4 md:p-8">
-        <div v-if="!activeMonthId" class="mb-6 flex flex-wrap items-center gap-3">
-          <p class="font-body text-sm text-on-surface-variant">
+        <div v-if="!activeMonthId" class="mb-6 flex min-w-0 flex-wrap items-center gap-3">
+          <p class="min-w-0 max-w-full break-words font-body text-sm text-on-surface-variant">
             No month plans yet. Create one to store four weekly snapshots.
           </p>
           <button

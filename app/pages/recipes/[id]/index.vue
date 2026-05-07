@@ -30,29 +30,38 @@ useSeoMeta({
     ? `${data.value.title} | Your Atelier`
     : 'Recipe | Your Atelier'),
 })
+
+/** Preload hero image so the browser fetches it during head parsing, before the img tag is rendered. */
+useHead({
+  link: computed(() =>
+    data.value?.imageUrl
+      ? [{ rel: 'preload', as: 'image', href: data.value.imageUrl }]
+      : [],
+  ),
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f7f2e8] px-4 pb-24 pt-8 text-[#1e261f] sm:px-6 lg:px-10">
+  <div class="min-h-screen bg-atelier-canvas px-4 pb-24 pt-8 text-atelier-ink sm:px-6 lg:px-10">
     <div class="mx-auto grid max-w-3xl gap-8">
       <NuxtLink
         to="/recipes"
-        class="inline-flex min-h-12 w-fit items-center gap-2 rounded-2xl px-1 py-1 text-sm font-bold text-[#0f5238] transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+        class="inline-flex min-h-12 w-fit items-center gap-2 rounded-2xl px-1 py-1 text-sm font-bold text-primary transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <span class="material-symbols-outlined text-[20px] leading-none" aria-hidden="true">arrow_back</span>
         Back to catalog
       </NuxtLink>
 
       <div v-if="pending" class="grid gap-6">
-        <div class="h-10 w-2/3 animate-pulse rounded-2xl bg-[#fffaf0]" />
-        <div class="aspect-[4/3] w-full animate-pulse rounded-[28px] bg-[#e6d6bd]" />
-        <div class="h-4 w-full animate-pulse rounded-lg bg-[#fffaf0]" />
-        <div class="h-4 w-5/6 animate-pulse rounded-lg bg-[#fffaf0]" />
+        <div class="h-10 w-2/3 animate-pulse rounded-2xl bg-atelier-skeleton" />
+        <div class="aspect-[4/3] w-full animate-pulse rounded-[28px] bg-atelier-image-well" />
+        <div class="h-4 w-full animate-pulse rounded-lg bg-atelier-skeleton" />
+        <div class="h-4 w-5/6 animate-pulse rounded-lg bg-atelier-skeleton" />
       </div>
 
       <section
         v-else-if="error"
-        class="rounded-[28px] bg-[#fff1e8] p-6 text-[#9c3d16] shadow-[0_18px_54px_rgba(156,61,22,0.08)]"
+        class="rounded-[28px] bg-atelier-cream-error p-6 text-atelier-error-foreground shadow-atelier-status-error"
         role="alert"
       >
         <p class="font-semibold">
@@ -60,7 +69,7 @@ useSeoMeta({
         </p>
         <NuxtLink
           to="/recipes"
-          class="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[#0f5238] to-[#2d6a4f] px-5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(15,82,56,0.22)]"
+          class="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-primary to-primary-container px-5 text-sm font-bold text-on-primary shadow-atelier-primary-btn"
         >
           <span class="material-symbols-outlined text-[20px]">restaurant_menu</span>
           Back to catalog
@@ -71,22 +80,22 @@ useSeoMeta({
         <header class="grid gap-3">
           <div class="flex items-start justify-between gap-4">
             <div class="grid gap-3">
-              <p v-if="data.categories[0]" class="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7662f]">
+              <p v-if="data.categories[0]" class="text-xs font-semibold uppercase tracking-[0.18em] text-atelier-warm-accent">
                 {{ data.categories[0] }}
               </p>
-              <h1 class="font-['Newsreader'] text-4xl font-semibold leading-tight text-[#123628] sm:text-5xl">
+              <h1 class="font-['Newsreader'] text-4xl font-semibold leading-tight text-atelier-heading sm:text-5xl">
                 {{ data.title }}
               </h1>
             </div>
             <NuxtLink
               :to="`/recipes/${recipeId}/edit`"
-              class="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#f0e4d2] px-5 py-2 text-sm font-bold text-[#0f5238] transition hover:bg-[#e6d6bd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+              class="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-2xl bg-atelier-chip px-5 py-2 text-sm font-bold text-primary transition hover:bg-atelier-chip-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <span class="material-symbols-outlined text-[20px]">edit</span>
               Edit
             </NuxtLink>
           </div>
-          <p v-if="data.description" class="text-base font-medium leading-relaxed text-[#5d6c60]">
+          <p v-if="data.description" class="text-base font-medium leading-relaxed text-atelier-description">
             {{ data.description }}
           </p>
         </header>
@@ -98,7 +107,7 @@ useSeoMeta({
           <span
             v-for="item in primaryMeta(data)"
             :key="item"
-            class="rounded-full bg-[#f0e4d2] px-3 py-1 text-xs font-bold text-[#485746]"
+            class="rounded-full bg-atelier-chip px-3 py-1 text-xs font-bold text-atelier-neutral-action"
           >
             {{ item }}
           </span>
@@ -106,23 +115,26 @@ useSeoMeta({
 
         <div
           v-if="data.prepTimeMinutes != null || data.cookTimeMinutes != null"
-          class="text-sm font-semibold text-[#6a786b]"
+          class="text-sm font-semibold text-atelier-meta"
         >
           <span v-if="data.prepTimeMinutes != null">Prep {{ data.prepTimeMinutes }} min</span>
           <span v-if="data.prepTimeMinutes != null && data.cookTimeMinutes != null"> · </span>
           <span v-if="data.cookTimeMinutes != null">Cook {{ data.cookTimeMinutes }} min</span>
         </div>
 
-        <div class="overflow-hidden rounded-[28px] bg-[#e6d6bd] shadow-[0_18px_54px_rgba(15,82,56,0.10)]">
+        <div class="aspect-[4/3] overflow-hidden rounded-[28px] bg-atelier-image-well shadow-atelier-card">
           <img
             v-if="data.imageUrl"
             :src="data.imageUrl"
             :alt="`Photo of ${data.title}`"
             class="h-full w-full object-cover"
+            fetchpriority="high"
+            loading="eager"
+            decoding="async"
           >
           <div
             v-else
-            class="flex aspect-[4/3] w-full items-center justify-center text-[#0f5238]"
+            class="flex h-full w-full items-center justify-center text-primary"
             aria-hidden="true"
           >
             <span class="material-symbols-outlined text-[72px]">restaurant</span>
@@ -133,11 +145,11 @@ useSeoMeta({
           v-if="data.sourceUrl"
           class="text-sm"
         >
-          <p class="text-[#6a786b]">
-            <span class="font-semibold text-[#1e261f]">Source</span>
+          <p class="text-atelier-meta">
+            <span class="font-semibold text-atelier-ink">Source</span>
             <a
               :href="data.sourceUrl"
-              class="ml-1 break-words text-[#0f5238] underline underline-offset-2 hover:text-[#174d38] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5238]"
+              class="ml-1 break-words text-primary underline underline-offset-2 hover:text-atelier-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               rel="noopener noreferrer"
               target="_blank"
             >{{ data.sourceHost || data.sourceUrl }}</a>
@@ -152,30 +164,30 @@ useSeoMeta({
           <span
             v-for="tag in data.tags"
             :key="tag"
-            class="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#485746] ring-1 ring-[#0f5238]/10"
+            class="rounded-full bg-surface-container-lowest/90 px-3 py-1 text-xs font-semibold text-atelier-neutral-action ring-1 ring-primary/10"
           >
             {{ tag }}
           </span>
         </section>
 
         <section class="grid gap-4">
-          <h2 class="font-['Newsreader'] text-2xl font-semibold text-[#123628]">
+          <h2 class="font-['Newsreader'] text-2xl font-semibold text-atelier-heading">
             Ingredients
           </h2>
           <ol class="list-none space-y-4 p-0">
             <li
               v-for="ing in data.ingredients"
               :key="ing.id"
-              class="text-base leading-7 text-[#1e261f]"
+              class="text-base leading-7 text-atelier-ink"
             >
-              <span class="font-['Newsreader'] text-sm font-semibold text-[#b7662f]" aria-hidden="true">{{ String(ing.position).padStart(2, '0') }}.</span>
-              <span class="ml-2 font-medium text-[#1b1c1c]">{{ ing.rawText }}</span>
+              <span class="font-['Newsreader'] text-sm font-semibold text-atelier-warm-accent" aria-hidden="true">{{ String(ing.position).padStart(2, '0') }}.</span>
+              <span class="ml-2 font-medium text-on-surface">{{ ing.rawText }}</span>
             </li>
           </ol>
         </section>
 
         <section class="grid gap-4">
-          <h2 class="font-['Newsreader'] text-2xl font-semibold text-[#123628]">
+          <h2 class="font-['Newsreader'] text-2xl font-semibold text-atelier-heading">
             Steps
           </h2>
           <ol class="list-none space-y-6 p-0">
@@ -184,10 +196,10 @@ useSeoMeta({
               :key="step.id"
               class="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-6"
             >
-              <span class="font-['Newsreader'] text-lg font-semibold text-[#123628] sm:min-w-16" aria-hidden="true">
+              <span class="font-['Newsreader'] text-lg font-semibold text-atelier-heading sm:min-w-16" aria-hidden="true">
                 Step {{ String(step.position).padStart(2, '0') }}
               </span>
-              <p class="max-w-[65ch] text-base leading-7 text-[#1b1c1c] sm:pt-0.5">
+              <p class="max-w-[65ch] text-base leading-7 text-on-surface sm:pt-0.5">
                 {{ step.text }}
               </p>
             </li>

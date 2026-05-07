@@ -25,16 +25,19 @@ function isActive(to: string): boolean {
       :to="tab.to"
       class="pointer-events-auto flex min-h-touch min-w-touch flex-col items-center justify-end"
       :class="isActive(tab.to) ? 'text-primary' : 'text-stone-400'"
+      :aria-current="isActive(tab.to) ? 'page' : undefined"
     >
-      <span class="material-symbols-outlined">{{ tab.icon }}</span>
+      <span class="material-symbols-outlined" aria-hidden="true">{{ tab.icon }}</span>
       <span class="mt-1 text-[10px] font-bold">{{ tab.label }}</span>
     </NuxtLink>
 
     <NuxtLink
       :to="primaryNavFabTo"
       class="pointer-events-auto -translate-y-4 rounded-full bg-primary p-4 text-on-primary shadow-xl"
+      aria-label="Add Recipe"
+      :aria-current="isActive(primaryNavFabTo) ? 'page' : undefined"
     >
-      <span class="material-symbols-outlined">add</span>
+      <span class="material-symbols-outlined" aria-hidden="true">add</span>
     </NuxtLink>
 
     <NuxtLink
@@ -43,8 +46,9 @@ function isActive(to: string): boolean {
       :to="tab.to"
       class="pointer-events-auto flex min-h-touch min-w-touch flex-col items-center justify-end"
       :class="isActive(tab.to) ? 'text-primary' : 'text-stone-400'"
+      :aria-current="isActive(tab.to) ? 'page' : undefined"
     >
-      <span class="material-symbols-outlined">{{ tab.icon }}</span>
+      <span class="material-symbols-outlined" aria-hidden="true">{{ tab.icon }}</span>
       <span class="mt-1 text-[10px] font-bold">{{ tab.label }}</span>
     </NuxtLink>
   </div>

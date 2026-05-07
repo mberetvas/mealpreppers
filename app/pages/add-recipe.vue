@@ -469,6 +469,8 @@ onBeforeUnmount(() => {
                     <AtelierCircleIconButton
                       variant="ghost"
                       :aria-label="ingredient.showDetails ? 'Collapse details' : 'Split quantity'"
+                      :aria-expanded="ingredient.showDetails"
+                      :aria-controls="`ingredient-details-${index}`"
                       @click="ingredient.showDetails = !ingredient.showDetails"
                     >
                       <span class="material-symbols-outlined text-[18px]">{{ ingredient.showDetails ? 'unfold_less' : 'unfold_more' }}</span>
@@ -481,7 +483,7 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
 
-                <div v-if="ingredient.showDetails" class="grid min-w-0 gap-3 pt-1 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,2fr)]">
+                <div v-if="ingredient.showDetails" :id="`ingredient-details-${index}`" class="grid min-w-0 gap-3 pt-1 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,2fr)]">
                   <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-[0.12em] text-atelier-subtle">
                     Qty
                     <input v-model="ingredient.quantity" type="text" inputmode="decimal" class="design-input-sm min-w-0 normal-case tracking-normal">

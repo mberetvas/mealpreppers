@@ -12,9 +12,13 @@ function isActive(to: string): boolean {
 
 <template>
   <nav
-    class="fixed top-0 w-full z-50 bg-stone-50/80 dark:bg-stone-900/80 backdrop-blur-md shadow-sm dark:shadow-none h-20 flex justify-between items-center px-8"
+    class="fixed top-0 w-full z-50 bg-stone-50/80 dark:bg-stone-900/80 backdrop-blur-sm sm:backdrop-blur-md shadow-sm dark:shadow-none h-20 flex justify-between items-center px-8"
   >
-    <NuxtLink :to="primaryNavBrandTo" class="font-headline italic text-2xl font-bold text-emerald-900 dark:text-emerald-400">
+    <NuxtLink
+      :to="primaryNavBrandTo"
+      class="font-headline italic text-2xl font-bold text-emerald-900 dark:text-emerald-400"
+      :aria-current="isActive(primaryNavBrandTo) ? 'page' : undefined"
+    >
       Culinary Atelier
     </NuxtLink>
 
@@ -28,6 +32,7 @@ function isActive(to: string): boolean {
             ? 'text-emerald-800 dark:text-emerald-400 font-bold border-b-2 border-emerald-800 dark:border-emerald-400 pb-1'
             : 'text-stone-600 dark:text-stone-400 font-medium hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors',
         ]"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
       >
         {{ item.label }}
       </NuxtLink>
