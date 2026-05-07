@@ -1,0 +1,129 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createEvent } from 'h3'
+import { IncomingMessage, ServerResponse } from 'node:http'
+import { Socket } from 'node:net'
+
+vi.mock('../../server/utils/logger', () => ({
+  appLogger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    withTag: vi.fn(function () {
+      return this
+    }),
+  },
+}))
+
+/** Creates a minimal H3Event for unit testing with configurable URL and method. */
+function makeEvent(url = '/api/test', method = 'GET') {
+  const socket = new Socket()
+  const req = new IncomingMessage(socket)
+  req.url = url
+  req.method = method
+  req.headers = { host: 'mealprepper.test' }
+  const res = new ServerResponse(req)
+  return createEvent(req, res)
+}
+
+describe('request-diagnostics middleware', () => {
+  const originalLogLevel = process.env.LOG_LEVEL
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    process.env.LOG_LEVEL = originalLogLevel
+  })
+
+  it('skips logging when LOG_LEVEL is not debug', async () => {
+    process.env.LOG_LEVEL = 'info'
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent()
+    await middleware(event)
+    event.node.res.emit('finish')
+
+    expect(appLogger.debug).not.toHaveBeenCalled()
+  })
+
+  it('skips logging when LOG_LEVEL is undefined', async () => {
+    delete process.env.LOG_LEVEL
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent()
+    await middleware(event)
+    event.node.res.emit('finish')
+
+    expect(appLogger.debug).not.toHaveBeenCalled()
+  })
+
+  it('emits http.request_handled on res finish when LOG_LEVEL is debug', async () => {
+    process.env.LOG_LEVEL = 'debug'
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent('/api/recipes', 'POST')
+    event.context.traceId = 'trace-abc'
+    await middleware(event)
+
+    event.node.res.statusCode = 201
+    event.node.res.emit('finish')
+
+    expect(appLogger.debug).toHaveBeenCalledOnce()
+    const [message, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(message).toBe('http.request_handled')
+    expect(data).toMatchObject({
+      method: 'POST',
+      path: '/api/recipes',
+      statusCode: 201,
+      traceId: 'trace-abc',
+    })
+    expect(typeof data.duration).toBe('number')
+    expect(data.duration).toBeGreaterThanOrEqual(0)
+  })
+
+  it('captures the correct HTTP method', async () => {
+    process.env.LOG_LEVEL = 'debug'
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent('/api/meals', 'DELETE')
+    await middleware(event)
+    event.node.res.statusCode = 204
+    event.node.res.emit('finish')
+
+    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(data.method).toBe('DELETE')
+  })
+
+  it('uses only the pathname, not query string', async () => {
+    process.env.LOG_LEVEL = 'debug'
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent('/api/search?q=pasta&limit=10', 'GET')
+    await middleware(event)
+    event.node.res.emit('finish')
+
+    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(data.path).toBe('/api/search')
+    expect(data.path).not.toContain('?')
+  })
+
+  it('uses empty traceId when event context has no traceId', async () => {
+    process.env.LOG_LEVEL = 'debug'
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent()
+    await middleware(event)
+    event.node.res.emit('finish')
+
+    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(data.traceId).toBe('')
+  })
+})

@@ -1,11 +1,12 @@
-import { consola } from 'consola'
 import { recipePreviewRequestSchema } from '../../../services/recipe-catalog/recipeSchemas'
 import { previewRecipeFromUrl } from '../../../services/recipe-ingestion/recipePreviewApp'
 import { RecipePublisherAuthWallError, RecipePreviewDomainError } from '../../../services/recipe-ingestion/recipePreview/recipePreviewErrors'
-
-const previewLogger = consola.withTag('recipe-preview')
+import { appLogger } from '../../../utils/logger'
+import { useStructuredLogger } from '../../../utils/structuredLogger'
+import { useTraceId } from '../../../middleware/01.trace-context'
 
 export default defineEventHandler(async (event) => {
+  const traceId = useTraceId(event)
   const parsedBody = recipePreviewRequestSchema.safeParse(await readBody(event))
 
   if (!parsedBody.success) {
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event) => {
   }
   catch (error) {
     if (error instanceof RecipePublisherAuthWallError) {
-      previewLogger.warn('Recipe preview blocked by publisher auth wall', {
+      useStructuredLogger(appLogger.withTag('recipe-preview'), traceId).warn('recipe_preview.auth_wall_blocked', {
         requestedUrl: error.diagnostics.requestedUrl,
         finalUrl: error.diagnostics.finalUrl,
         status: error.diagnostics.status,
