@@ -1,3 +1,4 @@
+/** Legacy `DELETE /api/v1/planning/week-templates/:id` — staged deprecation; prefer Saved Weekplans routes. See `./DEPRECATED.md`. */
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
 import { deleteWeekTemplate } from '../../../../services/planning/planningRepository'
 import { handlePlanningUnexpected, toPlanningHttpError } from '../../../../utils/planningErrors'

@@ -5,12 +5,18 @@ import { describe, expect, it } from 'vitest'
 import {
   PRIMARY_NAV_PAGE_FILES,
   getDeclaredPrimaryNavPaths,
+  topNavItems,
 } from '../../app/constants/primaryNavigation'
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 const pagesDir = join(repoRoot, 'app', 'pages')
 
 describe('primary navigation integrity', () => {
+  it('exposes Saved Weekplans on desktop top navigation for the manage surface', () => {
+    const entry = topNavItems.find(i => i.to === '/saved-weekplans')
+    expect(entry?.label).toBe('Saved Weekplans')
+  })
+
   it('declared chrome paths match the canonical route set exactly', () => {
     const declared = new Set(getDeclaredPrimaryNavPaths())
     const mapped = new Set(Object.keys(PRIMARY_NAV_PAGE_FILES))

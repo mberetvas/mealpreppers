@@ -17,16 +17,46 @@ describe('fetchWeekTemplateRowForPlanner', () => {
     expect(mock).not.toHaveBeenCalled()
   })
 
-  it('loads and returns the template row for a valid id', async () => {
+  it('loads from saved-weekplans when available', async () => {
     const { fetcher, mock } = createFetcherMock()
     const body = emptyWeekPlan()
-    mock.mockResolvedValue({ id: 'tpl-1', body })
-    const result = await fetchWeekTemplateRowForPlanner(fetcher, ' tpl-1 ')
-    expect(mock).toHaveBeenCalledWith('/api/v1/planning/week-templates/tpl-1')
-    expect(result).toEqual({ ok: true, id: 'tpl-1', body })
+    mock.mockResolvedValue({ id: 'sw-1', body, name: 'Lunch week' })
+    const result = await fetchWeekTemplateRowForPlanner(fetcher, ' sw-1 ')
+    expect(mock).toHaveBeenCalledWith('/api/v1/saved-weekplans/sw-1')
+    expect(result).toEqual({
+      ok: true,
+      id: 'sw-1',
+      body,
+      name: 'Lunch week',
+      source: 'saved-weekplan',
+    })
   })
 
-  it('returns ok false when fetching template row fails', async () => {
+  it('falls back to week-templates when saved-weekplans fetch fails', async () => {
+    const { fetcher, mock } = createFetcherMock()
+    const body = emptyWeekPlan()
+    mock.mockImplementation(async (url: string) => {
+      if (url.includes('saved-weekplans')) {
+        throw new Error('not found')
+      }
+      if (url.includes('week-templates')) {
+        return { id: 'tpl-1', body, name: 'Legacy' }
+      }
+      throw new Error(`unexpected url ${url}`)
+    })
+    const result = await fetchWeekTemplateRowForPlanner(fetcher, 'tpl-1')
+    expect(mock).toHaveBeenCalledWith('/api/v1/saved-weekplans/tpl-1')
+    expect(mock).toHaveBeenCalledWith('/api/v1/planning/week-templates/tpl-1')
+    expect(result).toEqual({
+      ok: true,
+      id: 'tpl-1',
+      body,
+      name: 'Legacy',
+      source: 'week-template',
+    })
+  })
+
+  it('returns ok false when both saved and legacy fetches fail', async () => {
     const { fetcher, mock } = createFetcherMock()
     mock.mockRejectedValue(new Error('boom'))
     const result = await fetchWeekTemplateRowForPlanner(fetcher, 'tpl-1')

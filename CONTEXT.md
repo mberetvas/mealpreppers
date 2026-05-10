@@ -48,6 +48,31 @@ _Avoid_: caller-managed sanitization
 Detailed request/response logging used for deep troubleshooting at debug level.
 _Avoid_: always-on request dumps
 
+## Planning
+
+Vocabulary for weekly meal grids, persistence, and accounts. Product copy uses these names even when internal storage or legacy HTTP paths still say “week template.”
+
+**Saved Weekplan**:
+A **persisted** weekly meal grid (the `WeekPlanV1` document) plus a human-readable **title** and server metadata (`id`, timestamps). It belongs to the **current principal** (signed-in user or anonymous session). This is what users **save** from the planner and manage on the **Manage plans** page (`/saved-weekplans`).
+
+**Draft week plan**:
+Planner work that is **not** stored as a Saved Weekplan yet (no create **POST**). It may exist only in the client until the user saves with a valid title.
+
+**Anonymous merge**:
+When someone moves from **anonymous** to **authenticated**, choosing to **move** anonymous-owned Saved Weekplans into the account or **discard** them (no silent retention of anonymous-owned rows as “hidden”).
+
+**Anonymous idle purge**:
+A scheduled job may **delete anonymous-owned** Saved Weekplans whose **`updated_at`** is older than the configured idle window (approximately 90 days). **Authenticated** users’ Saved Weekplans are **not** selected by that job.
+
+### HTTP API (Saved Weekplans vs legacy)
+
+- **Preferred**: `GET` / `POST` `/api/v1/saved-weekplans`, `GET` / `PATCH` / `DELETE` `/api/v1/saved-weekplans/:id`, plus anonymous merge preview and merge routes as needed. See `server/api/v1/planning/week-templates/DEPRECATED.md` for the staged deprecation note on **`/api/v1/planning/week-templates`** (legacy, unscoped list/get/mutations).
+
+### Navigation (manage surface)
+
+- **Desktop** top navigation includes **Saved Weekplans** (`/saved-weekplans`).
+- **Mobile** bottom bar focuses Recipes, Plan, Shopping List, and More; the **More** hub lists the same primary destinations as desktop, including Saved Weekplans.
+
 ## Relationships
 
 - An **Execution Environment** determines the default **Log Level**
@@ -63,6 +88,9 @@ _Avoid_: always-on request dumps
 - **Request Diagnostics Logging** is emitted only when **Log Level** is `debug`
 - **Request Diagnostics Logging** is metadata-only by default and excludes request and response bodies
 - A **Trace ID** is attached to request-scoped entries emitted by the **Application Logger**
+- A **Draft week plan** becomes a **Saved Weekplan** after a successful first **create** from the planner
+- **Anonymous merge** changes ownership of anonymous **Saved Weekplans**; **discard** removes them rather than leaving them anonymous-owned
+- **Anonymous idle purge** applies only to rows still tied to an anonymous session, not to authenticated-owned **Saved Weekplans**
 
 ## Example dialogue
 

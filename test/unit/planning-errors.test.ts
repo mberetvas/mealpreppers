@@ -40,4 +40,17 @@ describe('toPlanningHttpError', () => {
       statusMessage: 'Month plans could not be loaded.',
     })
   })
+
+  it('maps forbidden to a 403 response payload', () => {
+    const payload = toPlanningHttpError({
+      kind: 'forbidden',
+      entity: 'saved_weekplan',
+      message: 'You do not have access to this saved weekplan.',
+    })
+
+    expect(payload).toEqual({
+      statusCode: 403,
+      statusMessage: 'You do not have access to this saved weekplan.',
+    })
+  })
 })

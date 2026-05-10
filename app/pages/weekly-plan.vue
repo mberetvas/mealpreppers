@@ -4,7 +4,17 @@ import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
 import { deepCloneWeek, emptyMonthPlan, emptyWeekPlan, getDuplicateRecipeIds, isWeekPlanValid } from '~~/utils/weekPlan'
 import { duplicatePlannerMessage } from '~~/utils/plannerDuplicateMessages'
 import { fetchMonthPlanBodyForPlanner, fetchWeekTemplateRowForPlanner } from '~~/utils/planningHydration'
+import {
+  clearPlannerWeekDraftSnapshot,
+  plannerDraftHasMeaningfulEdits,
+  plannerUnsavedSavedWeekplanDraftNeedsGuard,
+  PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY,
+  readPlannerWeekDraftSnapshot,
+  shouldApplyStoredPlannerWeekDraftSnapshot,
+  writePlannerWeekDraftSnapshot,
+} from '~~/utils/plannerDraftRecovery'
 import { ariaForPlannerWeekSaveStatus } from '~~/utils/stateMessagingContract'
+import { onBeforeRouteLeave } from 'vue-router'
 
 type Tab = 'week' | 'month' | 'templates'
 type Meal = 'breakfast' | 'lunch' | 'dinner'
@@ -19,10 +29,13 @@ const weekPlan = ref<WeekPlanV1>(emptyWeekPlan())
 const monthPlan = ref<MonthPlanV1>(emptyMonthPlan())
 const activeTemplateId = ref<string | null>(null)
 const activeMonthId = ref<string | null>(null)
+const weekPlanTitle = ref('')
+const weekPersistenceKind = ref<'none' | 'saved-weekplan' | 'week-template'>('none')
+const firstSaveBusy = ref(false)
 
 const saveStatus = ref<'saved' | 'saving' | 'dirty' | 'error'>('saved')
 
-usePlanningWeekAutosave(weekPlan, activeTemplateId, saveStatus)
+usePlanningWeekAutosave(weekPlan, activeTemplateId, saveStatus, weekPlanTitle, weekPersistenceKind)
 usePlanningMonthAutosave(monthPlan, activeMonthId)
 
 const pickerOpen = ref(false)
@@ -87,6 +100,98 @@ useAccessibleOverlayInteraction({
   onRequestClose: cancelRemove,
 })
 
+/** Best-effort sessionStorage for draft snapshots (client only). */
+function getClientSessionStorage(): Storage | null {
+  if (!import.meta.client) {
+    return null
+  }
+  try {
+    return sessionStorage
+  }
+  catch {
+    return null
+  }
+}
+
+let draftSnapshotDebounce: ReturnType<typeof setTimeout> | undefined
+
+function flushLocalDraftSnapshotToSession(): void {
+  const storage = getClientSessionStorage()
+  if (!storage) {
+    return
+  }
+  const key = PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY
+  if (weekPersistenceKind.value !== 'none') {
+    clearPlannerWeekDraftSnapshot(storage, key)
+    return
+  }
+  if (!plannerDraftHasMeaningfulEdits(weekPlan.value, weekPlanTitle.value)) {
+    clearPlannerWeekDraftSnapshot(storage, key)
+    return
+  }
+  writePlannerWeekDraftSnapshot(storage, key, {
+    v: 1,
+    weekPlan: deepCloneWeek(weekPlan.value),
+    weekPlanTitle: weekPlanTitle.value,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+function scheduleLocalDraftSnapshotToSession(): void {
+  if (!import.meta.client) {
+    return
+  }
+  clearTimeout(draftSnapshotDebounce)
+  draftSnapshotDebounce = setTimeout(() => flushLocalDraftSnapshotToSession(), 450)
+}
+
+function tryRestoreLocalPlannerDraft(): void {
+  const storage = getClientSessionStorage()
+  if (!storage) {
+    return
+  }
+  const tid = typeof route.query.template === 'string' ? route.query.template.trim() : ''
+  const snapshot = readPlannerWeekDraftSnapshot(storage, PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
+  if (!snapshot) {
+    return
+  }
+  if (!shouldApplyStoredPlannerWeekDraftSnapshot({
+    routeHasTemplateQuery: Boolean(tid),
+    persistenceKind: weekPersistenceKind.value,
+    currentWeek: weekPlan.value,
+    currentTitle: weekPlanTitle.value,
+    snapshot,
+  })) {
+    return
+  }
+  weekPlan.value = deepCloneWeek(snapshot.weekPlan)
+  weekPlanTitle.value = snapshot.weekPlanTitle
+  saveStatus.value = 'dirty'
+}
+
+function handlePlannerDraftBeforeUnload(e: BeforeUnloadEvent): void {
+  if (plannerUnsavedSavedWeekplanDraftNeedsGuard(weekPersistenceKind.value, weekPlan.value, weekPlanTitle.value)) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+onBeforeRouteLeave(() => {
+  if (!import.meta.client) {
+    return true
+  }
+  if (!plannerUnsavedSavedWeekplanDraftNeedsGuard(weekPersistenceKind.value, weekPlan.value, weekPlanTitle.value)) {
+    return true
+  }
+  const leave = window.confirm('You have an unsaved week draft. Leave without saving?')
+  if (leave) {
+    clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
+  }
+  return leave
+})
+
+watch([weekPlan, weekPlanTitle, weekPersistenceKind], scheduleLocalDraftSnapshotToSession, { deep: true })
+
 async function hydrateTemplateFromRoute(): Promise<void> {
   const tid = typeof route.query.template === 'string' ? route.query.template.trim() : ''
   if (!tid) {
@@ -97,13 +202,27 @@ async function hydrateTemplateFromRoute(): Promise<void> {
     saveStatus.value = 'error'
     return
   }
+  clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
   weekPlan.value = loaded.body
   activeTemplateId.value = loaded.id
+  weekPlanTitle.value = loaded.name
+  weekPersistenceKind.value = loaded.source
   saveStatus.value = 'saved'
 }
 
-onMounted(() => {
-  void hydrateTemplateFromRoute()
+onMounted(async () => {
+  await hydrateTemplateFromRoute()
+  if (import.meta.client) {
+    tryRestoreLocalPlannerDraft()
+    window.addEventListener('beforeunload', handlePlannerDraftBeforeUnload)
+  }
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(draftSnapshotDebounce)
+  if (import.meta.client) {
+    window.removeEventListener('beforeunload', handlePlannerDraftBeforeUnload)
+  }
 })
 
 watch(() => route.query.template, () => {
@@ -190,11 +309,14 @@ function saveAsNewTemplate(): void {
   }
   void (async () => {
     try {
-      const created = await $fetch<{ id: string }>('/api/v1/planning/week-templates', {
+      const created = await $fetch<{ id: string, name: string }>('/api/v1/planning/week-templates', {
         method: 'POST',
         body: { name: name.trim(), body: weekPlan.value },
       })
       activeTemplateId.value = created.id
+      weekPlanTitle.value = created.name
+      weekPersistenceKind.value = 'week-template'
+      clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
       const q = { ...route.query, template: created.id }
       await router.replace({ query: q })
       saveStatus.value = 'saved'
@@ -209,9 +331,12 @@ function saveAsNewTemplate(): void {
 async function loadTemplateIntoWeek(id: string): Promise<void> {
   templateBusyId.value = id
   try {
-    const row = await $fetch<{ id: string, body: WeekPlanV1 }>(`/api/v1/planning/week-templates/${id}`)
+    const row = await $fetch<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/planning/week-templates/${id}`)
+    clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
     weekPlan.value = row.body
     activeTemplateId.value = row.id
+    weekPlanTitle.value = row.name
+    weekPersistenceKind.value = 'week-template'
     const q = { ...route.query, template: row.id }
     await router.replace({ query: q })
     activeTab.value = 'week'
@@ -232,6 +357,8 @@ async function deleteTemplate(id: string): Promise<void> {
     if (activeTemplateId.value === id) {
       activeTemplateId.value = null
       weekPlan.value = emptyWeekPlan()
+      weekPlanTitle.value = ''
+      weekPersistenceKind.value = 'none'
       const q = { ...route.query } as Record<string, string | string[] | undefined>
       delete q.template
       await router.replace({ query: q })
@@ -262,8 +389,45 @@ function onSnapshotCurrent(weekIndex: number): void {
 function onOpenWeek(_index: number, snapshot: WeekPlanV1): void {
   weekPlan.value = deepCloneWeek(snapshot)
   activeTemplateId.value = null
+  weekPlanTitle.value = ''
+  weekPersistenceKind.value = 'none'
   saveStatus.value = 'dirty'
   activeTab.value = 'week'
+}
+
+const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
+
+const canPersistDraftSavedWeekplan = computed(
+  () => Boolean(weekPlanTitle.value.trim()) && weekValid.value && !firstSaveBusy.value,
+)
+
+/** Creates the first server row for the current draft week (explicit save; no autosave before this). */
+async function persistDraftAsSavedWeekplan(): Promise<void> {
+  const name = weekPlanTitle.value.trim()
+  if (!name || !weekValid.value || firstSaveBusy.value) {
+    return
+  }
+  firstSaveBusy.value = true
+  saveStatus.value = 'saving'
+  try {
+    const created = await $fetch<{ id: string, name: string }>('/api/v1/saved-weekplans', {
+      method: 'POST',
+      body: { name, body: weekPlan.value },
+    })
+    clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
+    activeTemplateId.value = created.id
+    weekPlanTitle.value = created.name
+    weekPersistenceKind.value = 'saved-weekplan'
+    const q = { ...route.query, template: created.id }
+    await router.replace({ query: q })
+    saveStatus.value = 'saved'
+  }
+  catch {
+    saveStatus.value = 'error'
+  }
+  finally {
+    firstSaveBusy.value = false
+  }
 }
 
 const headerTitle = computed(() => {
@@ -274,7 +438,13 @@ const headerTitle = computed(() => {
 
 const savePillText = computed(() => {
   if (!activeTemplateId.value) {
-    return 'Not linked to a saved template'
+    if (firstSaveBusy.value) {
+      return 'Saving…'
+    }
+    if (saveStatus.value === 'error') {
+      return 'Save failed'
+    }
+    return 'Draft — not stored yet'
   }
   if (saveStatus.value === 'saving') {
     return 'Saving…'
@@ -291,13 +461,12 @@ const savePillText = computed(() => {
 const weekSaveStatusAria = computed(() => ariaForPlannerWeekSaveStatus(saveStatus.value))
 
 const savePillIcon = computed(() => {
-  if (saveStatus.value === 'saving') return 'sync'
+  if (firstSaveBusy.value || saveStatus.value === 'saving') return 'sync'
   if (saveStatus.value === 'error') return 'error_outline'
+  if (!activeTemplateId.value) return 'edit_note'
   if (saveStatus.value === 'dirty') return 'pending'
   return 'check_circle'
 })
-
-const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
 
 const categoryOptions = computed(() => options.value?.categories ?? [])
 </script>
@@ -419,6 +588,29 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
 
     <template v-else>
       <div v-show="activeTab === 'week'" class="rounded-2xl bg-surface-container p-4 md:p-8">
+        <div class="mb-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <label for="planner-week-title" class="sr-only">Week plan name</label>
+            <input
+              id="planner-week-title"
+              v-model="weekPlanTitle"
+              type="text"
+              :disabled="firstSaveBusy"
+              placeholder="Week plan name"
+              autocomplete="off"
+              class="min-w-0 flex-1 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 font-body text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            >
+            <button
+              v-if="weekPersistenceKind === 'none'"
+              type="button"
+              class="shrink-0 rounded-2xl bg-primary px-4 py-2 font-body text-sm font-semibold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50"
+              :disabled="!canPersistDraftSavedWeekplan"
+              @click="persistDraftAsSavedWeekplan"
+            >
+              Save
+            </button>
+          </div>
+        </div>
         <PlanWeekPlanEditor
           v-model:selected-day="selectedDay"
           :model-value="weekPlan"

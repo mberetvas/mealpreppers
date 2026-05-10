@@ -9,7 +9,7 @@ import { topNavItems } from '~/constants/primaryNavigation'
         More
       </h1>
       <p class="text-stone-600 dark:text-stone-400">
-        Quick access to every main area of the app from your phone.
+        Quick access to every main area of the app from your phone, including <strong>Saved Weekplans</strong> (manage plans).
       </p>
     </header>
 

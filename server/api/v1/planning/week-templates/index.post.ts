@@ -1,3 +1,4 @@
+/** Legacy `POST /api/v1/planning/week-templates` — staged deprecation; prefer Saved Weekplans routes. See `./DEPRECATED.md`. */
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
 import {
   assertRecipeIdsExist,

@@ -22,6 +22,11 @@ export function toPlanningHttpError(error: PlanningFailure): HttpErrorPayload {
         statusCode: 404,
         statusMessage: error.message,
       }
+    case 'forbidden':
+      return {
+        statusCode: 403,
+        statusMessage: error.message,
+      }
     case 'storage_error':
       return {
         statusCode: 500,
