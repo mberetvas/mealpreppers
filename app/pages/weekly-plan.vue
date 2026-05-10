@@ -302,32 +302,6 @@ function confirmRemove(): void {
   removeTarget.value = null
 }
 
-function saveAsNewTemplate(): void {
-  const name = window.prompt('Template name')
-  if (!name?.trim()) {
-    return
-  }
-  void (async () => {
-    try {
-      const created = await $fetch<{ id: string, name: string }>('/api/v1/planning/week-templates', {
-        method: 'POST',
-        body: { name: name.trim(), body: weekPlan.value },
-      })
-      activeTemplateId.value = created.id
-      weekPlanTitle.value = created.name
-      weekPersistenceKind.value = 'week-template'
-      clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
-      const q = { ...route.query, template: created.id }
-      await router.replace({ query: q })
-      saveStatus.value = 'saved'
-      await refreshTemplates()
-    }
-    catch {
-      saveStatus.value = 'error'
-    }
-  })()
-}
-
 async function loadTemplateIntoWeek(id: string): Promise<void> {
   templateBusyId.value = id
   try {
@@ -529,14 +503,6 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         >
           Add at least one recipe
         </span>
-        <button
-          v-if="activeTab === 'week'"
-          type="button"
-          class="rounded-full bg-surface-container-low px-4 py-2 font-body text-xs font-semibold text-primary hover:bg-primary-fixed/30"
-          @click="saveAsNewTemplate"
-        >
-          Save as template
-        </button>
       </div>
     </header>
 
