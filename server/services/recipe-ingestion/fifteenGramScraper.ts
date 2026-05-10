@@ -5,7 +5,30 @@ import {
   parseRecipeDuration,
 } from './normalizers'
 import type { RecipeDraft, RecipeSource } from './recipeScraper'
-import { optionalText, parseServings, toRecipeSteps } from './scraperUtils'
+import { optionalText, parseServings, toRecipeSteps, uniqueStrings } from './scraperUtils'
+
+/**
+ * Reads category, cuisine, and keyword labels from the sidebar tag list (avoids unrelated keyword nodes elsewhere on the page).
+ */
+function readFifteenGramTaxonomy(document: CheerioAPI): { categories: string[], tags: string[] } {
+  const tagSidebar = document('#recipe-detail #tags')
+  const scoped = tagSidebar.length > 0 ? tagSidebar : document('#recipe-detail .tags-elements')
+
+  const categoryLabels = scoped
+    .find('[itemprop="recipeCategory"], [itemprop="recipeCuisine"]')
+    .toArray()
+    .map(element => cleanText(document(element).text()))
+
+  const keywordLabels = scoped
+    .find('[itemprop="keywords"]')
+    .toArray()
+    .map(element => cleanText(document(element).text()))
+
+  return {
+    categories: uniqueStrings(categoryLabels),
+    tags: uniqueStrings(keywordLabels),
+  }
+}
 
 /**
  * Parses a 15gram recipe page using microdata attributes.
@@ -23,6 +46,7 @@ export function parseFifteenGramRecipe(document: CheerioAPI, source: RecipeSourc
   const steps = toRecipeSteps(document('li[itemprop="recipeInstructions"]')
     .toArray()
     .map(element => document(element).text()))
+  const { categories, tags } = readFifteenGramTaxonomy(document)
 
   return {
     source,
@@ -31,8 +55,8 @@ export function parseFifteenGramRecipe(document: CheerioAPI, source: RecipeSourc
     imageUrl,
     servings,
     cookTimeMinutes,
-    categories: [],
-    tags: [],
+    categories,
+    tags,
     ingredients,
     steps,
   }
