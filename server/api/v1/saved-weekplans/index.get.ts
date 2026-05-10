@@ -1,19 +1,19 @@
 /** Preferred list endpoint for persisted week grids (principal-scoped). Replaces deprecated `GET .../planning/week-templates`. */
+import { createError, defineEventHandler } from 'h3'
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
-import { resolvePlanningPrincipalFromEvent } from '../../../services/planning/planningPrincipal'
+import { withPlanningHandler } from '../../../services/planning/planningRequestContext'
 import { listSavedWeekplans } from '../../../services/planning/savedWeekplansRepository'
-import { handlePlanningUnexpected, toPlanningHttpError } from '../../../utils/planningErrors'
+import { toPlanningHttpError } from '../../../utils/planningErrors'
 
-export default defineEventHandler(async (event) => {
-  try {
-    const principal = await resolvePlanningPrincipalFromEvent(event)
-    const result = await listSavedWeekplans(getSupabaseServerClient(), principal)
-    if (!result.ok) {
-      throw createError(toPlanningHttpError(result.error))
-    }
-    return result.value
-  }
-  catch (err) {
-    handlePlanningUnexpected(err, 'saved-weekplans', 'list saved weekplans')
-  }
-})
+export default defineEventHandler(
+  withPlanningHandler(
+    { tag: 'saved-weekplans', operation: 'list saved weekplans' },
+    async (_event, ctx) => {
+      const result = await listSavedWeekplans(getSupabaseServerClient(), ctx.principal)
+      if (!result.ok) {
+        throw createError(toPlanningHttpError(result.error))
+      }
+      return result.value
+    },
+  ),
+)
