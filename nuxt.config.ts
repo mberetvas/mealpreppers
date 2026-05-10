@@ -6,6 +6,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    /** Bearer secret for POST /api/v1/internal/saved-weekplans/purge-idle-anonymous (cron / batch). */
+    savedWeekplansIdlePurgeSecret: process.env.SAVED_WEEKPLANS_IDLE_PURGE_SECRET,
   },
 
   modules: [

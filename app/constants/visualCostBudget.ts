@@ -11,7 +11,9 @@ export const VISUAL_COST_BUDGET_SCROLL_SURFACE_FILES = [
 /** Planner modals should use semantic panel elevation, not ad-hoc rgba shadows. */
 export const VISUAL_COST_BUDGET_MODAL_SURFACE_FILES = [
   'app/components/plan/RecipePickerModal.vue',
+  'app/components/plan/AnonymousSavedWeekplansHandoffModal.vue',
   'app/pages/weekly-plan.vue',
+  'app/pages/saved-weekplans.vue',
 ] as const
 
 /** Legacy catalog grid wrappers used heavy arbitrary shadows (large blur radius per card). */

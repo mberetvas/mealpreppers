@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptyWeekPlan } from '../../utils/weekPlan'
-import { createPlanningMonthAutosave, createPlanningWeekAutosave } from '../../utils/planningAutosave'
+import {
+  buildPlannerWeekPatchInput,
+  createPlanningMonthAutosave,
+  createPlanningWeekAutosave,
+} from '../../utils/planningAutosave'
 
 /** Flushes pending promise microtasks after timer callbacks run. */
 async function flushMicrotasks(): Promise<void> {
@@ -51,6 +55,7 @@ describe('createPlanningWeekAutosave', () => {
     vi.advanceTimersByTime(700)
     await flushMicrotasks()
     expect(patch).toHaveBeenCalledTimes(1)
+    expect(patch).toHaveBeenCalledWith('tpl-1', { body: emptyWeekPlan() })
     expect(onSaved).toHaveBeenCalledTimes(1)
   })
 
@@ -72,6 +77,67 @@ describe('createPlanningWeekAutosave', () => {
     vi.advanceTimersByTime(700)
     await flushMicrotasks()
     expect(patch).toHaveBeenCalledTimes(1)
+    expect(patch).toHaveBeenCalledWith('tpl-1', { body: emptyWeekPlan() })
+  })
+
+  it('includes trimmed name in patch when getWeekName is provided', async () => {
+    const patch = vi.fn().mockResolvedValue(undefined)
+    const body = emptyWeekPlan()
+    const ctrl = createPlanningWeekAutosave({
+      debounceMs: 700,
+      getTemplateId: () => 'tpl-1',
+      getWeekBody: () => body,
+      getWeekName: () => '  Hello ',
+      patch,
+      onDirty: vi.fn(),
+      onSaving: vi.fn(),
+      onSaved: vi.fn(),
+      onError: vi.fn(),
+    })
+    ctrl.notifyWeekPlanChanged()
+    vi.advanceTimersByTime(700)
+    await flushMicrotasks()
+    expect(patch).toHaveBeenCalledWith('tpl-1', { body, name: 'Hello' })
+  })
+
+  it('does not PATCH until an id exists (draft vs post-create)', async () => {
+    const patch = vi.fn().mockResolvedValue(undefined)
+    let id: string | null = null
+    const ctrl = createPlanningWeekAutosave({
+      debounceMs: 700,
+      getTemplateId: () => id,
+      getWeekBody: () => emptyWeekPlan(),
+      getWeekName: () => 'Titled',
+      patch,
+      onDirty: vi.fn(),
+      onSaving: vi.fn(),
+      onSaved: vi.fn(),
+      onError: vi.fn(),
+    })
+    ctrl.notifyWeekPlanChanged()
+    vi.advanceTimersByTime(700)
+    await flushMicrotasks()
+    expect(patch).not.toHaveBeenCalled()
+    id = 'new-1'
+    ctrl.notifyWeekPlanChanged()
+    vi.advanceTimersByTime(700)
+    await flushMicrotasks()
+    expect(patch).toHaveBeenCalledTimes(1)
+    expect(patch).toHaveBeenCalledWith('new-1', { body: emptyWeekPlan(), name: 'Titled' })
+  })
+})
+
+describe('buildPlannerWeekPatchInput', () => {
+  it('adds trimmed name when getter returns spaced text', () => {
+    const body = emptyWeekPlan()
+    const input = buildPlannerWeekPatchInput(body, () => '  Hi  ')
+    expect(input).toEqual({ body, name: 'Hi' })
+  })
+
+  it('omits name for whitespace-only title', () => {
+    const body = emptyWeekPlan()
+    const input = buildPlannerWeekPatchInput(body, () => '   ')
+    expect(input).toEqual({ body })
   })
 })
 

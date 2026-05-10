@@ -1,4 +1,4 @@
-import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
+import type { MonthPlanV1, WeekPlanV1, WeekTemplatePatchInput } from '~~/types/planning'
 
 export type PlannerWeekSaveStatus = 'saved' | 'saving' | 'dirty' | 'error'
 
@@ -8,14 +8,33 @@ export interface PlanningWeekAutosaveController {
   cancel: () => void
 }
 
+/** Builds the PATCH body for a linked planner week (grid + optional inline title). */
+export function buildPlannerWeekPatchInput(
+  body: WeekPlanV1,
+  getWeekName?: () => string | null,
+): WeekTemplatePatchInput {
+  const input: WeekTemplatePatchInput = { body }
+  if (!getWeekName) {
+    return input
+  }
+  const raw = getWeekName()
+  const n = typeof raw === 'string' ? raw.trim() : ''
+  if (n) {
+    input.name = n
+  }
+  return input
+}
+
 /**
- * Debounced PATCH for a linked week template; mirrors planner UX (dirty / saving / saved / error).
+ * Debounced PATCH for a linked week row; mirrors planner UX (dirty / saving / saved / error).
+ * With no linked id, marks dirty and never PATCHes (draft until explicit create).
  */
 export function createPlanningWeekAutosave(config: {
   debounceMs: number
   getTemplateId: () => string | null
   getWeekBody: () => WeekPlanV1
-  patch: (templateId: string, body: WeekPlanV1) => Promise<void>
+  getWeekName?: () => string | null
+  patch: (templateId: string, input: WeekTemplatePatchInput) => Promise<void>
   onDirty: () => void
   onSaving: () => void
   onSaved: () => void
@@ -39,7 +58,8 @@ export function createPlanningWeekAutosave(config: {
     clearT(timer)
     timer = setT(async () => {
       try {
-        await config.patch(id, config.getWeekBody())
+        const input = buildPlannerWeekPatchInput(config.getWeekBody(), config.getWeekName)
+        await config.patch(id, input)
         config.onSaved()
       }
       catch {

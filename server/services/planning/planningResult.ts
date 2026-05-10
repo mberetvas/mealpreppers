@@ -5,7 +5,12 @@ export type PlanningFailure =
   }
   | {
     kind: 'not_found'
-    entity: 'week_template' | 'month_plan'
+    entity: 'week_template' | 'month_plan' | 'saved_weekplan'
+    message: string
+  }
+  | {
+    kind: 'forbidden'
+    entity: 'saved_weekplan'
     message: string
   }
   | {

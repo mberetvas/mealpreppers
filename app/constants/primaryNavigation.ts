@@ -1,11 +1,13 @@
 /**
  * Single source of truth for primary chrome routes and their on-disk page modules.
  * Keep `PRIMARY_NAV_PAGE_FILES` keys in sync with every path exposed by TopNavBar,
- * MobileBottomNav (including the FAB), and the brand link.
+ * MobileBottomNav (including the FAB), the brand link, and the More hub (mirrors `topNavItems`).
+ * Manage surface: `/saved-weekplans` (page title **Manage plans**); desktop top nav label **Saved Weekplans**.
  */
 export const PRIMARY_NAV_PAGE_FILES = {
   '/recipes': 'recipes/index.vue',
   '/weekly-plan': 'weekly-plan.vue',
+  '/saved-weekplans': 'saved-weekplans.vue',
   '/shopping-list': 'shopping-list.vue',
   '/add-recipe': 'add-recipe.vue',
   '/more': 'more.vue',
@@ -17,6 +19,7 @@ export type PrimaryNavResolvedPath = keyof typeof PRIMARY_NAV_PAGE_FILES
 export const topNavItems = [
   { label: 'Recipes', to: '/recipes' },
   { label: 'Weekly Plan', to: '/weekly-plan' },
+  { label: 'Saved Weekplans', to: '/saved-weekplans' },
   { label: 'Shopping List', to: '/shopping-list' },
   { label: 'Add Recipe', to: '/add-recipe' },
 ] as const satisfies ReadonlyArray<{ label: string; to: PrimaryNavResolvedPath }>
