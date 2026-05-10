@@ -81,6 +81,18 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 - **Desktop** top navigation includes **Saved Weekplans** (`/saved-weekplans`).
 - **Mobile** bottom bar focuses Recipes, Plan, Shopping List, and More; the **More** hub lists the same primary destinations as desktop, including Saved Weekplans.
 
+## Local full-stack (Docker)
+
+Vocabulary for running Mealprepper and Supabase together via Docker Compose on a developer machine. Not intended for internet-facing production.
+
+**Supabase server origin**:
+The HTTP origin the Mealprepper **server** uses for the Supabase client when that server runs **inside** the Compose network (reachable via Docker service names, e.g. the API gateway).
+_Avoid_: internal URL, private URL
+
+**Supabase browser origin**:
+The HTTP origin used when constructing **Supabase Storage** (and similar) URLs **returned to the browser**; it must resolve on the **developer host** (typically `localhost` with a published API port), not only inside the Compose network.
+_Avoid_: public URL (overloaded), CORS origin
+
 ## Relationships
 
 - An **Execution Environment** determines the default **Log Level**
@@ -102,12 +114,17 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 - A **Draft week plan** becomes a **Saved Weekplan** after a successful first **create** from the planner
 - **Anonymous merge** changes ownership of anonymous **Saved Weekplans**; **discard** removes them rather than leaving them anonymous-owned
 - **Anonymous idle purge** applies only to rows still tied to an anonymous session, not to authenticated-owned **Saved Weekplans**
+- **Supabase browser origin** and **Supabase server origin** may differ under local Compose; both refer to the same Supabase project, but the **browser** must not receive URLs that only work inside the Compose network
 
 ## Example dialogue
 
 > **Dev:** "Should we run at `prod` level in staging?"
 > **Domain expert:** "`production` is the **Execution Environment**; choose a **Log Level** like `info` separately."
 
+> **Dev:** "We set `SUPABASE_URL` to the Docker gateway hostname; recipe images 404 in the browser."
+> **Domain expert:** "Server traffic uses the **Supabase server origin**; URLs returned to the client must use the **Supabase browser origin** on `localhost`."
+
 ## Flagged ambiguities
 
 - "`prod` level" was used to mean a **Log Level**; resolved: use **Execution Environment** (`production`) and **Log Level** as separate terms.
+- A single `SUPABASE_URL` was used for both server calls and browser-loaded Storage URLs; resolved: distinguish **Supabase server origin** from **Supabase browser origin** when those origins cannot be the same string (typical under Docker Compose).
