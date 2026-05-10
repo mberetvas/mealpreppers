@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { useTraceId } from '../../../middleware/01.trace-context'
 import { readAnonymousPlanningSessionCookie } from '../../../services/planning/planningPrincipal'
 import { resolveSupabaseUserIdFromBearer } from '../../../services/planning/planningSupabaseAuth'
 import { countAnonymousSavedWeekplansForSession } from '../../../services/planning/savedWeekplansRepository'
@@ -26,6 +27,6 @@ export default defineEventHandler(async (event) => {
     return { count: result.value }
   }
   catch (err) {
-    handlePlanningUnexpected(err, 'saved-weekplans', 'anonymous merge preview')
+    handlePlanningUnexpected(err, 'saved-weekplans', 'anonymous merge preview', useTraceId(event))
   }
 })

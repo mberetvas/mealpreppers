@@ -13,7 +13,7 @@ describe('legacy week-templates repository surface', () => {
     expect(listWeekTemplates.length).toBe(1)
   })
 
-  it('exports createWeekTemplate with a single Supabase client argument', () => {
+  it('exports createWeekTemplate with two arguments: Supabase client and template input', () => {
     expect(createWeekTemplate.length).toBe(2)
   })
 })

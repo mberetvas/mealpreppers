@@ -34,6 +34,8 @@ watch(renamingId, async (id) => {
 function startRename(item: SavedWeekplanListItem): void {
   renamingId.value = item.id
   renameDraft.value = item.name
+  renameError.value = null
+  renameBusy.value = false
 }
 
 function cancelRename(): void {

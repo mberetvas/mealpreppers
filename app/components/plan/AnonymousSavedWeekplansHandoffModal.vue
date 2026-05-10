@@ -14,6 +14,17 @@ const errorMessage = ref<string | null>(null)
 
 const dialogVisible = computed(() => (dialogOpen.value && pendingCount.value > 0) || busy.value)
 
+/** Best-effort sessionStorage access (client only); returns null when storage is unavailable. */
+function getClientSessionStorage(): Storage | null {
+  if (!import.meta.client) return null
+  try {
+    return sessionStorage
+  }
+  catch {
+    return null
+  }
+}
+
 watch(
   () => accessToken.value,
   async (t) => {
@@ -24,7 +35,12 @@ watch(
       errorMessage.value = null
       return
     }
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(HANDOFF_DEFER_KEY) === '1') return
+    try {
+      if (getClientSessionStorage()?.getItem(HANDOFF_DEFER_KEY) === '1') return
+    }
+    catch {
+      // storage unavailable — proceed with the preview check
+    }
     errorMessage.value = null
     try {
       const res = await $fetch<{ count: number }>('/api/v1/saved-weekplans/anonymous-merge-preview', {
@@ -51,7 +67,12 @@ useAccessibleOverlayInteraction({
 })
 
 function deferDecision(): void {
-  if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(HANDOFF_DEFER_KEY, '1')
+  try {
+    getClientSessionStorage()?.setItem(HANDOFF_DEFER_KEY, '1')
+  }
+  catch {
+    // storage unavailable — defer is best-effort
+  }
   dialogOpen.value = false
 }
 
@@ -67,7 +88,12 @@ async function runHandoff(action: 'move' | 'discard'): Promise<void> {
       headers: { Authorization: `Bearer ${t}` },
       credentials: 'include',
     })
-    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(HANDOFF_DEFER_KEY)
+    try {
+      getClientSessionStorage()?.removeItem(HANDOFF_DEFER_KEY)
+    }
+    catch {
+      // storage unavailable — removal is best-effort
+    }
     pendingCount.value = 0
     dialogOpen.value = false
   }

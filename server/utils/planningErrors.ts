@@ -37,13 +37,14 @@ export function toPlanningHttpError(error: PlanningFailure): HttpErrorPayload {
 
 /**
  * Rethrows H3 errors from `createError`; logs and wraps unknown failures for planning APIs.
+ * Pass `traceId` to correlate the unexpected-error log entry with the originating request.
  */
-export function handlePlanningUnexpected(err: unknown, tag: string, operation: string): never {
+export function handlePlanningUnexpected(err: unknown, tag: string, operation: string, traceId?: string): never {
   if (err && typeof err === 'object' && 'statusCode' in err) {
     throw err
   }
   const errorId = randomUUID()
-  useStructuredLogger(appLogger.withTag(tag)).error('planning.unexpected_error', { operation, errorId, err })
+  useStructuredLogger(appLogger.withTag(tag), traceId).error('planning.unexpected_error', { operation, errorId, err })
   throw createError({
     statusCode: 500,
     statusMessage: 'The planner could not complete this request.',

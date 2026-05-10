@@ -83,6 +83,6 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (err) {
-    handlePlanningUnexpected(err, 'saved-weekplans-idle-purge', 'purge idle anonymous saved weekplans')
+    handlePlanningUnexpected(err, 'saved-weekplans-idle-purge', 'purge idle anonymous saved weekplans', traceId)
   }
 })

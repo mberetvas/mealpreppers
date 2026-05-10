@@ -62,6 +62,6 @@ export default defineEventHandler(async (event) => {
     return { deleted: result.value.deleted }
   }
   catch (err) {
-    handlePlanningUnexpected(err, 'saved-weekplans', 'anonymous merge')
+    handlePlanningUnexpected(err, 'saved-weekplans', 'anonymous merge', useTraceId(event))
   }
 })
