@@ -28,7 +28,9 @@ export async function fetchWeekTemplateRowForPlanner(
     const row = await fetcher<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/saved-weekplans/${tid}`)
     return { ok: true, id: row.id, name: row.name, body: row.body, source: 'saved-weekplan' }
   }
-  catch {
+  catch (err: unknown) {
+    const status = (err as Record<string, unknown>)?.statusCode as number | undefined
+    if (status !== 404) return { ok: false }
     try {
       const row = await fetcher<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/planning/week-templates/${tid}`)
       return { ok: true, id: row.id, name: row.name, body: row.body, source: 'week-template' }

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { H3Event } from 'h3'
 import { deleteCookie, getCookie, setCookie } from 'h3'
+import { resolveSupabaseUserIdFromBearer } from './planningSupabaseAuth'
 
 /** HttpOnly cookie carrying the anonymous Saved Weekplans session id (opaque UUID). */
 export const ANON_PLANNING_SESSION_COOKIE = 'mp_planning_session'
@@ -54,6 +55,19 @@ export function resolvePlanningPrincipal(event: H3Event): PlanningPrincipal {
   if (typeof fromContext === 'string' && fromContext.trim() !== '') {
     return { kind: 'user', userId: fromContext.trim() }
   }
+  return { kind: 'anonymous', sessionId: ensureAnonymousPlanningSession(event) }
+}
+
+/**
+ * Async principal resolver that checks the Bearer token via an injectable dependency.
+ * Defaults to Supabase auth; accepts a custom resolver for unit testing.
+ */
+export async function resolvePlanningPrincipalFromEvent(
+  event: H3Event,
+  resolveUserId: (e: H3Event) => Promise<string | null> = resolveSupabaseUserIdFromBearer,
+): Promise<PlanningPrincipal> {
+  const userId = await resolveUserId(event)
+  if (userId) return { kind: 'user', userId }
   return { kind: 'anonymous', sessionId: ensureAnonymousPlanningSession(event) }
 }
 

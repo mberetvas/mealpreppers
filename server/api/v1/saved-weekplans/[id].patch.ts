@@ -2,7 +2,7 @@ import { getSupabaseServerClient } from '../../../db/supabaseClient'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import {
   principalKindForLog,
-  resolvePlanningPrincipal,
+  resolvePlanningPrincipalFromEvent,
 } from '../../../services/planning/planningPrincipal'
 import {
   assertRecipeIdsExist,
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid saved weekplan patch.', data: parsed.error.flatten() })
     }
 
-    const principal = resolvePlanningPrincipal(event)
+    const principal = await resolvePlanningPrincipalFromEvent(event)
     const supabase = getSupabaseServerClient()
     if (parsed.data.body) {
       const recipeCheck = await assertRecipeIdsExist(supabase, collectRecipeIdsFromWeekPlan(parsed.data.body))

@@ -2,7 +2,7 @@ import { getSupabaseServerClient } from '../../../db/supabaseClient'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import {
   principalKindForLog,
-  resolvePlanningPrincipal,
+  resolvePlanningPrincipalFromEvent,
 } from '../../../services/planning/planningPrincipal'
 import { deleteSavedWeekplan } from '../../../services/planning/savedWeekplansRepository'
 import { appLogger } from '../../../utils/logger'
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Saved weekplan id is required.' })
     }
 
-    const principal = resolvePlanningPrincipal(event)
+    const principal = await resolvePlanningPrincipalFromEvent(event)
     const result = await deleteSavedWeekplan(getSupabaseServerClient(), id, principal)
     if (!result.ok) {
       throw createError(toPlanningHttpError(result.error))

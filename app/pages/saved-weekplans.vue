@@ -21,6 +21,7 @@ const sortedList = computed(() =>
 const renamingId = ref<string | null>(null)
 const renameDraft = ref('')
 const renameBusy = ref(false)
+const renameError = ref<string | null>(null)
 
 watch(renamingId, async (id) => {
   if (!id) return
@@ -38,6 +39,7 @@ function startRename(item: SavedWeekplanListItem): void {
 function cancelRename(): void {
   renamingId.value = null
   renameDraft.value = ''
+  renameError.value = null
 }
 
 async function commitRename(id: string): Promise<void> {
@@ -55,7 +57,7 @@ async function commitRename(id: string): Promise<void> {
     cancelRename()
   }
   catch {
-    cancelRename()
+    renameError.value = 'Rename failed. Try again.'
   }
   finally {
     renameBusy.value = false
@@ -77,6 +79,7 @@ const deleteTarget = ref<{ id: string, name: string } | null>(null)
 const deleteOverlayRef = ref<HTMLElement | null>(null)
 const deleteRestoreFocus = ref<HTMLElement | null>(null)
 const deleteBusy = ref(false)
+const deleteError = ref<string | null>(null)
 const deleteDialogOpen = computed(() => deleteTarget.value !== null)
 
 function requestDelete(item: SavedWeekplanListItem, invoker?: HTMLElement | null): void {
@@ -86,6 +89,7 @@ function requestDelete(item: SavedWeekplanListItem, invoker?: HTMLElement | null
 
 function cancelDelete(): void {
   deleteTarget.value = null
+  deleteError.value = null
 }
 
 useAccessibleOverlayInteraction({
@@ -104,6 +108,9 @@ async function confirmDelete(): Promise<void> {
     await $fetch(`/api/v1/saved-weekplans/${t.id}`, { method: 'DELETE' })
     cancelDelete()
     await refresh()
+  }
+  catch {
+    deleteError.value = 'Could not delete. Try again.'
   }
   finally {
     deleteBusy.value = false
@@ -211,16 +218,21 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
         class="flex flex-col gap-4 rounded-2xl bg-atelier-parchment p-5 shadow-atelier-float ring-1 ring-primary/10 sm:flex-row sm:items-center sm:justify-between"
       >
         <div class="min-w-0 flex-1">
-          <div v-if="renamingId === item.id" class="flex flex-wrap items-center gap-2">
-            <input
-              :id="`rename-${item.id}`"
-              v-model="renameDraft"
-              type="text"
-              class="min-w-0 flex-1 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-base font-semibold text-atelier-heading focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-              :aria-label="`Rename Saved Weekplan ${item.name}`"
-              @keydown="onRenameKeydown(item.id, $event)"
-              @blur="() => commitRename(item.id)"
-            >
+          <div v-if="renamingId === item.id" class="flex flex-col gap-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <input
+                :id="`rename-${item.id}`"
+                v-model="renameDraft"
+                type="text"
+                class="min-w-0 flex-1 rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-base font-semibold text-atelier-heading focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                :aria-label="`Rename Saved Weekplan ${item.name}`"
+                @keydown="onRenameKeydown(item.id, $event)"
+                @blur="() => commitRename(item.id)"
+              >
+            </div>
+            <p v-if="renameError" role="alert" class="text-sm text-atelier-error-foreground">
+              {{ renameError }}
+            </p>
           </div>
           <button
             v-else
@@ -285,6 +297,9 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
           </h2>
           <p id="saved-weekplan-delete-desc" class="mt-2 text-sm text-atelier-description">
             “{{ deleteTarget.name }}” will be removed. This cannot be undone.
+          </p>
+          <p v-if="deleteError" role="alert" class="mt-2 text-sm font-semibold text-atelier-error-foreground">
+            {{ deleteError }}
           </p>
           <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
