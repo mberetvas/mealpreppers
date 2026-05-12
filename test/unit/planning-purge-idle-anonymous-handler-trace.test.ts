@@ -10,6 +10,8 @@ import type { H3Event } from 'h3'
 import { createEvent } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { appLogger } from '../../server/utils/logger'
+import purgeHandler from '../../server/api/v1/internal/saved-weekplans/purge-idle-anonymous.post'
 
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
@@ -39,9 +41,6 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', async (import
     purgeAnonymousIdleSavedWeekplans: mocks.purgeAnonymousIdleSavedWeekplans,
   }
 })
-
-import { appLogger } from '../../server/utils/logger'
-import purgeHandler from '../../server/api/v1/internal/saved-weekplans/purge-idle-anonymous.post'
 
 const PURGE_SECRET = 'test-secret'
 const AUTH_HEADER = `Bearer ${PURGE_SECRET}`

@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { H3Event } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { createEvent } from 'h3'
+import { appLogger } from '../../server/utils/logger'
+import listSavedWeekplansHandler from '../../server/api/v1/saved-weekplans/index.get'
+import patchSavedWeekplanHandler from '../../server/api/v1/saved-weekplans/[id].patch'
 
 const h3Mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
@@ -18,8 +22,6 @@ vi.mock('h3', async (importOriginal) => {
     readBody: h3Mocks.readBody,
   }
 })
-
-import { createEvent } from 'h3'
 
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
@@ -51,10 +53,6 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', async (import
     updateSavedWeekplan: mocks.updateSavedWeekplan,
   }
 })
-
-import { appLogger } from '../../server/utils/logger'
-import listSavedWeekplansHandler from '../../server/api/v1/saved-weekplans/index.get'
-import patchSavedWeekplanHandler from '../../server/api/v1/saved-weekplans/[id].patch'
 
 const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
 

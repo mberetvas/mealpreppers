@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { createError, createEvent, eventHandler, readBody, toNodeListener } from 'h3'
-import { createApp } from 'h3'
+import { createError, eventHandler, readBody, toNodeListener, createApp } from 'h3'
+import { Readable } from 'node:stream'
+import { ServerResponse } from 'node:http'
+import type { IncomingMessage } from 'node:http'
 import { recipePreviewRequestSchema } from '../../types/recipe-preview.schema'
 
 /**
@@ -57,11 +59,8 @@ function callListener(
   listener: ReturnType<typeof toNodeListener>,
   opts: { method: string, url: string, headers: Record<string, string>, body: string },
 ): Promise<{ statusCode: number, body: string }> {
-  const { Readable } = require('stream')
-  const { ServerResponse, IncomingMessage } = require('http')
-
   return new Promise((resolve) => {
-    const req = new Readable() as InstanceType<typeof IncomingMessage>
+    const req = new Readable() as unknown as InstanceType<typeof IncomingMessage>
     req.push(opts.body)
     req.push(null)
     Object.assign(req, {
@@ -75,20 +74,20 @@ function callListener(
     const originalWrite = res.write.bind(res)
     const originalEnd = res.end.bind(res)
 
-    res.write = ((chunk: any) => {
+    res.write = ((chunk: Buffer | string) => {
       chunks.push(Buffer.from(chunk))
       return originalWrite(chunk)
-    }) as any
+    }) as typeof res.write
 
-    res.end = ((chunk?: any) => {
+    res.end = ((chunk?: Buffer | string) => {
       if (chunk) chunks.push(Buffer.from(chunk))
       resolve({
         statusCode: res.statusCode,
         body: Buffer.concat(chunks).toString(),
       })
       return originalEnd(chunk)
-    }) as any
+    }) as typeof res.end
 
-    listener(req as any, res)
+    listener(req as unknown as InstanceType<typeof IncomingMessage>, res)
   })
 }

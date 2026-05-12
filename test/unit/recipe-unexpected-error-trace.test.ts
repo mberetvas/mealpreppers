@@ -10,6 +10,8 @@ import type { H3Event } from 'h3'
 import { createEvent } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { appLogger } from '../../server/utils/logger'
+import getRecipeByIdHandler from '../../server/api/v1/recipes/[id].get'
 
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
@@ -39,9 +41,6 @@ vi.mock('../../server/services/recipe-catalog/recipeRepository', async (importOr
     getRecipeById: mocks.getRecipeById,
   }
 })
-
-import { appLogger } from '../../server/utils/logger'
-import getRecipeByIdHandler from '../../server/api/v1/recipes/[id].get'
 
 /** Builds a minimal H3Event with the **Request Context Trace ID** pre-set on context. */
 function makeEvent(traceId?: string, recipeId = 'recipe-abc'): H3Event {

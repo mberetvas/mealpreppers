@@ -26,7 +26,7 @@ function createDeleteLogic(fetchFn: typeof globalThis.$fetch) {
     if (!t || deleteBusy.value) return
     deleteBusy.value = true
     try {
-      await fetchFn(`/api/v1/saved-weekplans/${t.id}`, { method: 'DELETE' } as any)
+      await fetchFn(`/api/v1/saved-weekplans/${t.id}`, { method: 'DELETE' })
       cancelDelete()
     }
     catch {
@@ -58,7 +58,7 @@ function createRenameLogic(fetchFn: typeof globalThis.$fetch) {
     if (renameBusy.value) return
     renameBusy.value = true
     try {
-      await fetchFn(`/api/v1/saved-weekplans/${id}`, { method: 'PATCH', body: { name: next } } as any)
+      await fetchFn(`/api/v1/saved-weekplans/${id}`, { method: 'PATCH', body: { name: next } })
       cancelRename()
     }
     catch {
@@ -79,7 +79,7 @@ function createRenameLogic(fetchFn: typeof globalThis.$fetch) {
 describe('saved-weekplans manage page: delete error handling', () => {
   it('sets deleteError when $fetch throws', async () => {
     const fetchFn = vi.fn().mockRejectedValue(new Error('network'))
-    const { deleteTarget, deleteError, deleteBusy, confirmDelete } = createDeleteLogic(fetchFn as any)
+    const { deleteTarget, deleteError, deleteBusy, confirmDelete } = createDeleteLogic(fetchFn as unknown as typeof globalThis.$fetch)
 
     deleteTarget.value = { id: 'plan-1', name: 'My week' }
     await confirmDelete()
@@ -91,7 +91,7 @@ describe('saved-weekplans manage page: delete error handling', () => {
 
   it('clears deleteError and target on cancelDelete', async () => {
     const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
-    const { deleteTarget, deleteError, cancelDelete, confirmDelete } = createDeleteLogic(fetchFn as any)
+    const { deleteTarget, deleteError, cancelDelete, confirmDelete } = createDeleteLogic(fetchFn as unknown as typeof globalThis.$fetch)
 
     deleteTarget.value = { id: 'plan-1', name: 'My week' }
     await confirmDelete()
@@ -104,7 +104,7 @@ describe('saved-weekplans manage page: delete error handling', () => {
 
   it('clears deleteError on successful delete', async () => {
     const fetchFn = vi.fn().mockResolvedValue({})
-    const { deleteTarget, deleteError, confirmDelete } = createDeleteLogic(fetchFn as any)
+    const { deleteTarget, deleteError, confirmDelete } = createDeleteLogic(fetchFn as unknown as typeof globalThis.$fetch)
 
     deleteTarget.value = { id: 'plan-1', name: 'My week' }
     await confirmDelete()
@@ -117,7 +117,7 @@ describe('saved-weekplans manage page: delete error handling', () => {
 describe('saved-weekplans manage page: rename error handling', () => {
   it('sets renameError when $fetch throws', async () => {
     const fetchFn = vi.fn().mockRejectedValue(new Error('network'))
-    const { renamingId, renameDraft, renameError, renameBusy, commitRename } = createRenameLogic(fetchFn as any)
+    const { renamingId, renameDraft, renameError, renameBusy, commitRename } = createRenameLogic(fetchFn as unknown as typeof globalThis.$fetch)
 
     renamingId.value = 'plan-1'
     renameDraft.value = 'New name'
@@ -130,7 +130,7 @@ describe('saved-weekplans manage page: rename error handling', () => {
 
   it('clears renameError on cancelRename', async () => {
     const fetchFn = vi.fn().mockRejectedValue(new Error('fail'))
-    const { renamingId, renameDraft, renameError, cancelRename, commitRename } = createRenameLogic(fetchFn as any)
+    const { renamingId, renameDraft, renameError, cancelRename, commitRename } = createRenameLogic(fetchFn as unknown as typeof globalThis.$fetch)
 
     renamingId.value = 'plan-1'
     renameDraft.value = 'New name'
@@ -145,7 +145,7 @@ describe('saved-weekplans manage page: rename error handling', () => {
 
   it('clears renameError on successful rename', async () => {
     const fetchFn = vi.fn().mockResolvedValue({})
-    const { renamingId, renameDraft, renameError, commitRename } = createRenameLogic(fetchFn as any)
+    const { renamingId, renameDraft, renameError, commitRename } = createRenameLogic(fetchFn as unknown as typeof globalThis.$fetch)
 
     renamingId.value = 'plan-1'
     renameDraft.value = 'New name'

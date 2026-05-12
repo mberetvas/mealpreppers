@@ -9,6 +9,10 @@ import type { H3Event } from 'h3'
 import { createEvent } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { appLogger } from '../../server/utils/logger'
+import getMonthPlanHandler from '../../server/api/v1/planning/month-plans/[id].get'
+import deleteMonthPlanHandler from '../../server/api/v1/planning/month-plans/[id].delete'
+import listMonthPlansHandler from '../../server/api/v1/planning/month-plans/index.get'
 
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
@@ -50,11 +54,6 @@ vi.mock('../../server/services/planning/planningRepository', async (importOrigin
     collectRecipeIdsFromMonthPlan: mocks.collectRecipeIdsFromMonthPlan,
   }
 })
-
-import { appLogger } from '../../server/utils/logger'
-import getMonthPlanHandler from '../../server/api/v1/planning/month-plans/[id].get'
-import deleteMonthPlanHandler from '../../server/api/v1/planning/month-plans/[id].delete'
-import listMonthPlansHandler from '../../server/api/v1/planning/month-plans/index.get'
 
 /** Builds a minimal H3Event with the **Request Context Trace ID** pre-set on context. */
 function makeEvent(traceId?: string): H3Event {

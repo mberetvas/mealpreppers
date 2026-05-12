@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
   focusRestoreTarget?: HTMLElement | null
   recipes: RecipeCatalogItem[]
   categories: string[]
-  recentlyUsedIds: string[]
+  recentlyUsedIds?: string[]
   duplicateBanner?: string | null
   /** Recipe id pending confirmation when `duplicateBanner` is set. */
   stagedRecipeId?: string | null

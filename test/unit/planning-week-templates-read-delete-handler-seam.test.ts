@@ -7,6 +7,10 @@ import { createEvent } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
 import { emptyWeekPlan } from '../../utils/weekPlan'
+import { appLogger } from '../../server/utils/logger'
+import listWeekTemplatesHandler from '../../server/api/v1/planning/week-templates/index.get'
+import getWeekTemplateHandler from '../../server/api/v1/planning/week-templates/[id].get'
+import deleteWeekTemplateHandler from '../../server/api/v1/planning/week-templates/[id].delete'
 
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
@@ -40,11 +44,6 @@ vi.mock('../../server/services/planning/planningRepository', async (importOrigin
     deleteWeekTemplate: mocks.deleteWeekTemplate,
   }
 })
-
-import { appLogger } from '../../server/utils/logger'
-import listWeekTemplatesHandler from '../../server/api/v1/planning/week-templates/index.get'
-import getWeekTemplateHandler from '../../server/api/v1/planning/week-templates/[id].get'
-import deleteWeekTemplateHandler from '../../server/api/v1/planning/week-templates/[id].delete'
 
 const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
 

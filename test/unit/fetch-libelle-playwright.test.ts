@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  closeLibellePlaywrightBrowser,
+  fetchLibelleRecipePagePlaywright,
+} from '../../server/services/recipe-ingestion/fetchLibelleRecipePagePlaywright'
 
 const { mockPage, mockBrowser, mockChromium } = vi.hoisted(() => ({
   mockPage: {
@@ -23,11 +27,6 @@ vi.mock('playwright', () => ({
     TimeoutError: class TimeoutError extends Error {},
   },
 }))
-
-import {
-  closeLibellePlaywrightBrowser,
-  fetchLibelleRecipePagePlaywright,
-} from '../../server/services/recipe-ingestion/fetchLibelleRecipePagePlaywright'
 
 describe('fetchLibelleRecipePagePlaywright', () => {
   beforeEach(async () => {

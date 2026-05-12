@@ -3,6 +3,11 @@ import type { H3Event } from 'h3'
 import { createEvent } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { appLogger } from '../../server/utils/logger'
+import {
+  createPlanningRequestContext,
+  withPlanningHandler,
+} from '../../server/services/planning/planningRequestContext'
 
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
@@ -15,12 +20,6 @@ vi.mock('../../server/utils/logger', () => ({
     })),
   },
 }))
-
-import { appLogger } from '../../server/utils/logger'
-import {
-  createPlanningRequestContext,
-  withPlanningHandler,
-} from '../../server/services/planning/planningRequestContext'
 
 const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
 

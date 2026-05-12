@@ -1,5 +1,5 @@
 import { load } from 'cheerio'
-import type { RecipeDraft, RecipeScrapeResult, RecipeSource, SupportedRecipeHost } from '../../../types/recipe-draft'
+import type { RecipeScrapeResult, RecipeSource, SupportedRecipeHost } from '../../../types/recipe-draft'
 import { SUPPORTED_RECIPE_HOSTS } from '../../../types/recipe-draft'
 import { parseFifteenGramRecipe } from './fifteenGramScraper'
 import { parseColruytRecipe } from './colruytScraper'

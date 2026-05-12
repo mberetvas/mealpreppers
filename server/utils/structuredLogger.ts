@@ -1,8 +1,6 @@
 import type { AppLogger } from './logger'
 import { redact } from './redaction'
 
-export { redact } from './redaction'
-
 /** Canonical structured log entry — every emission must include a `domain.action` event name. */
 export interface StructuredLogEntry {
   event: string

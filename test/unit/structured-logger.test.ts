@@ -1,9 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AppLogger } from '../../server/utils/logger'
+import * as structuredLoggerModule from '../../server/utils/structuredLogger'
+import { redact } from '../../server/utils/redaction'
 import {
   createStructuredLogger,
   isValidEventName,
-  redact,
   useStructuredLogger,
 } from '../../server/utils/structuredLogger'
 
@@ -215,5 +216,11 @@ describe('useStructuredLogger', () => {
     const logger = useStructuredLogger(mock, 'trace-xyz')
     logger.info('planning.created')
     expect(mock.calls[0]?.data?.traceId).toBe('trace-xyz')
+  })
+})
+
+describe('structuredLogger module exports', () => {
+  it('does not re-export redaction helpers', () => {
+    expect(structuredLoggerModule).not.toHaveProperty('redact')
   })
 })
