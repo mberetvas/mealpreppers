@@ -20,15 +20,18 @@ export interface PlanningHandlerMeta {
 
 /** Request-scoped context supplied to adopting Planning handlers. */
 export interface PlanningRequestContext {
+  /** The **Request Context Trace ID** resolved by the trace middleware and stored on the event context. */
   traceId: string
   principal: PlanningPrincipal
   principalKind: 'user' | 'anonymous'
+  /** Structured logger pre-bound to the handler tag and **Request Context Trace ID** for log correlation. */
   logger: StructuredLogger
 }
 
 /**
- * Builds a PlanningRequestContext for the current request. Resolves the Planning
- * Principal via the auth adapter and binds a request-scoped logger to handler metadata.
+ * Builds a **Planning Request Context** for the current request. Resolves the Planning
+ * Principal via the auth adapter and binds a request-scoped logger to handler metadata
+ * using the **Request Context Trace ID** from `event.context.traceId`.
  * Defaults to Supabase bearer resolution.
  */
 export async function createPlanningRequestContext(
@@ -44,10 +47,11 @@ export async function createPlanningRequestContext(
 }
 
 /**
- * Planning handler wrapper. Builds PlanningRequestContext from stable handler metadata,
+ * Planning handler wrapper. Builds a **Planning Request Context** from stable handler metadata,
  * passes it alongside the event to the handler fn, and centralizes unexpected-error
- * logging with trace correlation. Expected H3 errors pass through unchanged; all others
- * are logged once and wrapped as the standard Planning 500 payload with an error identifier.
+ * logging with **Trace ID** correlation. Expected H3 errors pass through unchanged; all others
+ * are logged once using the **Request Context Trace ID** and wrapped as the standard
+ * Planning 500 payload with an error identifier.
  */
 export function withPlanningHandler<T>(
   meta: PlanningHandlerMeta,

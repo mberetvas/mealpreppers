@@ -1,4 +1,6 @@
+import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
+import { useTraceId } from '../../../../middleware/01.trace-context'
 import {
   assertRecipeIdsExist,
   collectRecipeIdsFromMonthPlan,
@@ -35,6 +37,6 @@ export default defineEventHandler(async (event) => {
     return result.value
   }
   catch (err) {
-    handlePlanningUnexpected(err, 'planning-month-plans', 'patch month plan')
+    handlePlanningUnexpected(err, 'planning-month-plans', 'patch month plan', useTraceId(event))
   }
 })

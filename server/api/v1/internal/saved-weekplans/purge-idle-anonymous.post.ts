@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
-import { getRequestHeader } from 'h3'
+import { createError, defineEventHandler, getRequestHeader } from 'h3'
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
+import { useTraceId } from '../../../../middleware/01.trace-context'
 import {
   ANONYMOUS_SAVED_WEEKPLAN_IDLE_RETENTION_DAYS,
   anonymousSavedWeekplanIdleCutoffIso,
@@ -38,7 +39,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized.' })
   }
 
-  const traceId = getRequestHeader(event, 'x-trace-id')
+  const traceId = useTraceId(event)
   const slog = useStructuredLogger(appLogger.withTag('saved-weekplans-idle-purge'), traceId)
 
   const now = new Date()

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { createError } from 'h3'
 import type { PlanningFailure } from '../services/planning/planningResult'
 import { appLogger } from '../utils/logger'
 import { useStructuredLogger } from '../utils/structuredLogger'

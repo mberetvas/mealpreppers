@@ -1,4 +1,6 @@
+import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { getSupabaseServerClient } from '../../../../db/supabaseClient'
+import { useTraceId } from '../../../../middleware/01.trace-context'
 import { getMonthPlanById } from '../../../../services/planning/planningRepository'
 import { handlePlanningUnexpected, toPlanningHttpError } from '../../../../utils/planningErrors'
 
@@ -16,6 +18,6 @@ export default defineEventHandler(async (event) => {
     return result.value
   }
   catch (err) {
-    handlePlanningUnexpected(err, 'planning-month-plans', 'get month plan')
+    handlePlanningUnexpected(err, 'planning-month-plans', 'get month plan', useTraceId(event))
   }
 })
