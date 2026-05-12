@@ -189,3 +189,95 @@ describe('createAppLogger', () => {
     expect(typeof appLogger.info).toBe('function')
   })
 })
+
+describe('AppLogger — Log Redaction at output boundary', () => {
+  it('redacts a top-level sensitive key before JSON output', () => {
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: true, level: 'debug' })
+    logger.info('auth.attempt', { password: 'hunter2', user: 'alice' })
+    stdout.restore()
+
+    const [entry] = parseJsonLines(stdout.lines)
+    const data = entry?.data as Record<string, unknown>
+    expect(data.password).toBe('[REDACTED]')
+    expect(data.user).toBe('alice')
+  })
+
+  it('redacts all required sensitive keys', () => {
+    const sensitivePayload: Record<string, unknown> = {
+      password: '1',
+      token: '2',
+      secret: '3',
+      authorization: '4',
+      auth: '5',
+      apikey: '6',
+      api_key: '7',
+      credential: '8',
+      credentials: '9',
+      ssn: '10',
+      credit_card: '11',
+      cvv: '12',
+      pin: '13',
+    }
+
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: true, level: 'debug' })
+    logger.warn('audit.check', sensitivePayload)
+    stdout.restore()
+
+    const [entry] = parseJsonLines(stdout.lines)
+    const data = entry?.data as Record<string, unknown>
+    for (const key of Object.keys(sensitivePayload)) {
+      expect(data[key], `key "${key}" should be redacted`).toBe('[REDACTED]')
+    }
+  })
+
+  it('redacts sensitive keys case-insensitively', () => {
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: true, level: 'debug' })
+    logger.info('session.init', { Password: 'x', TOKEN: 'y', ApiKey: 'z', safe: 'keep' })
+    stdout.restore()
+
+    const [entry] = parseJsonLines(stdout.lines)
+    const data = entry?.data as Record<string, unknown>
+    expect(data.Password).toBe('[REDACTED]')
+    expect(data.TOKEN).toBe('[REDACTED]')
+    expect(data.ApiKey).toBe('[REDACTED]')
+    expect(data.safe).toBe('keep')
+  })
+
+  it('redacts sensitive keys nested inside objects', () => {
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: true, level: 'debug' })
+    logger.debug('db.query', { user: { token: 'abc', name: 'alice' }, count: 1 })
+    stdout.restore()
+
+    const [entry] = parseJsonLines(stdout.lines)
+    const data = entry?.data as Record<string, unknown>
+    expect((data.user as Record<string, unknown>).token).toBe('[REDACTED]')
+    expect((data.user as Record<string, unknown>).name).toBe('alice')
+    expect(data.count).toBe(1)
+  })
+
+  it('does not mutate the caller data object', () => {
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: true, level: 'debug' })
+    const original = { password: 'secret', user: 'bob' }
+    logger.info('user.action', original)
+    stdout.restore()
+
+    expect(original.password).toBe('secret')
+  })
+
+  it('leaves non-sensitive keys and arrays untouched', () => {
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: true, level: 'debug' })
+    logger.info('recipe.search', { tags: ['vegan', 'quick'], count: 5 })
+    stdout.restore()
+
+    const [entry] = parseJsonLines(stdout.lines)
+    const data = entry?.data as Record<string, unknown>
+    expect(data.tags).toEqual(['vegan', 'quick'])
+    expect(data.count).toBe(5)
+  })
+})

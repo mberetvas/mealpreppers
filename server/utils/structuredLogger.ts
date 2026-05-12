@@ -1,4 +1,7 @@
 import type { AppLogger } from './logger'
+import { redact } from './redaction'
+
+export { redact } from './redaction'
 
 /** Canonical structured log entry — every emission must include a `domain.action` event name. */
 export interface StructuredLogEntry {
@@ -7,7 +10,11 @@ export interface StructuredLogEntry {
   [key: string]: unknown
 }
 
-/** Structured logger that validates event names and redacts sensitive fields before emitting. */
+/**
+ * **Structured Logger** facade — validates **Log Event Name** format, attaches
+ * the **Trace ID**, applies **Log Redaction** via the shared policy, and
+ * delegates to the **Application Logger**.
+ */
 export interface StructuredLogger {
   log(level: 'debug' | 'info' | 'warn' | 'error', entry: StructuredLogEntry): void
   debug(event: string, data?: Record<string, unknown>): void
@@ -21,40 +28,6 @@ const EVENT_NAME_PATTERN = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/
 /** Returns true when `name` follows the `domain.action` snake_case convention. */
 export function isValidEventName(name: string): boolean {
   return EVENT_NAME_PATTERN.test(name)
-}
-
-const SENSITIVE_KEYS = new Set([
-  'password',
-  'token',
-  'secret',
-  'authorization',
-  'auth',
-  'apikey',
-  'api_key',
-  'credential',
-  'credentials',
-  'ssn',
-  'credit_card',
-  'cvv',
-  'pin',
-])
-
-/**
- * Recursively copies `data`, replacing the values of any sensitive keys with `'[REDACTED]'`.
- * Never mutates the original object.
- */
-export function redact(data: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(data)) {
-    if (SENSITIVE_KEYS.has(key.toLowerCase())) {
-      result[key] = '[REDACTED]'
-    } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result[key] = redact(value as Record<string, unknown>)
-    } else {
-      result[key] = value
-    }
-  }
-  return result
 }
 
 /**

@@ -1,10 +1,15 @@
 import { createConsola } from 'consola'
 import type { ConsolaReporter, LogObject } from 'consola'
+import { redact } from './redaction'
 
-/** Supported log levels for the application logger. */
+/** Supported log levels for the **Application Logger**. */
 export type LogLevelName = 'debug' | 'info' | 'warn' | 'error'
 
-/** Configuration for the application logger. */
+/**
+ * **Log Configuration** — the environment-variable based policy that selects
+ * and validates the active **Log Level** and **Log Format** from `LOG_LEVEL`
+ * and `LOG_JSON`.
+ */
 export interface LogConfig {
   level: LogLevelName
   json: boolean
@@ -12,8 +17,13 @@ export interface LogConfig {
 }
 
 /**
- * Decouples callers from consola so the underlying reporter can be
- * swapped out (e.g. in tests) without touching call sites.
+ * The **Application Logger** interface — the project-wide logging contract
+ * used by all server code.
+ *
+ * Every call that passes a structured `data` payload goes through
+ * **Log Redaction** before the payload leaves this boundary, so sensitive
+ * keys are masked even when the caller does not use the **Structured Logger**
+ * facade.
  */
 export interface AppLogger {
   debug(message: string, data?: Record<string, unknown>): void
@@ -81,13 +91,17 @@ export function resolveLogConfig(overrides: Partial<LogConfig> = {}): LogConfig 
 /**
  * Wraps a consola instance in the AppLogger interface so log calls
  * always pass a message string plus an optional structured-data object.
+ *
+ * **Log Redaction** is applied here — every `data` payload is passed through
+ * `redact` before reaching the reporter, enforcing the policy at the
+ * **Application Logger** boundary regardless of the call site.
  */
 function wrapConsola(instance: ReturnType<typeof createConsola>): AppLogger {
   return {
-    debug: (message, data) => instance.debug(message, ...(data ? [data] : [])),
-    info: (message, data) => instance.info(message, ...(data ? [data] : [])),
-    warn: (message, data) => instance.warn(message, ...(data ? [data] : [])),
-    error: (message, data) => instance.error(message, ...(data ? [data] : [])),
+    debug: (message, data) => instance.debug(message, ...(data ? [redact(data)] : [])),
+    info: (message, data) => instance.info(message, ...(data ? [redact(data)] : [])),
+    warn: (message, data) => instance.warn(message, ...(data ? [redact(data)] : [])),
+    error: (message, data) => instance.error(message, ...(data ? [redact(data)] : [])),
     withTag: (tag) => wrapConsola(instance.withTag(tag) as ReturnType<typeof createConsola>),
   }
 }
