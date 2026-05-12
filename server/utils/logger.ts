@@ -53,7 +53,7 @@ const jsonReporter: ConsolaReporter = {
  * Resolves the effective LogConfig from environment variables,
  * applying defaults and emitting a warning for invalid LOG_LEVEL values.
  */
-function resolveConfig(overrides: Partial<LogConfig> = {}): LogConfig {
+export function resolveLogConfig(overrides: Partial<LogConfig> = {}): LogConfig {
   const nodeEnv = overrides.nodeEnv ?? process.env.NODE_ENV ?? 'development'
   const defaultLevel: LogLevelName = nodeEnv === 'production' ? 'info' : 'debug'
 
@@ -97,15 +97,18 @@ function wrapConsola(instance: ReturnType<typeof createConsola>): AppLogger {
  * Accepts optional config overrides for testability; reads env vars otherwise.
  */
 export function createAppLogger(overrides: Partial<LogConfig> = {}): AppLogger {
-  const config = resolveConfig(overrides)
+  const config = resolveLogConfig(overrides)
 
   const instance = createConsola({
     level: LEVEL_MAP[config.level],
-    reporters: config.json ? [jsonReporter] : [],
+    reporters: config.json ? [jsonReporter] : undefined,
   })
 
   return wrapConsola(instance)
 }
+
+/** The resolved LogConfig singleton, computed once at module load from environment variables. */
+export const logConfig: LogConfig = resolveLogConfig()
 
 /** Singleton logger initialised from environment variables at module load time. */
 export const appLogger: AppLogger = createAppLogger()

@@ -18,6 +18,15 @@ function makeEvent(
   return createEvent(req, res)
 }
 
+/** Parses newline-delimited JSON log output into plain objects. */
+function parseLogEntries(output: string): Array<Record<string, unknown>> {
+  return output
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+}
+
 describe('Logging V2 integration', () => {
   let stdoutOutput: string
   let stdoutSpy: ReturnType<typeof vi.spyOn>
@@ -66,11 +75,7 @@ describe('Logging V2 integration', () => {
     event.node.res.statusCode = 201
     event.node.res.emit('finish')
 
-    const [logEntry] = stdoutOutput
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as Record<string, unknown>)
+    const [logEntry] = parseLogEntries(stdoutOutput)
 
     expect(event.context.traceId).toBe('trace-preferred')
     expect(event.node.res.getHeader('x-trace-id')).toBe('trace-preferred')
@@ -84,5 +89,72 @@ describe('Logging V2 integration', () => {
       },
     })
     expect(typeof (logEntry?.data as Record<string, unknown>).duration).toBe('number')
+  })
+
+  it('emits diagnostics when LOG_LEVEL is absent outside production (defaults to debug)', async () => {
+    delete process.env.LOG_LEVEL
+    process.env.NODE_ENV = 'development'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+
+    const event = makeEvent({ 'x-trace-id': 'trace-absent' })
+    await traceContext(event)
+    await requestDiagnostics(event)
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const entries = parseLogEntries(stdoutOutput)
+    expect(entries.some((e) => e.message === 'http.request_handled')).toBe(true)
+  })
+
+  it('emits diagnostics when LOG_LEVEL is invalid outside production (falls back to debug)', async () => {
+    process.env.LOG_LEVEL = 'verbose'
+    process.env.NODE_ENV = 'development'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+
+    const event = makeEvent({ 'x-trace-id': 'trace-invalid' })
+    await traceContext(event)
+    await requestDiagnostics(event)
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const entries = parseLogEntries(stdoutOutput)
+    expect(entries.some((e) => e.message === 'http.request_handled')).toBe(true)
+  })
+
+  it('suppresses diagnostics when effective LOG_LEVEL is info', async () => {
+    process.env.LOG_LEVEL = 'info'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+
+    const event = makeEvent({ 'x-trace-id': 'trace-info' })
+    await traceContext(event)
+    await requestDiagnostics(event)
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const entries = parseLogEntries(stdoutOutput)
+    expect(entries.some((e) => e.message === 'http.request_handled')).toBe(false)
+  })
+
+  it('includes trace ID from fallback x-request-id header in diagnostics', async () => {
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+
+    const event = makeEvent({ 'x-request-id': 'req-fallback-id' })
+    await traceContext(event)
+    await requestDiagnostics(event)
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const [logEntry] = parseLogEntries(stdoutOutput)
+    expect((logEntry?.data as Record<string, unknown>).traceId).toBe('req-fallback-id')
   })
 })
