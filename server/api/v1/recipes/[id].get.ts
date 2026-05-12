@@ -1,4 +1,6 @@
+import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { useTraceId } from '../../../middleware/01.trace-context'
 import { getRecipeById } from '../../../services/recipe-catalog/recipeRepository'
 import { handleRecipeUnexpected, toRecipeHttpError } from '../../../utils/recipeErrors'
 
@@ -16,6 +18,6 @@ export default defineEventHandler(async (event) => {
     return result.value
   }
   catch (err) {
-    handleRecipeUnexpected(err, 'recipes', 'get recipe by id')
+    handleRecipeUnexpected(err, 'recipes', 'get recipe by id', useTraceId(event))
   }
 })

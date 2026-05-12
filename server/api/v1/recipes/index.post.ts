@@ -1,4 +1,6 @@
+import { createError, defineEventHandler, readBody } from 'h3'
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { useTraceId } from '../../../middleware/01.trace-context'
 import { createRecipe } from '../../../services/recipe-catalog/recipeRepository'
 import { recipeCreatePayloadSchema } from '../../../services/recipe-catalog/recipeSchemas'
 import { handleRecipeUnexpected, toRecipeHttpError } from '../../../utils/recipeErrors'
@@ -20,6 +22,6 @@ export default defineEventHandler(async (event) => {
     return result.value
   }
   catch (err) {
-    handleRecipeUnexpected(err, 'recipes', 'create recipe')
+    handleRecipeUnexpected(err, 'recipes', 'create recipe', useTraceId(event))
   }
 })

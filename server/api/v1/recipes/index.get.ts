@@ -1,8 +1,10 @@
+import { createError, defineEventHandler } from 'h3'
 import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { useTraceId } from '../../../middleware/01.trace-context'
 import { listRecipes } from '../../../services/recipe-catalog/recipeRepository'
 import { handleRecipeUnexpected, toRecipeHttpError } from '../../../utils/recipeErrors'
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseServerClient()
     const result = await listRecipes(supabase)
@@ -12,6 +14,6 @@ export default defineEventHandler(async () => {
     return result.value
   }
   catch (err) {
-    handleRecipeUnexpected(err, 'recipes', 'list recipes')
+    handleRecipeUnexpected(err, 'recipes', 'list recipes', useTraceId(event))
   }
 })
