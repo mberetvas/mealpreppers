@@ -6,7 +6,9 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "format": "eslint app server test scripts types utils eslint.config.mjs nuxt.config.ts tailwind.config.ts vitest.config.ts vitest.config.component.ts --fix",
     "generate": "nuxt generate",
+    "lint": "eslint app server test scripts types utils eslint.config.mjs nuxt.config.ts tailwind.config.ts vitest.config.ts vitest.config.component.ts",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "vitest",
