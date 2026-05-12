@@ -4,9 +4,10 @@ import { useStructuredLogger } from '../utils/structuredLogger'
 import { useTraceId } from './01.trace-context'
 
 /**
- * Emits a structured `http.request_handled` diagnostic event for every
- * request when the resolved log level is `debug`. Runs after the route handler
- * via the Node.js `res.finish` event so it can capture the real status code.
+ * **Request Diagnostics Logging** — emits a structured `http.request_handled` event for every
+ * request when the resolved **Log Level** is `debug`. Delegates to the **Application Logger**
+ * via the **Structured Logger** facade. Runs after the route handler via the Node.js
+ * `res.finish` event so it can capture the real status code.
  * Request and response bodies are never logged.
  */
 export default defineEventHandler((event) => {
