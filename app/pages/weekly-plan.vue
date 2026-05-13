@@ -32,6 +32,8 @@ const activeMonthId = ref<string | null>(null)
 const weekPlanTitle = ref('')
 const weekPersistenceKind = ref<'none' | 'saved-weekplan' | 'week-template'>('none')
 const firstSaveBusy = ref(false)
+/** Set to the plan ID immediately after the first-save POST succeeds; drives the nudge banner. */
+const shoppingListNudgeId = ref<string | null>(null)
 
 const saveStatus = ref<'saved' | 'saving' | 'dirty' | 'error'>('saved')
 
@@ -220,6 +222,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearTimeout(draftSnapshotDebounce)
+  shoppingListNudgeId.value = null
   if (import.meta.client) {
     window.removeEventListener('beforeunload', handlePlannerDraftBeforeUnload)
   }
@@ -392,6 +395,7 @@ async function persistDraftAsSavedWeekplan(): Promise<void> {
     activeTemplateId.value = created.id
     weekPlanTitle.value = created.name
     weekPersistenceKind.value = 'saved-weekplan'
+    shoppingListNudgeId.value = created.id
     const q = { ...route.query, template: created.id }
     await router.replace({ query: q })
     saveStatus.value = 'saved'
@@ -544,6 +548,13 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         </span>
       </div>
     </div>
+
+    <PlanShoppingListNudge
+      v-if="activeTab === 'week'"
+      :plan-id="shoppingListNudgeId"
+      class="mb-4"
+      @dismissed="shoppingListNudgeId = null"
+    />
 
     <div v-if="recipesPending" class="grid gap-4 rounded-2xl bg-surface-container p-4 md:p-8" aria-busy="true" aria-label="Loading recipes">
       <div class="h-6 w-1/3 animate-pulse rounded-lg bg-surface-container-high motion-reduce:animate-none" />

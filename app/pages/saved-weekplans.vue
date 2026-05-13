@@ -260,6 +260,13 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
           >
             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">edit</span>
           </button>
+          <NuxtLink
+            :to="{ path: '/shopping-list', query: { plan: item.id } }"
+            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-atelier-neutral-action transition hover:bg-atelier-chip hover:text-atelier-heading"
+            :aria-label="`Shopping list for ${item.name}`"
+          >
+            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">shopping_cart</span>
+          </NuxtLink>
           <button
             type="button"
             class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-atelier-neutral-action transition hover:bg-error-container hover:text-atelier-error-foreground"
