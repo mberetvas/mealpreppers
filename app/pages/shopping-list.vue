@@ -4,8 +4,8 @@ import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 import {
   collectRecipeOccurrences,
   buildShoppingList,
+  formatShoppingListIngredient as formatIngredient,
   type ShoppingListSection,
-  type ShoppingListIngredient,
 } from '~~/utils/shoppingList'
 
 const route = useRoute()
@@ -21,14 +21,6 @@ const failedRecipeCount = ref(0)
 useHead(() => ({
   title: planName.value ? `Shopping list — ${planName.value}` : 'Shopping list',
 }))
-
-/** Formats a single ingredient line: `{quantity} {unit} {name}` or rawText fallback. */
-function formatIngredient(ing: ShoppingListIngredient): string {
-  if (ing.quantity !== undefined) {
-    return [ing.quantity, ing.unit, ing.name].filter(Boolean).join(' ')
-  }
-  return ing.rawText
-}
 
 /** Fetches the weekplan, fans out to all recipe endpoints, and builds the shopping list. */
 async function load(): Promise<void> {
@@ -55,10 +47,10 @@ async function load(): Promise<void> {
     )
     const recipeMap = new Map<string, RecipeCatalogItem>()
     let failures = 0
-    for (let i = 0; i < recipeIds.length; i++) {
-      const result = settled[i]
-      if (result.status === 'fulfilled') {
-        recipeMap.set(recipeIds[i], result.value)
+    for (const [index, recipeId] of recipeIds.entries()) {
+      const result = settled[index]
+      if (result && result.status === 'fulfilled') {
+        recipeMap.set(recipeId, result.value)
       }
       else {
         failures++

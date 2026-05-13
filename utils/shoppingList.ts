@@ -18,6 +18,11 @@ export interface ShoppingListSection {
 const DAY_KEYS = ['1', '2', '3', '4', '5', '6', '7'] as const
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const
 
+/** Returns true when a formatter part should be rendered into an ingredient line. */
+function isPresentIngredientPart(part: number | string | null | undefined): part is number | string {
+  return part !== undefined && part !== null && part !== ''
+}
+
 /**
  * Iterates all 21 meal slots in day-ascending, breakfast→lunch→dinner order,
  * returning an insertion-ordered map of recipeId → occurrenceCount.
@@ -58,4 +63,15 @@ export function buildShoppingList(
     sections.push({ recipeId, recipeTitle: recipe.title, occurrenceCount, ingredients })
   }
   return sections
+}
+
+/** Formats an ingredient as quantity-unit-name when quantity exists, otherwise rawText. */
+export function formatShoppingListIngredient(ingredient: ShoppingListIngredient): string {
+  if (ingredient.quantity === undefined) {
+    return ingredient.rawText
+  }
+
+  return [ingredient.quantity, ingredient.unit, ingredient.name]
+    .filter(isPresentIngredientPart)
+    .join(' ')
 }

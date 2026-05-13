@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { RecipeCatalogItem } from '../../types/recipe-catalog-item'
-import { collectRecipeOccurrences, buildShoppingList } from '../../utils/shoppingList'
+import { collectRecipeOccurrences, buildShoppingList, formatShoppingListIngredient } from '../../utils/shoppingList'
 import { emptyWeekPlan } from '../../utils/weekPlan'
 
 const RID_A = '11111111-1111-1111-1111-111111111111'
@@ -111,5 +111,25 @@ describe('buildShoppingList', () => {
     const result = buildShoppingList(occurrences, recipes)
     expect(result[0].recipeId).toBe(RID_B)
     expect(result[1].recipeId).toBe(RID_A)
+  })
+})
+
+describe('formatShoppingListIngredient', () => {
+  it('preserves a zero quantity when formatting a quantified ingredient', () => {
+    expect(formatShoppingListIngredient({
+      rawText: '0 g salt',
+      name: 'salt',
+      quantity: 0,
+      unit: 'g',
+    })).toBe('0 g salt')
+  })
+
+  it('falls back to rawText when quantity is undefined', () => {
+    expect(formatShoppingListIngredient({
+      rawText: 'a pinch of salt',
+      name: 'salt',
+      quantity: undefined,
+      unit: undefined,
+    })).toBe('a pinch of salt')
   })
 })

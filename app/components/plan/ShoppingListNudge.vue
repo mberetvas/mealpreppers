@@ -18,10 +18,10 @@ defineEmits<{ dismissed: [] }>()
     aria-atomic="true"
   >
     <span class="font-semibold">Plan saved!</span>
-    <a
-      :href="`/shopping-list?plan=${planId}`"
+    <NuxtLink
+      :to="{ path: '/shopping-list', query: { plan: planId ?? undefined } }"
       class="font-semibold underline underline-offset-2 hover:opacity-80"
-    >View shopping list</a>
+    >View shopping list</NuxtLink>
     <button
       type="button"
       aria-label="Dismiss"
