@@ -28,35 +28,19 @@ describe('fetchWeekTemplateRowForPlanner', () => {
       id: 'sw-1',
       body,
       name: 'Lunch week',
-      source: 'saved-weekplan',
     })
   })
 
-  it('falls back to week-templates when saved-weekplans returns 404', async () => {
+  it('returns ok false when saved-weekplans returns 404 (no legacy fallback)', async () => {
     const { fetcher, mock } = createFetcherMock()
-    const body = emptyWeekPlan()
-    mock.mockImplementation(async (url: string) => {
-      if (url.includes('saved-weekplans')) {
-        throw Object.assign(new Error('not found'), { statusCode: 404 })
-      }
-      if (url.includes('week-templates')) {
-        return { id: 'tpl-1', body, name: 'Legacy' }
-      }
-      throw new Error(`unexpected url ${url}`)
-    })
+    mock.mockRejectedValue(Object.assign(new Error('not found'), { statusCode: 404 }))
     const result = await fetchWeekTemplateRowForPlanner(fetcher, 'tpl-1')
+    expect(mock).toHaveBeenCalledTimes(1)
     expect(mock).toHaveBeenCalledWith('/api/v1/saved-weekplans/tpl-1')
-    expect(mock).toHaveBeenCalledWith('/api/v1/planning/week-templates/tpl-1')
-    expect(result).toEqual({
-      ok: true,
-      id: 'tpl-1',
-      body,
-      name: 'Legacy',
-      source: 'week-template',
-    })
+    expect(result).toEqual({ ok: false })
   })
 
-  it('does not fall back on 403 — returns ok false immediately', async () => {
+  it('returns ok false on 403 without a second fetch', async () => {
     const { fetcher, mock } = createFetcherMock()
     mock.mockRejectedValue(Object.assign(new Error('forbidden'), { statusCode: 403 }))
     const result = await fetchWeekTemplateRowForPlanner(fetcher, 'tpl-1')
@@ -65,7 +49,7 @@ describe('fetchWeekTemplateRowForPlanner', () => {
     expect(result).toEqual({ ok: false })
   })
 
-  it('does not fall back on 500 — returns ok false immediately', async () => {
+  it('returns ok false on 500 without a second fetch', async () => {
     const { fetcher, mock } = createFetcherMock()
     mock.mockRejectedValue(Object.assign(new Error('server error'), { statusCode: 500 }))
     const result = await fetchWeekTemplateRowForPlanner(fetcher, 'tpl-1')
@@ -73,12 +57,6 @@ describe('fetchWeekTemplateRowForPlanner', () => {
     expect(result).toEqual({ ok: false })
   })
 
-  it('returns ok false when both saved (404) and legacy fetches fail', async () => {
-    const { fetcher, mock } = createFetcherMock()
-    mock.mockRejectedValue(Object.assign(new Error('not found'), { statusCode: 404 }))
-    const result = await fetchWeekTemplateRowForPlanner(fetcher, 'tpl-1')
-    expect(result).toEqual({ ok: false })
-  })
 })
 
 describe('fetchMonthPlanBodyForPlanner', () => {

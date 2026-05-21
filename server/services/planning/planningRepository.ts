@@ -4,8 +4,6 @@ import type {
   MonthPlanPatchInput,
   MonthPlanV1,
   WeekPlanV1,
-  WeekTemplateCreateInput,
-  WeekTemplatePatchInput,
 } from '../../../types/planning'
 import { fail, ok, type PlanningResult } from './planningResult'
 
@@ -31,117 +29,12 @@ export interface MonthPlanRow extends MonthPlanListItem {
   createdAt: string
 }
 
-interface WeekTemplateDbRow {
-  id: string
-  name: string
-  body: WeekPlanV1
-  created_at: string
-  updated_at: string
-}
-
 interface MonthPlanDbRow {
   id: string
   name: string | null
   body: MonthPlanV1
   created_at: string
   updated_at: string
-}
-
-export async function listWeekTemplates(client: SupabaseClient): Promise<PlanningResult<WeekTemplateListItem[]>> {
-  const { data, error } = await client
-    .from('meal_week_templates')
-    .select('id, name, updated_at')
-    .order('updated_at', { ascending: false })
-
-  if (error || !data) {
-    return fail(storageError(error?.message, 'Week templates could not be loaded.'))
-  }
-
-  return ok((data as Pick<WeekTemplateDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
-    id: row.id,
-    name: row.name,
-    updatedAt: row.updated_at,
-  })))
-}
-
-export async function getWeekTemplateById(client: SupabaseClient, id: string): Promise<PlanningResult<WeekTemplateRow>> {
-  const { data, error } = await client
-    .from('meal_week_templates')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error) {
-    return fail(storageError(error.message, 'Week template could not be loaded.'))
-  }
-
-  if (!data) {
-    return fail(notFoundError('week_template', 'Week template not found.'))
-  }
-
-  const row = data as WeekTemplateDbRow
-  return ok({
-    id: row.id,
-    name: row.name,
-    body: row.body,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  })
-}
-
-export async function createWeekTemplate(client: SupabaseClient, input: WeekTemplateCreateInput): Promise<PlanningResult<WeekTemplateRow>> {
-  const { data, error } = await client
-    .from('meal_week_templates')
-    .insert({ name: input.name, body: input.body })
-    .select('*')
-    .single()
-
-  if (error || !data) {
-    return fail(storageError(error?.message, 'Week template could not be created.'))
-  }
-
-  return ok(mapWeekTemplateRow(data as WeekTemplateDbRow))
-}
-
-export async function updateWeekTemplate(client: SupabaseClient, id: string, input: WeekTemplatePatchInput): Promise<PlanningResult<WeekTemplateRow>> {
-  const patch: Record<string, unknown> = {}
-  if (input.name !== undefined) patch.name = input.name
-  if (input.body !== undefined) patch.body = input.body
-
-  const { data, error } = await client
-    .from('meal_week_templates')
-    .update(patch)
-    .eq('id', id)
-    .select('*')
-    .single()
-
-  if (error || !data) {
-    if (error?.code === 'PGRST116') {
-      return fail(notFoundError('week_template', 'Week template not found.'))
-    }
-    return fail(storageError(error?.message, 'Week template could not be updated.'))
-  }
-
-  return ok(mapWeekTemplateRow(data as WeekTemplateDbRow))
-}
-
-export async function deleteWeekTemplate(client: SupabaseClient, id: string): Promise<PlanningResult<{ ok: true }>> {
-  const { data, error } = await client
-    .from('meal_week_templates')
-    .delete()
-    .eq('id', id)
-    .select('id')
-    .maybeSingle()
-
-  if (error) {
-    return fail(storageError(error.message, 'Week template could not be deleted.'))
-  }
-
-  if (!data) {
-    return fail(notFoundError('week_template', 'Week template not found.'))
-  }
-
-  return ok({ ok: true })
 }
 
 export async function listMonthPlans(client: SupabaseClient): Promise<PlanningResult<MonthPlanListItem[]>> {
@@ -297,16 +190,6 @@ export async function assertRecipeIdsExist(client: SupabaseClient, recipeIds: st
   return ok(undefined)
 }
 
-function mapWeekTemplateRow(row: WeekTemplateDbRow): WeekTemplateRow {
-  return {
-    id: row.id,
-    name: row.name,
-    body: row.body,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
-
 function mapMonthPlanRow(row: MonthPlanDbRow): MonthPlanRow {
   return {
     id: row.id,
@@ -324,7 +207,7 @@ function storageError(message: string | undefined, fallback: string) {
   }
 }
 
-function notFoundError(entity: 'week_template' | 'month_plan', message: string) {
+function notFoundError(entity: 'month_plan', message: string) {
   return {
     kind: 'not_found' as const,
     entity,

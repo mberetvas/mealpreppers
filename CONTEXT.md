@@ -74,7 +74,8 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 
 ### HTTP API (Saved Weekplans vs legacy)
 
-- **Preferred**: `GET` / `POST` `/api/v1/saved-weekplans`, `GET` / `PATCH` / `DELETE` `/api/v1/saved-weekplans/:id`, plus anonymous merge preview and merge routes as needed. See `server/api/v1/planning/week-templates/DEPRECATED.md` for the staged deprecation note on **`/api/v1/planning/week-templates`** (legacy, unscoped list/get/mutations).
+- **Saved Weekplans**: `GET` / `POST` `/api/v1/saved-weekplans`, `GET` / `PATCH` / `DELETE` `/api/v1/saved-weekplans/:id`, plus anonymous merge preview and merge routes as needed. Legacy unscoped `/api/v1/planning/week-templates` was retired (May 2026).
+- Architecture decision: [ADR 0001 — Saved Weekplans single persistence](docs/adr/0001-saved-weekplans-single-persistence.md).
 
 ### Navigation (manage surface)
 

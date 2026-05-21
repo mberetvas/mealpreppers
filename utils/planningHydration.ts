@@ -1,21 +1,14 @@
 import type { $Fetch } from 'ofetch'
 import type { MonthPlanV1, WeekPlanV1 } from '../types/planning'
 
-/** Where a planner week row was resolved from (drives PATCH URL after load). */
-export type PlannerWeekRowSource = 'saved-weekplan' | 'week-template'
-
 type PlannerWeekRowOk = {
   ok: true
   id: string
   name: string
   body: WeekPlanV1
-  source: PlannerWeekRowSource
 }
 
-/**
- * Loads a week plan row for the planner: Saved Weekplans first, then legacy `week-templates`
- * (staged deprecation — see `server/api/v1/planning/week-templates/DEPRECATED.md`).
- */
+/** Loads a week plan row for the planner via principal-scoped Saved Weekplans. */
 export async function fetchWeekTemplateRowForPlanner(
   fetcher: $Fetch,
   templateId: string,
@@ -26,18 +19,10 @@ export async function fetchWeekTemplateRowForPlanner(
   }
   try {
     const row = await fetcher<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/saved-weekplans/${tid}`)
-    return { ok: true, id: row.id, name: row.name, body: row.body, source: 'saved-weekplan' }
+    return { ok: true, id: row.id, name: row.name, body: row.body }
   }
-  catch (err: unknown) {
-    const status = (err as Record<string, unknown>)?.statusCode as number | undefined
-    if (status !== 404) return { ok: false }
-    try {
-      const row = await fetcher<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/planning/week-templates/${tid}`)
-      return { ok: true, id: row.id, name: row.name, body: row.body, source: 'week-template' }
-    }
-    catch {
-      return { ok: false }
-    }
+  catch {
+    return { ok: false }
   }
 }
 
