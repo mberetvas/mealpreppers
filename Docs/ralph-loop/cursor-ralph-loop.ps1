@@ -21,7 +21,8 @@
     Workspace directory passed to the agent. Defaults to the current location.
 
 .PARAMETER ShowProgress
-    Stream agent activity to the console (tool calls, model, duration) via stream-json.
+    Stream agent activity in real time via stream-json and --stream-partial-output
+    (model init, generating char count, tool calls, completion stats).
     Defaults to true. Pass -ShowProgress:$false for final-answer-only text output.
 
 .EXAMPLE
@@ -92,10 +93,8 @@ function Update-AgentStreamProgress {
         }
         'assistant' {
             # Streaming deltas only: timestamp_ms present, model_call_id absent.
-            $hasTimestamp = $null -ne $event.PSObject.Properties['timestamp_ms']
-            $hasModelCallId = $null -ne $event.PSObject.Properties['model_call_id']
-
-            if ($hasTimestamp -and -not $hasModelCallId) {
+            $propertyNames = @($event.PSObject.Properties.Name)
+            if ($propertyNames -contains 'timestamp_ms' -and $propertyNames -notcontains 'model_call_id') {
                 $content = $event.message.content[0].text
                 if ($content) {
                     [void]$State.AccumulatedText.Append($content)
@@ -151,6 +150,19 @@ function Update-AgentStreamProgress {
     }
 }
 
+function ConvertTo-ProcessArguments {
+    param([string[]] $ArgumentList)
+
+    ($ArgumentList | ForEach-Object {
+        if ($_ -match '[\s"]') {
+            '"' + ($_ -replace '"', '\"') + '"'
+        }
+        else {
+            $_
+        }
+    }) -join ' '
+}
+
 function Invoke-AgentHeadless {
     param(
         [string[]] $AgentArgs,
@@ -162,71 +174,49 @@ function Invoke-AgentHeadless {
         return $LASTEXITCODE
     }
 
+    # Mirrors: agent -p --force --output-format stream-json --stream-partial-output "..." | while read line
     $state = New-AgentStreamState
-    $sync = [hashtable]::Synchronized(@{ Done = $false; ExitCode = 1 })
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = 'agent'
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
     $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
     $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
 
-    foreach ($arg in $AgentArgs) {
-        [void]$psi.ArgumentList.Add($arg)
-    }
-
-    $process = New-Object System.Diagnostics.Process
-    $process.StartInfo = $psi
-    $process.EnableRaisingEvents = $true
-
-    $stdoutHandler = {
-        param($sender, $e)
-        if ($null -eq $e.Data) {
-            return
+    if ($psi.PSObject.Properties.Name -contains 'ArgumentList') {
+        foreach ($arg in $AgentArgs) {
+            [void]$psi.ArgumentList.Add($arg)
         }
-
-        Update-AgentStreamProgress -Line $e.Data -State $script:AgentStreamState
+    }
+    else {
+        $psi.Arguments = ConvertTo-ProcessArguments -ArgumentList $AgentArgs
     }
 
-    $stderrHandler = {
-        param($sender, $e)
-        if ($null -eq $e.Data) {
-            return
-        }
-
-        Clear-AgentGeneratingLine -State $script:AgentStreamState
-        Write-Host $e.Data
-    }
-
-    $exitHandler = {
-        $script:AgentStreamSync.Done = $true
-        $script:AgentStreamSync.ExitCode = $sender.ExitCode
-    }
-
-    $script:AgentStreamState = $state
-    $script:AgentStreamSync = $sync
-
-    $process.add_OutputDataReceived($stdoutHandler)
-    $process.add_ErrorDataReceived($stderrHandler)
-    $process.add_Exited($exitHandler)
-
-    if (-not $process.Start()) {
+    $process = [System.Diagnostics.Process]::Start($psi)
+    if ($null -eq $process) {
         throw 'Failed to start agent process.'
     }
 
-    $process.BeginOutputReadLine()
-    $process.BeginErrorReadLine()
-    $process.WaitForExit()
+    try {
+        while ($null -ne ($line = $process.StandardOutput.ReadLine())) {
+            Update-AgentStreamProgress -Line $line -State $state
+        }
 
-    # Wait for async line handlers to finish after the process exits.
-    while (-not $sync.Done) {
-        Start-Sleep -Milliseconds 50
+        $process.WaitForExit()
+
+        while ($null -ne ($line = $process.StandardError.ReadLine())) {
+            Clear-AgentGeneratingLine -State $state
+            Write-Host $line
+        }
+    }
+    finally {
+        Clear-AgentGeneratingLine -State $state
     }
 
-    Clear-AgentGeneratingLine -State $state
-    return $sync.ExitCode
+    return $process.ExitCode
 }
 
 Set-StrictMode -Version Latest
