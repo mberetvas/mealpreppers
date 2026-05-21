@@ -82,6 +82,34 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 - **Desktop** top navigation includes **Saved Weekplans** (`/saved-weekplans`).
 - **Mobile** bottom bar focuses Recipes, Plan, Shopping List, and More; the **More** hub lists the same primary destinations as desktop, including Saved Weekplans.
 
+## Shopping list
+
+Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is built from one **Saved Weekplan** and the **Recipe Catalog**.
+
+**Shopping list**:
+Ingredients for all meals in a **Saved Weekplan**, grouped into **recipe sections** (one block per distinct recipe in slot order), with quantities scaled by how often that recipe appears in the week grid.
+_Avoid_: grocery list, pantry list (when meaning this page)
+
+**Recipe section**:
+One recipe’s ingredient lines on the shopping list, including an occurrence badge when the same recipe appears in multiple slots.
+_Avoid_: aisle, category
+
+**Shopping list plan link**:
+The `plan` query parameter (Saved Weekplan id) that selects which persisted week grid to load.
+_Avoid_: template id (retired product term)
+
+**Shopping list empty plan**:
+The plan loaded successfully but every meal slot has no recipe — not a fetch failure.
+_Avoid_: no ingredients, load error
+
+**Shopping list recipe resolution failure**:
+One or more catalog recipes referenced by the plan could not be loaded; successful recipes still appear in **recipe sections**.
+_Avoid_: plan error (plan access succeeded)
+
+**Shopping list total recipe resolution failure**:
+Every referenced recipe failed to load; the plan title is shown, a warning banner notes the failure, and a dedicated empty message explains that no list could be built (distinct from **Shopping list empty plan** and from plan access errors).
+_Avoid_: plan could not be loaded
+
 ## Local full-stack (Docker)
 
 Vocabulary for running Mealprepper and Supabase together via Docker Compose on a developer machine. Not intended for internet-facing production.
@@ -116,6 +144,10 @@ _Avoid_: public URL (overloaded), CORS origin
 - **Anonymous merge** changes ownership of anonymous **Saved Weekplans**; **discard** removes them rather than leaving them anonymous-owned
 - **Anonymous idle purge** applies only to rows still tied to an anonymous session, not to authenticated-owned **Saved Weekplans**
 - **Supabase browser origin** and **Supabase server origin** may differ under local Compose; both refer to the same Supabase project, but the **browser** must not receive URLs that only work inside the Compose network
+- A **Shopping list** is built from exactly one **Saved Weekplan** selected by **Shopping list plan link**
+- **Recipe section** order follows week-grid slot traversal (day ascending, breakfast → lunch → dinner), not alphabetical merge across recipes
+- **Shopping list empty plan** requires zero recipe slots; partial or **total recipe resolution failure** still means the plan had recipe ids
+- **Shopping list total recipe resolution failure** keeps the loaded plan visible; it does not use the same UI as a missing or forbidden **Saved Weekplan**
 
 ## Example dialogue
 
@@ -124,6 +156,9 @@ _Avoid_: public URL (overloaded), CORS origin
 
 > **Dev:** "We set `SUPABASE_URL` to the Docker gateway hostname; recipe images 404 in the browser."
 > **Domain expert:** "Server traffic uses the **Supabase server origin**; URLs returned to the client must use the **Supabase browser origin** on `localhost`."
+
+> **Dev:** "All recipe fetches failed — should we show ‘Plan could not be loaded’?"
+> **Domain expert:** "No. The **Saved Weekplan** loaded. Show **shopping list total recipe resolution failure**: warning plus an empty-state message, not plan access error."
 
 ## Flagged ambiguities
 

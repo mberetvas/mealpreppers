@@ -15,7 +15,8 @@ export function isLegacyUnownedWeekTemplateOwner(row: WeekTemplateOwnerColumns):
 
 /**
  * Classifies row ownership relative to the current principal.
- * Legacy rows (both owner columns null) are only exposed via legacy week-templates routes.
+ * Legacy rows (both owner columns null) are hidden from Saved Weekplans (404).
+ * Backfill or purge per Docs/audits/001-legacy-unowned-week-grid-rows.md.
  */
 export function interpretSavedWeekplanAccess(
   row: WeekTemplateOwnerColumns,

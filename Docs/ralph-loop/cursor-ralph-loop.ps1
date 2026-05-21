@@ -81,8 +81,13 @@ function Update-AgentStreamProgress {
         return
     }
 
-    $type = $event.type
-    $subtype = $event.subtype
+    $propertyNames = @($event.PSObject.Properties.Name)
+    $type = if ($propertyNames -contains 'type') { $event.type } else { $null }
+    $subtype = if ($propertyNames -contains 'subtype') { $event.subtype } else { $null }
+
+    if (-not $type) {
+        return
+    }
 
     switch ($type) {
         'system' {
@@ -109,17 +114,18 @@ function Update-AgentStreamProgress {
                 Clear-AgentGeneratingLine -State $State
                 $State.ToolCount++
 
-                if ($event.tool_call.writeToolCall) {
+                $tcProps = @($event.tool_call.PSObject.Properties.Name)
+                if ($tcProps -contains 'writeToolCall') {
                     $path = $event.tool_call.writeToolCall.args.path
                     if (-not $path) { $path = 'unknown' }
                     Write-Host "Tool #$($State.ToolCount): Creating $path"
                 }
-                elseif ($event.tool_call.readToolCall) {
+                elseif ($tcProps -contains 'readToolCall') {
                     $path = $event.tool_call.readToolCall.args.path
                     if (-not $path) { $path = 'unknown' }
                     Write-Host "Tool #$($State.ToolCount): Reading $path"
                 }
-                elseif ($event.tool_call.shellToolCall) {
+                elseif ($tcProps -contains 'shellToolCall') {
                     $cmd = $event.tool_call.shellToolCall.args.command
                     if (-not $cmd) { $cmd = 'unknown' }
                     Write-Host "Tool #$($State.ToolCount): Shell $cmd"
@@ -129,14 +135,23 @@ function Update-AgentStreamProgress {
                 }
             }
             elseif ($subtype -eq 'completed') {
-                if ($event.tool_call.writeToolCall.result.success) {
-                    $lines = $event.tool_call.writeToolCall.result.success.linesCreated
-                    $size = $event.tool_call.writeToolCall.result.success.fileSize
-                    Write-Host "   Created $lines lines ($size bytes)"
+                $tcProps = @($event.tool_call.PSObject.Properties.Name)
+                if ($tcProps -contains 'writeToolCall') {
+                    $writeResult = $event.tool_call.writeToolCall.result
+                    $writeResultProps = if ($null -ne $writeResult) { @($writeResult.PSObject.Properties.Name) } else { @() }
+                    if ($writeResultProps -contains 'success') {
+                        $lines = $writeResult.success.linesCreated
+                        $size = $writeResult.success.fileSize
+                        Write-Host "   Created $lines lines ($size bytes)"
+                    }
                 }
-                elseif ($event.tool_call.readToolCall.result.success) {
-                    $lines = $event.tool_call.readToolCall.result.success.totalLines
-                    Write-Host "   Read $lines lines"
+                elseif ($tcProps -contains 'readToolCall') {
+                    $readResult = $event.tool_call.readToolCall.result
+                    $readResultProps = if ($null -ne $readResult) { @($readResult.PSObject.Properties.Name) } else { @() }
+                    if ($readResultProps -contains 'success') {
+                        $lines = $readResult.success.totalLines
+                        Write-Host "   Read $lines lines"
+                    }
                 }
             }
         }
@@ -178,7 +193,13 @@ function Invoke-AgentHeadless {
     $state = New-AgentStreamState
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = 'agent'
+    # Process.Start cannot resolve PowerShell shims; prefer agent.cmd / agent.exe on PATH.
+    $agentExecutable = Get-Command agent -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty Source
+    if ([string]::IsNullOrEmpty($agentExecutable)) {
+        throw 'Streaming mode needs agent.cmd or agent.exe on PATH. Use -ShowProgress:$false to run via shell.'
+    }
+    $psi.FileName = $agentExecutable
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true

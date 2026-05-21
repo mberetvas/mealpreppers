@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it, expect, vi } from 'vitest'
 import type { WeekPlanV1 } from '../../types/planning'
 import type { RecipeCatalogItem } from '../../types/recipe-catalog-item'
@@ -267,5 +270,59 @@ describe('shopping-list page: resilience states', () => {
     const { failedRecipeCount } = await loadShoppingList('plan-1', fetchPlan, fetchRecipe)
 
     expect(failedRecipeCount).toBe(0)
+  })
+})
+
+const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
+const pageSource = readFileSync(
+  join(repoRoot, 'app', 'pages', 'shopping-list.vue'),
+  'utf8',
+)
+
+describe('shopping-list page: plan link change (issue 006)', () => {
+  it('reloads when the Shopping list plan link changes, not only on mount', () => {
+    expect(pageSource).toMatch(/watch\s*\(\s*planId\s*,\s*load\s*\)/)
+    expect(pageSource).toContain('onMounted(load)')
+  })
+
+  it('clears recipe sections at the start of each load', () => {
+    expect(pageSource).toContain('sections.value = []')
+  })
+})
+
+describe('shopping-list page: total recipe resolution failure UI (issue 007)', () => {
+  it('renders total-failure when plan loaded, no sections, and failedRecipeCount > 0', () => {
+    expect(pageSource).toContain(
+      'v-else-if="planLoaded && sections.length === 0 && failedRecipeCount > 0"',
+    )
+  })
+
+  it('shows total-failure heading and body copy', () => {
+    expect(pageSource).toContain('Could not load recipes for this plan')
+    expect(pageSource).toContain(
+      'Some recipes could not be loaded from the catalog. Try Refresh or open the plan in the planner.',
+    )
+  })
+
+  it('includes Open in Planner with the current plan id and no duplicate Refresh button in the block', () => {
+    const totalFailureIdx = pageSource.indexOf('Could not load recipes for this plan')
+    expect(totalFailureIdx).toBeGreaterThan(-1)
+    const block = pageSource.slice(totalFailureIdx, totalFailureIdx + 800)
+    expect(block).toMatch(/weekly-plan.*template:\s*planId|query:\s*\{\s*template:\s*planId/)
+    expect(block).toContain('Open in Planner')
+    expect(block).not.toContain('aria-label="Refresh shopping list"')
+    expect(block).not.toMatch(/>\s*refresh\s*</i)
+  })
+
+  it('keeps empty-plan copy separate from total-failure conditions', () => {
+    expect(pageSource).toContain(
+      'v-else-if="planLoaded && sections.length === 0 && failedRecipeCount === 0"',
+    )
+    expect(pageSource).toContain('This plan has no recipes yet')
+    const totalFailureBranch = pageSource.match(
+      /v-else-if="planLoaded && sections\.length === 0 && failedRecipeCount > 0"[\s\S]*?<\/template>/,
+    )?.[0]
+    expect(totalFailureBranch).toBeDefined()
+    expect(totalFailureBranch).not.toContain('This plan has no recipes yet')
   })
 })

@@ -28,6 +28,7 @@ async function load(): Promise<void> {
   planError.value = false
   failedRecipeCount.value = 0
   planLoaded.value = false
+  sections.value = []
 
   if (!planId.value) {
     planError.value = true
@@ -68,6 +69,7 @@ async function load(): Promise<void> {
   }
 }
 
+watch(planId, load)
 onMounted(load)
 </script>
 
@@ -166,6 +168,40 @@ onMounted(load)
         Open in Planner
       </NuxtLink>
     </section>
+
+    <!-- Total recipe resolution failure: plan loaded, every catalog fetch failed -->
+    <template v-else-if="planLoaded && sections.length === 0 && failedRecipeCount > 0">
+      <div
+        class="rounded-2xl bg-atelier-cream-warning px-5 py-4 text-sm font-semibold text-atelier-warning-foreground"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
+        {{ failedRecipeCount }} recipe(s) could not be loaded — this list may be incomplete.
+      </div>
+
+      <section
+        class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
+      >
+        <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
+          <span class="material-symbols-outlined text-[28px]" aria-hidden="true">menu_book</span>
+        </div>
+        <h2 class="mt-5 font-headline text-2xl font-semibold text-atelier-heading md:text-3xl">
+          Could not load recipes for this plan
+        </h2>
+        <p class="mx-auto mt-3 max-w-md text-sm text-atelier-description">
+          Some recipes could not be loaded from the catalog. Try Refresh or open the plan in the planner.
+        </p>
+        <NuxtLink
+          :to="{ path: '/weekly-plan', query: { template: planId } }"
+          class="mt-8 inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+        >
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">edit_calendar</span>
+          Open in Planner
+        </NuxtLink>
+      </section>
+    </template>
 
     <!-- Loaded state: recipe sections (with optional partial-load warning) -->
     <template v-else-if="planLoaded">
