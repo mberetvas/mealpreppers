@@ -46,6 +46,20 @@ Paste JSON output into the table below after each run.
 
 Automated attempt (local, `.env`): 2026-05-21 — script could not reach Supabase (`storage_error`: URL/port). Re-run locally when credentials and network are valid.
 
+## Purge runbook
+
+> [!WARNING]
+> **Do not purge until the audit step is complete.** The purge script
+> (`supabase/scripts/purge-legacy-unowned-week-templates.sql`) must not run
+> until the operator has reviewed the row count. The audit script output is a required prerequisite gate — skipping it risks deleting rows that may need backfill instead.
+
+### Pre-purge checklist
+
+- [ ] Audit script has been executed for the target environment (see commands above)
+- [ ] Row count and sample IDs recorded in the "Counts per environment" table
+- [ ] Operator has reviewed the audit script output and confirmed rows are junk (not real user data)
+- [ ] Decision recorded below as "Delete as junk"
+
 ## Decision
 
 **Status:** Pending until all target environments are audited.
