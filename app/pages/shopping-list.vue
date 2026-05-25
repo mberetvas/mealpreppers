@@ -2,9 +2,42 @@
 import { formatShoppingListIngredient as formatIngredient } from '~~/utils/shoppingList'
 
 const route = useRoute()
+const router = useRouter()
 const planId = computed(() => (route.query.plan as string | undefined) ?? '')
 
 const { loading, planName, sections, planLoaded, planError, failedRecipeCount, load } = useShoppingList(planId)
+const {
+  consolidating,
+  consolidatedLines,
+  baselineLines,
+  consolidationError,
+  polishStatus,
+  warnings,
+  hasConsolidated,
+  consolidate,
+} = useConsolidatedShoppingList(planId)
+
+const viewMode = computed(() => route.query.view === 'consolidated' ? 'consolidated' : 'sections')
+
+function setViewMode(mode: 'sections' | 'consolidated') {
+  const query = { ...route.query }
+  if (mode === 'consolidated') {
+    query.view = 'consolidated'
+  }
+  else {
+    delete query.view
+  }
+  router.replace({ path: route.path, query })
+}
+
+/** Lines to render in consolidated view depending on polish status. */
+const displayLines = computed(() => {
+  if (consolidationError.value) return []
+  if (polishStatus.value === 'baseline_fallback' || polishStatus.value === 'ai_skipped') {
+    return baselineLines.value
+  }
+  return consolidatedLines.value
+})
 
 useHead(() => ({
   title: planName.value ? `Shopping list — ${planName.value}` : 'Shopping list',
@@ -164,9 +197,31 @@ useHead(() => ({
       </section>
     </template>
 
-    <!-- Loaded state: recipe sections (with optional partial-load warning) -->
+    <!-- Loaded state: recipe sections or consolidated view -->
     <template v-else-if="planLoaded">
-      <!-- Partial-load warning banner -->
+      <!-- View mode toggle -->
+      <nav data-testid="view-mode-toggle" class="flex gap-1 rounded-xl bg-atelier-chip/50 p-1" aria-label="Shopping list view mode">
+        <button
+          type="button"
+          data-testid="view-mode-sections"
+          class="rounded-lg px-4 py-2 text-sm font-semibold transition motion-reduce:transition-none"
+          :class="viewMode === 'sections' ? 'active bg-atelier-parchment text-atelier-heading shadow-sm' : 'text-atelier-description hover:text-atelier-heading'"
+          @click="setViewMode('sections')"
+        >
+          Recipe sections
+        </button>
+        <button
+          type="button"
+          data-testid="view-mode-consolidated"
+          class="rounded-lg px-4 py-2 text-sm font-semibold transition motion-reduce:transition-none"
+          :class="viewMode === 'consolidated' ? 'active bg-atelier-parchment text-atelier-heading shadow-sm' : 'text-atelier-description hover:text-atelier-heading'"
+          @click="setViewMode('consolidated')"
+        >
+          Consolidated
+        </button>
+      </nav>
+
+      <!-- Partial-load warning banner (shown in both views) -->
       <div
         v-if="failedRecipeCount > 0"
         class="rounded-2xl bg-atelier-cream-warning px-5 py-4 text-sm font-semibold text-atelier-warning-foreground"
@@ -178,50 +233,218 @@ useHead(() => ({
         {{ failedRecipeCount }} recipe(s) could not be loaded — this list may be incomplete.
       </div>
 
-      <!-- Recipe sections -->
-      <ul
-        class="space-y-6"
-        aria-label="Shopping list by recipe"
-      >
-        <li
-          v-for="section in sections"
-          :key="section.recipeId"
-          class="rounded-2xl bg-atelier-parchment shadow-atelier-float ring-1 ring-primary/10"
+      <!-- ═══ CONSOLIDATED VIEW ═══ -->
+      <template v-if="viewMode === 'consolidated'">
+        <!-- Consolidation error state -->
+        <section
+          v-if="consolidationError"
+          data-testid="consolidation-error"
+          class="rounded-[28px] bg-atelier-cream-error p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
         >
-          <!-- Section header -->
-          <div class="flex items-center justify-between border-b border-outline-variant/30 px-6 py-5">
-            <h2 class="font-headline text-xl font-semibold text-atelier-heading md:text-2xl">
-              {{ section.recipeTitle }}
-            </h2>
-            <span
-              v-if="section.occurrenceCount > 1"
-              class="ml-3 inline-flex shrink-0 items-center justify-center rounded-full bg-secondary-container px-3 py-1 text-sm font-bold text-on-secondary-container"
-              :aria-label="`Used ${section.occurrenceCount} times`"
-            >
-              × {{ section.occurrenceCount }}
-            </span>
+          <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-error-container text-error">
+            <span class="material-symbols-outlined text-[28px]" aria-hidden="true">error</span>
           </div>
+          <h2 class="mt-5 font-headline text-xl font-semibold text-atelier-heading">
+            Consolidation failed
+          </h2>
+          <p class="mx-auto mt-3 max-w-md text-sm text-atelier-error-foreground">
+            {{ consolidationError }}
+          </p>
+          <button
+            type="button"
+            data-testid="retry-btn"
+            class="mt-6 inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+            @click="consolidate"
+          >
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
+            Retry
+          </button>
+        </section>
 
-          <!-- Ingredient list -->
-          <ul class="divide-y divide-outline-variant/20 px-2 py-2">
+        <!-- Loading state -->
+        <section
+          v-else-if="consolidating"
+          data-testid="consolidation-loading"
+          class="space-y-4"
+          aria-busy="true"
+          aria-label="Consolidating shopping list"
+        >
+          <div class="flex flex-col items-center gap-4 py-12">
+            <div class="size-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary motion-reduce:animate-none" />
+            <p class="text-sm font-medium text-atelier-description">
+              Consolidating your shopping list…
+            </p>
+          </div>
+        </section>
+
+        <!-- Baseline fallback banner -->
+        <template v-else-if="hasConsolidated && polishStatus === 'baseline_fallback'">
+          <div
+            data-testid="fallback-banner"
+            class="rounded-2xl bg-atelier-cream-warning px-5 py-4 text-sm font-semibold text-atelier-warning-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
+            {{ warnings[0] || 'AI polish was not applied. Showing baseline merged list.' }}
+          </div>
+          <ul class="space-y-2" aria-label="Consolidated shopping list (baseline)">
             <li
-              v-for="(ing, idx) in section.ingredients"
-              :key="idx"
-              class="flex items-center gap-3 rounded-xl px-4 py-3 transition hover:bg-atelier-entry-hover motion-reduce:transition-none"
+              v-for="line in displayLines"
+              :key="line.id"
+              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
             >
               <span class="flex-1 text-sm text-atelier-heading">
-                {{ formatIngredient(ing) }}
+                {{ line.quantity }} {{ line.unit }} {{ line.name }}
               </span>
             </li>
-            <li
-              v-if="section.ingredients.length === 0"
-              class="px-4 py-3 text-sm italic text-atelier-description"
+          </ul>
+          <div class="flex justify-center">
+            <button
+              type="button"
+              data-testid="retry-btn"
+              class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-atelier-chip px-6 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover motion-reduce:transition-none"
+              @click="consolidate"
             >
-              No ingredients listed.
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
+              Retry consolidation
+            </button>
+          </div>
+        </template>
+
+        <!-- AI skipped banner -->
+        <template v-else-if="hasConsolidated && polishStatus === 'ai_skipped'">
+          <div
+            data-testid="ai-skipped-banner"
+            class="rounded-2xl bg-atelier-cream-warning px-5 py-4 text-sm font-semibold text-atelier-warning-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">info</span>
+            {{ warnings[0] || 'AI consolidation is currently unavailable. Showing merged baseline.' }}
+          </div>
+          <ul class="space-y-2" aria-label="Consolidated shopping list (baseline)">
+            <li
+              v-for="line in displayLines"
+              :key="line.id"
+              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
+            >
+              <span class="flex-1 text-sm text-atelier-heading">
+                {{ line.quantity }} {{ line.unit }} {{ line.name }}
+              </span>
             </li>
           </ul>
-        </li>
-      </ul>
+          <div class="flex justify-center">
+            <button
+              type="button"
+              data-testid="retry-btn"
+              class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-atelier-chip px-6 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover motion-reduce:transition-none"
+              @click="consolidate"
+            >
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
+              Retry consolidation
+            </button>
+          </div>
+        </template>
+
+        <!-- Successful consolidation result -->
+        <template v-else-if="hasConsolidated && consolidatedLines.length > 0">
+          <ul class="space-y-2" aria-label="Consolidated shopping list">
+            <li
+              v-for="line in displayLines"
+              :key="line.id"
+              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
+            >
+              <span class="flex-1 text-sm text-atelier-heading">
+                {{ line.quantity }} {{ line.unit }} {{ line.name }}
+              </span>
+            </li>
+          </ul>
+          <div class="flex justify-center">
+            <button
+              type="button"
+              data-testid="consolidate-btn"
+              class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-atelier-chip px-6 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover motion-reduce:transition-none"
+              @click="consolidate"
+            >
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
+              Re-consolidate
+            </button>
+          </div>
+        </template>
+
+        <!-- Guidance: no results yet -->
+        <template v-else>
+          <section class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10">
+            <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
+              <span class="material-symbols-outlined text-[28px]" aria-hidden="true">merge_type</span>
+            </div>
+            <h2 class="mt-5 font-headline text-xl font-semibold text-atelier-heading">
+              Consolidated shopping list
+            </h2>
+            <p class="mx-auto mt-3 max-w-md text-sm text-atelier-description">
+              Consolidation merges duplicate ingredients across recipes into a single store-ready list. Press the button below to consolidate.
+            </p>
+            <button
+              type="button"
+              data-testid="consolidate-btn"
+              class="mt-8 inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+              @click="consolidate"
+            >
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">merge_type</span>
+              Consolidate shopping list
+            </button>
+          </section>
+        </template>
+      </template>
+
+      <!-- ═══ RECIPE SECTIONS VIEW ═══ -->
+      <template v-else>
+        <!-- Recipe sections -->
+        <ul
+          class="space-y-6"
+          aria-label="Shopping list by recipe"
+        >
+          <li
+            v-for="section in sections"
+            :key="section.recipeId"
+            class="rounded-2xl bg-atelier-parchment shadow-atelier-float ring-1 ring-primary/10"
+          >
+            <!-- Section header -->
+            <div class="flex items-center justify-between border-b border-outline-variant/30 px-6 py-5">
+              <h2 class="font-headline text-xl font-semibold text-atelier-heading md:text-2xl">
+                {{ section.recipeTitle }}
+              </h2>
+              <span
+                v-if="section.occurrenceCount > 1"
+                class="ml-3 inline-flex shrink-0 items-center justify-center rounded-full bg-secondary-container px-3 py-1 text-sm font-bold text-on-secondary-container"
+                :aria-label="`Used ${section.occurrenceCount} times`"
+              >
+                × {{ section.occurrenceCount }}
+              </span>
+            </div>
+
+            <!-- Ingredient list -->
+            <ul class="divide-y divide-outline-variant/20 px-2 py-2">
+              <li
+                v-for="(ing, idx) in section.ingredients"
+                :key="idx"
+                class="flex items-center gap-3 rounded-xl px-4 py-3 transition hover:bg-atelier-entry-hover motion-reduce:transition-none"
+              >
+                <span class="flex-1 text-sm text-atelier-heading">
+                  {{ formatIngredient(ing) }}
+                </span>
+              </li>
+              <li
+                v-if="section.ingredients.length === 0"
+                class="px-4 py-3 text-sm italic text-atelier-description"
+              >
+                No ingredients listed.
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </template>
     </template>
   </div>
 </template>
