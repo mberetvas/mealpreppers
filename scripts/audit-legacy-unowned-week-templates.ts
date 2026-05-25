@@ -1,13 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
 import { auditLegacyUnownedWeekTemplates } from '../server/services/planning/auditLegacyUnownedWeekTemplates'
+import { checkEnvironmentGuard } from './env-guard'
 
 /**
  * One-off audit runner for issue 001. Requires service-role credentials in the environment.
- * Usage: bun scripts/audit-legacy-unowned-week-templates.ts
- * Optional: MEALPREPPERS_ENV=local|staging|production (default: local)
+ * Usage: MEALPREPPERS_ENV=local bun scripts/audit-legacy-unowned-week-templates.ts
  */
 async function main(): Promise<void> {
-  const environment = process.env.MEALPREPPERS_ENV ?? 'local'
+  const guard = checkEnvironmentGuard(process.env.MEALPREPPERS_ENV)
+  if (!guard.allowed) {
+    console.error(guard.message)
+    process.exit(1)
+  }
+
+  const environment = guard.environment
   const supabaseUrl = process.env.SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

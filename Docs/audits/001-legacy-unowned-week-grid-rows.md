@@ -13,10 +13,15 @@ Rows are `legacy_unowned` when `meal_week_templates.owner_user_id` and `anon_ses
 | `supabase/scripts/purge-legacy-unowned-week-templates.sql` | Delete-as-junk one-off |
 | `supabase/scripts/backfill-legacy-unowned-week-template-owner.sql` | Assign user or anon owner one-off |
 
-Run audit (requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`):
+## Prerequisites
+
+1. Set `MEALPREPPERS_ENV=local` — the script will refuse to run if this variable is unset or points to a non-local environment.
+2. Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are available (via `.env` or exported).
+
+Run audit:
 
 ```bash
-bun --env-file=.env scripts/audit-legacy-unowned-week-templates.ts
+MEALPREPPERS_ENV=local bun --env-file=.env scripts/audit-legacy-unowned-week-templates.ts
 ```
 
 Staging / production (separate credentials; do not reuse local keys):
