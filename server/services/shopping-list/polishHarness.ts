@@ -1,4 +1,4 @@
-import type { PolishBaseline } from './exactMerge'
+import type { MergedLine, PolishBaseline } from './exactMerge'
 
 export interface PolishResponseLine {
   id: string
@@ -38,12 +38,13 @@ export interface ValidationResult {
 export function validatePolishResponse(response: PolishResponse, baseline: PolishBaseline): ValidationResult {
   const failures: ValidationFailure[] = []
 
-  const baselineIds = new Set(baseline.lines.map(l => l.id))
+  const baselineLineById = buildBaselineLineByIdMap(baseline)
   const baselineQuantityByNameUnit = buildBaselineQuantityMap(baseline)
   const baselineUnitsByName = buildBaselineUnitsMap(baseline)
 
   for (const line of response.lines) {
-    if (!baselineIds.has(line.id)) {
+    const baselineLine = baselineLineById.get(line.id)
+    if (!baselineLine) {
       failures.push({
         rule: 'no-invented-ingredients',
         lineId: line.id,
@@ -51,11 +52,16 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
       })
       continue
     }
-    validateUnitPolicy(line, baselineUnitsByName, failures)
-    validateQuantityCap(line, baselineQuantityByNameUnit, failures)
+    validateUnitPolicy(line, baselineLine, baselineUnitsByName, failures)
+    validateQuantityCap(line, baselineLine, baselineQuantityByNameUnit, failures)
   }
 
   return { valid: failures.length === 0, failures }
+}
+
+/** Builds a map of baseline line id → baseline line. */
+function buildBaselineLineByIdMap(baseline: PolishBaseline): Map<string, MergedLine> {
+  return new Map(baseline.lines.map(line => [line.id, line]))
 }
 
 /** Builds a map of (lowercased name, unit) → total baseline quantity. */
@@ -87,32 +93,13 @@ function quantityKey(name: string, unit: string | undefined): string {
 
 function validateUnitPolicy(
   line: PolishResponseLine,
+  baselineLine: MergedLine,
   baselineUnitsByName: Map<string, Set<string | undefined>>,
   failures: ValidationFailure[],
 ): void {
-  const name = line.name.toLowerCase()
-  const allowedUnits = baselineUnitsByName.get(name)
+  const allowedUnits = baselineUnitsByName.get(baselineLine.name.toLowerCase())
 
-  // If the name doesn't exist in baseline (renamed by AI), look up by original baseline line id
-  // For unit policy, we check against the original ingredient's allowed units
-  if (!allowedUnits) {
-    // Name was renamed by AI — check all baseline units (any name) for unit policy
-    // since we can't match by name, collect all units from all baseline entries
-    const allUnits = new Set<string | undefined>()
-    for (const units of baselineUnitsByName.values()) {
-      for (const u of units) allUnits.add(u)
-    }
-    if (!allUnits.has(line.unit)) {
-      failures.push({
-        rule: 'unit-policy',
-        lineId: line.id,
-        message: `Unit "${line.unit}" not present in baseline for ingredient "${line.name}"`,
-      })
-    }
-    return
-  }
-
-  if (!allowedUnits.has(line.unit)) {
+  if (!allowedUnits?.has(line.unit)) {
     failures.push({
       rule: 'unit-policy',
       lineId: line.id,
@@ -123,16 +110,14 @@ function validateUnitPolicy(
 
 function validateQuantityCap(
   line: PolishResponseLine,
+  baselineLine: MergedLine,
   baselineQuantityByNameUnit: Map<string, number>,
   failures: ValidationFailure[],
 ): void {
-  const key = quantityKey(line.name, line.unit)
+  const key = quantityKey(baselineLine.name, line.unit)
   const cap = baselineQuantityByNameUnit.get(key)
 
   if (cap === undefined) {
-    // Name was potentially renamed — find the cap by looking at original baseline
-    // If renamed, quantity cap uses the original name's cap from baseline for the same unit
-    // Since we don't track renames, use a fallback: look up any baseline entry with same unit
     return
   }
 

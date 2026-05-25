@@ -177,6 +177,27 @@ describe('validatePolishResponse', () => {
 
       expect(result.valid).toBe(true)
     })
+
+    it('rejects quantity inflation when the line is renamed', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'fusilli', quantity: 1000, unit: 'g' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({
+          rule: 'quantity-cap',
+          lineId: 'L1',
+        }),
+      )
+    })
   })
 
   describe('unit policy violation rejected', () => {
@@ -225,6 +246,29 @@ describe('validatePolishResponse', () => {
       const response: PolishResponse = {
         lines: [
           { id: 'L1', name: 'suiker', quantity: 0.5, unit: 'kg' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({
+          rule: 'unit-policy',
+          lineId: 'L1',
+        }),
+      )
+    })
+
+    it('rejects unit borrowed from another ingredient when the line is renamed', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+        { id: 'L2', name: 'melk', quantity: 500, unit: 'ml', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'fusilli', quantity: 400, unit: 'ml' },
+          { id: 'L2', name: 'melk', quantity: 500, unit: 'ml' },
         ],
       }
 
