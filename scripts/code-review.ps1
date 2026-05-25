@@ -22,6 +22,19 @@
     .\code-review.ps1 -ShowProgress:$false
 #>
 
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ ⚠️  TRUSTED-LOCAL-ONLY WARNING                                           ║
+# ║                                                                          ║
+# ║ The --force flag below allows the agent to write files without user       ║
+# ║ confirmation. This is appropriate for LOCAL DEVELOPMENT MACHINES ONLY.    ║
+# ║ Do NOT use --force on shared machines or production-adjacent environments.║
+# ║                                                                          ║
+# ║ READ-ONLY REVIEW (without --force):                                      ║
+# ║   To run a safe, read-only review that only proposes changes (does not    ║
+# ║   write files), omit --force from the agent args:                         ║
+# ║     agent -p --model composer-2.5 --output-format text "<prompt>"         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
 [CmdletBinding()]
 param(
     [string] $Model = 'composer-2.5',

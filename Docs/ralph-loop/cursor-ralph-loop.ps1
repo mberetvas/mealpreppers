@@ -32,6 +32,18 @@
     .\cursor-ralph-loop.ps1 -IssuesFolder "Docs\issues" -ShowProgress:$false
 #>
 
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ ⚠️  TRUSTED-LOCAL-ONLY WARNING                                           ║
+# ║                                                                          ║
+# ║ The --force, --trust, and --approve-mcps flags used below allow the       ║
+# ║ agent to write files, trust the workspace, and auto-approve MCP tool      ║
+# ║ calls without user confirmation.                                          ║
+# ║                                                                          ║
+# ║ These flags are appropriate for LOCAL DEVELOPMENT MACHINES ONLY.          ║
+# ║ Do NOT use --force, --trust, or --approve-mcps on shared machines or      ║
+# ║ production-adjacent environments.                                         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
