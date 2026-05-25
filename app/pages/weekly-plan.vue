@@ -3,7 +3,7 @@ import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
 import { deepCloneWeek, emptyMonthPlan, emptyWeekPlan, getDuplicateRecipeIds, isWeekPlanValid } from '~~/utils/weekPlan'
 import { duplicatePlannerMessage } from '~~/utils/plannerDuplicateMessages'
-import { fetchMonthPlanBodyForPlanner, fetchWeekTemplateRowForPlanner } from '~~/utils/planningHydration'
+import { fetchMonthPlanBodyForPlanner, fetchSavedWeekplanForPlanner } from '~~/utils/planningHydration'
 import {
   clearPlannerWeekDraftSnapshot,
   plannerDraftHasMeaningfulEdits,
@@ -199,7 +199,7 @@ async function hydrateTemplateFromRoute(): Promise<void> {
   if (!tid) {
     return
   }
-  const loaded = await fetchWeekTemplateRowForPlanner($fetch, tid)
+  const loaded = await fetchSavedWeekplanForPlanner($fetch, tid)
   if (!loaded.ok) {
     saveStatus.value = 'error'
     return
@@ -210,6 +210,7 @@ async function hydrateTemplateFromRoute(): Promise<void> {
   weekPlanTitle.value = loaded.name
   weekPersistenceKind.value = 'saved-weekplan'
   saveStatus.value = 'saved'
+  shoppingListNudgeId.value = null
 }
 
 onMounted(async () => {
@@ -306,6 +307,7 @@ function confirmRemove(): void {
 }
 
 async function loadTemplateIntoWeek(id: string): Promise<void> {
+  shoppingListNudgeId.value = null
   templateBusyId.value = id
   try {
     const row = await $fetch<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/saved-weekplans/${id}`)

@@ -9,7 +9,7 @@ type PlannerWeekRowOk = {
 }
 
 /** Loads a week plan row for the planner via principal-scoped Saved Weekplans. */
-export async function fetchWeekTemplateRowForPlanner(
+export async function fetchSavedWeekplanForPlanner(
   fetcher: $Fetch,
   templateId: string,
 ): Promise<PlannerWeekRowOk | { ok: false }> {
