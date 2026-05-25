@@ -20,6 +20,8 @@
     "test:ui-quality-remediation": "vitest run test/unit/primary-navigation-integrity.test.ts test/unit/design-token-compliance.test.ts test/unit/state-messaging-contract.test.ts test/unit/touch-ergonomics-contract.test.ts test/unit/visual-cost-budget.test.ts test/unit/list-image-loading-strategy.test.ts test/unit/component-vocabulary-contract.test.ts test/component/accessible-overlay-contract.test.ts test/component/list-image-loading-strategy.test.ts test/component/form-flow-status-surfaces.test.ts"
   },
   "dependencies": {
+    "@langchain/core": "^1.1.48",
+    "@langchain/openrouter": "^0.3.0",
     "@nuxt/eslint": "1.15.2",
     "@nuxt/test-utils": "4.0.3",
     "@nuxtjs/tailwindcss": "6.14.0",

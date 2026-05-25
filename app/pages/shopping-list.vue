@@ -13,6 +13,7 @@ const {
   consolidationError,
   polishStatus,
   warnings,
+  changes,
   hasConsolidated,
   consolidate,
 } = useConsolidatedShoppingList(planId)
@@ -37,6 +38,32 @@ const displayLines = computed(() => {
     return baselineLines.value
   }
   return consolidatedLines.value
+})
+
+/** Set of line IDs that differ between consolidated and baseline (name, quantity, or unit). */
+const changedLineIds = computed<Set<string>>(() => {
+  if (polishStatus.value === 'baseline_fallback' || polishStatus.value === 'ai_skipped') {
+    return new Set()
+  }
+  const baselineMap = new Map(
+    baselineLines.value.map((l: any) => [l.id, l]),
+  )
+  const changed = new Set<string>()
+  for (const line of consolidatedLines.value as any[]) {
+    const baseline = baselineMap.get(line.id)
+    if (!baseline || baseline.name !== line.name || baseline.quantity !== line.quantity || baseline.unit !== line.unit) {
+      changed.add(line.id)
+    }
+  }
+  return changed
+})
+
+/** Whether to show the changes explanation section. */
+const showChanges = computed(() => {
+  if (polishStatus.value === 'baseline_fallback' || polishStatus.value === 'ai_skipped') {
+    return false
+  }
+  return changes.value.length > 0
 })
 
 useHead(() => ({
@@ -349,12 +376,37 @@ useHead(() => ({
 
         <!-- Successful consolidation result -->
         <template v-else-if="hasConsolidated && consolidatedLines.length > 0">
+          <!-- Changes explanations -->
+          <div
+            v-if="showChanges"
+            data-testid="polish-changes"
+            class="rounded-2xl bg-atelier-chip/40 px-5 py-4 text-sm text-atelier-description"
+            role="note"
+            aria-label="AI consolidation changes"
+          >
+            <p class="mb-2 font-semibold text-atelier-heading">
+              Changes applied:
+            </p>
+            <ul class="list-inside list-disc space-y-1">
+              <li v-for="change in changes" :key="change.id">
+                {{ change.reason }}
+              </li>
+            </ul>
+          </div>
+
           <ul class="space-y-2" aria-label="Consolidated shopping list">
             <li
               v-for="line in displayLines"
               :key="line.id"
-              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
+              :data-testid="changedLineIds.has(line.id) ? 'diff-changed' : undefined"
+              class="flex items-center gap-3 rounded-xl px-4 py-3 ring-1 ring-primary/10"
+              :class="changedLineIds.has(line.id) ? 'bg-atelier-chip/60 border-l-4 border-l-primary' : 'bg-atelier-parchment'"
             >
+              <span
+                v-if="changedLineIds.has(line.id)"
+                class="material-symbols-outlined text-[16px] text-primary"
+                aria-hidden="true"
+              >auto_fix_high</span>
               <span class="flex-1 text-sm text-atelier-heading">
                 {{ line.quantity }} {{ line.unit }} {{ line.name }}
               </span>
