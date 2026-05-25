@@ -13,6 +13,12 @@ export default defineConfig({
   test: {
     projects: [
       {
+        resolve: {
+          alias: {
+            'bun:test': fileURLToPath(new URL('./test/stubs/bun-test-shim.ts', import.meta.url)),
+            '~~': repoRoot,
+          },
+        },
         test: {
           name: 'unit',
           include: ['test/unit/*.{test,spec}.ts'],
@@ -20,6 +26,12 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          alias: {
+            'bun:test': fileURLToPath(new URL('./test/stubs/bun-test-shim.ts', import.meta.url)),
+            '~~': repoRoot,
+          },
+        },
         test: {
           name: 'integration',
           include: ['test/integration/*.{test,spec}.ts'],

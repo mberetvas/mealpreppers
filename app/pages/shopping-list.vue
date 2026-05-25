@@ -1,76 +1,14 @@
 <script setup lang="ts">
-import type { WeekPlanV1 } from '~~/types/planning'
-import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
-import {
-  collectRecipeOccurrences,
-  buildShoppingList,
-  formatShoppingListIngredient as formatIngredient,
-  type ShoppingListSection,
-} from '~~/utils/shoppingList'
+import { formatShoppingListIngredient as formatIngredient } from '~~/utils/shoppingList'
 
 const route = useRoute()
 const planId = computed(() => (route.query.plan as string | undefined) ?? '')
 
-const loading = ref(true)
-const planName = ref('')
-const sections = ref<ShoppingListSection[]>([])
-const planLoaded = ref(false)
-const planError = ref(false)
-const failedRecipeCount = ref(0)
+const { loading, planName, sections, planLoaded, planError, failedRecipeCount, load } = useShoppingList(planId)
 
 useHead(() => ({
   title: planName.value ? `Shopping list — ${planName.value}` : 'Shopping list',
 }))
-
-/** Fetches the weekplan, fans out to all recipe endpoints, and builds the shopping list. */
-async function load(): Promise<void> {
-  loading.value = true
-  planError.value = false
-  failedRecipeCount.value = 0
-  planLoaded.value = false
-  sections.value = []
-
-  if (!planId.value) {
-    planError.value = true
-    loading.value = false
-    return
-  }
-
-  try {
-    const plan = await $fetch<{ id: string; name: string; body: WeekPlanV1 }>(
-      `/api/v1/saved-weekplans/${planId.value}`,
-    )
-    planName.value = plan.name
-    const occurrences = collectRecipeOccurrences(plan.body)
-    const recipeIds = [...occurrences.keys()]
-    const settled = await Promise.allSettled(
-      recipeIds.map(id => $fetch<RecipeCatalogItem>(`/api/v1/recipes/${id}`)),
-    )
-    const recipeMap = new Map<string, RecipeCatalogItem>()
-    let failures = 0
-    for (const [index, recipeId] of recipeIds.entries()) {
-      const result = settled[index]
-      if (result && result.status === 'fulfilled') {
-        recipeMap.set(recipeId, result.value)
-      }
-      else {
-        failures++
-      }
-    }
-    failedRecipeCount.value = failures
-    sections.value = buildShoppingList(occurrences, recipeMap)
-    planLoaded.value = true
-  }
-  catch {
-    planError.value = true
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-watch(planId, load)
-onMounted(load)
 </script>
 
 <template>
