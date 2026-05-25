@@ -155,7 +155,10 @@ describe('consolidateShoppingList service', () => {
       mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
       mocks.listRecipes.mockResolvedValue({
         ok: true,
-        value: [makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }])],
+        value: [
+          makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }]),
+          makeRecipe('recipe-2', 'Salad', [{ name: 'sla', quantity: 1, unit: 'krop' }]),
+        ],
       })
     })
 
@@ -223,7 +226,10 @@ describe('consolidateShoppingList service', () => {
       mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
       mocks.listRecipes.mockResolvedValue({
         ok: true,
-        value: [makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }])],
+        value: [
+          makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }]),
+          makeRecipe('recipe-2', 'Salad', [{ name: 'sla', quantity: 1, unit: 'krop' }]),
+        ],
       })
     })
 
@@ -240,11 +246,14 @@ describe('consolidateShoppingList service', () => {
       expect(result.warnings[0]).toContain('skipped')
     })
 
-    it('invokes polish port and returns ai_applied when port succeeds', async () => {
+    it('invokes polish port and returns polished when port succeeds and harness passes', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
-            lines: [{ id: 'L1', name: 'Pasta', quantity: 800, unit: 'g' }],
+            lines: [
+              { id: 'L1', name: 'Pasta', quantity: 800, unit: 'g' },
+              { id: 'L2', name: 'sla', quantity: 1, unit: 'krop' },
+            ],
             changes: [{ id: 'L1', reason: 'Capitalized name' }],
           },
         }),
@@ -258,7 +267,7 @@ describe('consolidateShoppingList service', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('ai_applied')
+      expect(result.polishStatus).toBe('polished')
       expect(result.consolidatedLines[0].name).toBe('Pasta')
       expect(result.changes).toHaveLength(1)
       expect(mockPort.polish).toHaveBeenCalledOnce()
@@ -277,9 +286,233 @@ describe('consolidateShoppingList service', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('ai_failed')
+      expect(result.polishStatus).toBe('baseline_fallback')
       expect(result.consolidatedLines).toEqual(result.baselineLines)
       expect(result.warnings[0]).toContain('failed')
+    })
+  })
+
+  describe('partial recipe resolution', () => {
+    it('consolidates only loaded sections when some plan recipes are missing from catalog', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      // Catalog only has recipe-1, not recipe-2
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }]),
+        ],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      // Only pasta from recipe-1 is in baseline (recipe-2 was missing)
+      expect(result.baselineLines).toHaveLength(1)
+      expect(result.baselineLines[0].name).toBe('pasta')
+    })
+
+    it('adds incomplete warning to warnings[] when some recipes are missing', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }]),
+        ],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.warnings).toContainEqual(
+        expect.stringContaining('could not be loaded'),
+      )
+    })
+
+    it('logs partial resolution with count of missing recipes', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-1', 'Pasta', [{ name: 'pasta', quantity: 400, unit: 'g' }]),
+        ],
+      })
+
+      await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        'shopping_list.partial_recipe_resolution',
+        expect.objectContaining({ planId: PLAN_ID, missingCount: 1 }),
+      )
+    })
+  })
+
+  describe('total recipe resolution failure', () => {
+    it('returns empty consolidation result when all plan recipes are missing from catalog', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      // Catalog has no matching recipes
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-other', 'Other', [{ name: 'other', quantity: 1, unit: 'stuk' }]),
+        ],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.consolidatedLines).toEqual([])
+      expect(result.baselineLines).toEqual([])
+    })
+
+    it('adds total failure warning to warnings[] when no recipes could be resolved', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-other', 'Other', [{ name: 'other', quantity: 1, unit: 'stuk' }]),
+        ],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.warnings).toContainEqual(
+        expect.stringContaining('Could not load any recipes'),
+      )
+    })
+
+    it('returns ai_skipped polish status on total recipe failure', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-other', 'Other', [{ name: 'other', quantity: 1, unit: 'stuk' }]),
+        ],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.polishStatus).toBe('ai_skipped')
+      expect(result.changes).toEqual([])
+    })
+  })
+
+  describe('empty plan', () => {
+    function makeEmptyWeekPlanBody() {
+      const emptySlot = { recipeId: null }
+      const day = { breakfast: emptySlot, lunch: emptySlot, dinner: emptySlot }
+      return {
+        version: 'week_v1' as const,
+        days: { '1': day, '2': day, '3': day, '4': day, '5': day, '6': day, '7': day },
+      }
+    }
+
+    it('returns empty consolidated list when plan has no recipes', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({
+        ok: true,
+        value: { ...makeSavedWeekplan(), body: makeEmptyWeekPlanBody() },
+      })
+      mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.consolidatedLines).toEqual([])
+      expect(result.baselineLines).toEqual([])
+    })
+
+    it('adds empty plan warning to warnings[]', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({
+        ok: true,
+        value: { ...makeSavedWeekplan(), body: makeEmptyWeekPlanBody() },
+      })
+      mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.warnings).toContainEqual(
+        expect.stringContaining('no recipes'),
+      )
+    })
+
+    it('returns ai_skipped polish status for empty plan', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({
+        ok: true,
+        value: { ...makeSavedWeekplan(), body: makeEmptyWeekPlanBody() },
+      })
+      mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.polishStatus).toBe('ai_skipped')
+      expect(result.changes).toEqual([])
+    })
+
+    it('does not invoke listRecipes when plan has no recipe slots', async () => {
+      mocks.getSavedWeekplanById.mockResolvedValue({
+        ok: true,
+        value: { ...makeSavedWeekplan(), body: makeEmptyWeekPlanBody() },
+      })
+      mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
+
+      await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as any,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(mocks.listRecipes).not.toHaveBeenCalled()
     })
   })
 

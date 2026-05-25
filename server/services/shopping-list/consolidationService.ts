@@ -8,11 +8,12 @@ import { getSavedWeekplanById } from '../planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../utils/planningErrors'
 import { collectRecipeOccurrences, buildShoppingList } from '../../../utils/shoppingList'
 import { exactMerge, buildPolishContext } from './exactMerge'
+import { validatePolishResponse } from './polishHarness'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
 
-export type PolishStatus = 'ai_skipped' | 'ai_applied' | 'ai_failed'
+export type PolishStatus = 'ai_skipped' | 'polished' | 'baseline_fallback'
 
 export interface ConsolidationResult {
   consolidatedLines: MergedLine[]
@@ -55,6 +56,18 @@ export async function consolidateShoppingList(
   // Collect recipe occurrences from the plan body
   const occurrences = collectRecipeOccurrences(plan.body)
 
+  // Early return: empty plan (no recipe slots filled)
+  if (occurrences.size === 0) {
+    logger.info('shopping_list.empty_plan', { planId })
+    return {
+      consolidatedLines: [],
+      baselineLines: [],
+      changes: [],
+      polishStatus: 'ai_skipped' as PolishStatus,
+      warnings: ['This plan has no recipes yet. Add recipes to generate a shopping list.'],
+    }
+  }
+
   // Resolve catalog recipes
   const recipesResult = await listRecipes(supabaseClient)
   if (!recipesResult.ok) {
@@ -68,6 +81,23 @@ export async function consolidateShoppingList(
   // Build scaled ingredient sections (day ascending, breakfast → lunch → dinner order is preserved by collectRecipeOccurrences)
   const sections = buildShoppingList(occurrences, recipeMap)
 
+  // Detect recipe resolution failures
+  const resolvedCount = sections.length
+  const totalRequested = occurrences.size
+  const missingCount = totalRequested - resolvedCount
+
+  // Total recipe resolution failure: all referenced recipes missing from catalog
+  if (resolvedCount === 0) {
+    logger.warn('shopping_list.total_recipe_resolution_failure', { planId, totalRequested })
+    return {
+      consolidatedLines: [],
+      baselineLines: [],
+      changes: [],
+      polishStatus: 'ai_skipped' as PolishStatus,
+      warnings: ['Could not load any recipes for this plan. The shopping list cannot be consolidated.'],
+    }
+  }
+
   // Exact merge
   const baseline = exactMerge(sections)
   const baselineLines = baseline.lines
@@ -77,6 +107,12 @@ export async function consolidateShoppingList(
   let consolidatedLines = baselineLines
   let changes: PolishResponseChange[] = []
   let polishStatus: PolishStatus = 'ai_skipped'
+
+  // Partial recipe resolution: some recipes missing from catalog
+  if (missingCount > 0) {
+    logger.warn('shopping_list.partial_recipe_resolution', { planId, missingCount, totalRequested, resolvedCount })
+    warnings.push(`${missingCount} recipe(s) could not be loaded — this list may be incomplete.`)
+  }
 
   if (!openrouterApiKey) {
     logger.info('shopping_list.polish_skipped', { reason: 'missing_api_key' })
@@ -92,23 +128,39 @@ export async function consolidateShoppingList(
     try {
       const polishContext = buildPolishContext(baseline)
       const result = await polishPort.polish(polishContext)
-      consolidatedLines = result.response.lines.map((line, idx) => {
-        const baselineLine = baselineLines.find(bl => bl.id === line.id)
-        return {
-          id: line.id,
-          name: line.name,
-          quantity: line.quantity,
-          unit: line.unit,
-          provenance: baselineLine?.provenance ?? [],
-        }
-      })
-      changes = result.response.changes ?? []
-      polishStatus = 'ai_applied'
+
+      // Harness validation — single attempt, no repair loop (retry policy v1)
+      const validation = validatePolishResponse(result.response, baseline)
+
+      if (validation.valid) {
+        consolidatedLines = result.response.lines.map((line) => {
+          const baselineLine = baselineLines.find(bl => bl.id === line.id)
+          return {
+            id: line.id,
+            name: line.name,
+            quantity: line.quantity,
+            unit: line.unit,
+            provenance: baselineLine?.provenance ?? [],
+          }
+        })
+        changes = result.response.changes ?? []
+        polishStatus = 'polished'
+      }
+      else {
+        logger.warn('shopping_list.polish_harness_failed', {
+          planId,
+          failureCount: validation.failures.length,
+          failures: validation.failures.map(f => `${f.rule}:${f.lineId}`),
+        })
+        warnings.push('AI polish output rejected by harness validation; returning baseline.')
+        polishStatus = 'baseline_fallback'
+        consolidatedLines = baselineLines
+      }
     }
     catch {
       logger.warn('shopping_list.polish_failed', { planId })
       warnings.push('AI polish failed; returning baseline.')
-      polishStatus = 'ai_failed'
+      polishStatus = 'baseline_fallback'
       consolidatedLines = baselineLines
     }
   }
