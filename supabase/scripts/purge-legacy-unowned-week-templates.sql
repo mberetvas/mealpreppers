@@ -4,10 +4,6 @@
 --   select count(*) from public.meal_week_templates
 --   where owner_user_id is null and anon_session_id is null;
 
-begin;
-
 delete from public.meal_week_templates
 where owner_user_id is null
   and anon_session_id is null;
-
-commit;
