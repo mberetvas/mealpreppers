@@ -18,6 +18,11 @@ export interface ShoppingListSection {
 const DAY_KEYS = ['1', '2', '3', '4', '5', '6', '7'] as const
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const
 
+/** Rounds a number to at most 2 decimal places, eliminating floating-point noise. */
+function roundQuantity(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 /** Returns true when a formatter part should be rendered into an ingredient line. */
 function isPresentIngredientPart(part: number | string | null | undefined): part is number | string {
   return part !== undefined && part !== null && part !== ''
@@ -57,7 +62,7 @@ export function buildShoppingList(
     const ingredients: ShoppingListIngredient[] = recipe.ingredients.map(ing => ({
       rawText: ing.rawText,
       name: ing.name,
-      quantity: ing.quantity !== undefined ? ing.quantity * occurrenceCount : undefined,
+      quantity: ing.quantity !== undefined ? roundQuantity(ing.quantity * occurrenceCount) : undefined,
       unit: ing.unit,
     }))
     sections.push({ recipeId, recipeTitle: recipe.title, occurrenceCount, ingredients })
