@@ -24,15 +24,10 @@ Run audit:
 MEALPREPPERS_ENV=local bun --env-file=.env scripts/audit-legacy-unowned-week-templates.ts
 ```
 
-Staging / production (separate credentials; do not reuse local keys):
+Staging / production:
 
-```bash
-MEALPREPPERS_ENV=staging SUPABASE_URL=<staging-url> SUPABASE_SERVICE_ROLE_KEY=<staging-key> \
-  bun scripts/audit-legacy-unowned-week-templates.ts
-
-MEALPREPPERS_ENV=production SUPABASE_URL=<production-url> SUPABASE_SERVICE_ROLE_KEY=<production-key> \
-  bun scripts/audit-legacy-unowned-week-templates.ts
-```
+This runner is intentionally **local-only** and will abort for non-`local` `MEALPREPPERS_ENV` values.
+For staging/production audits, run the equivalent SQL in the Supabase dashboard (or temporarily extend the allowlist in `scripts/env-guard.ts` with explicit HITL approval).
 
 Paste JSON output into the table below after each run.
 
