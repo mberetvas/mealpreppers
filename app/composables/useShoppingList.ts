@@ -40,7 +40,7 @@ export function useShoppingList(planId: Ref<string>, options: UseShoppingListOpt
     failedRecipeCount.value = 0
     planLoaded.value = false
     sections.value = []
-
+    planName.value = ''
     if (!planId.value) {
       planError.value = true
       loading.value = false
