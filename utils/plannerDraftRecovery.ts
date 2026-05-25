@@ -12,7 +12,7 @@ import { countAssignedRecipes } from './weekPlan'
 export const PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY = 'mealprepper:planner-week-draft-v1'
 
 /** How the week tab is backed (`none` = no linked row yet — unsaved saved-weekplan draft). */
-export type PlannerDraftPersistenceKind = 'none' | 'saved-weekplan' | 'week-template'
+export type PlannerDraftPersistenceKind = 'none' | 'saved-weekplan'
 
 /** Versioned payload for local draft recovery (refresh before first server save). */
 export type PlannerWeekDraftSnapshotV1 = {

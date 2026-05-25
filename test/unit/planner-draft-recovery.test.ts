@@ -34,9 +34,8 @@ describe('plannerDraftHasMeaningfulEdits', () => {
 })
 
 describe('plannerUnsavedSavedWeekplanDraftNeedsGuard', () => {
-  it('is false when linked to server row', () => {
+  it('is false when linked to a Saved Weekplan', () => {
     expect(plannerUnsavedSavedWeekplanDraftNeedsGuard('saved-weekplan', weekWithOneRecipe(), 'a')).toBe(false)
-    expect(plannerUnsavedSavedWeekplanDraftNeedsGuard('week-template', weekWithOneRecipe(), '')).toBe(false)
   })
 
   it('is false for blank draft', () => {

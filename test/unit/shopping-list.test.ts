@@ -114,6 +114,58 @@ describe('buildShoppingList', () => {
   })
 })
 
+describe('buildShoppingList — floating-point rounding', () => {
+  it('preserves integer quantities without decimal suffix', () => {
+    const occurrences = new Map([[RID_A, 3]])
+    const recipes = new Map([
+      [RID_A, makeRecipe(RID_A, 'Soup', [
+        { id: 'i1', position: 1, rawText: '2 carrots', name: 'carrots', quantity: 2, unit: undefined },
+      ])],
+    ])
+    const result = buildShoppingList(occurrences, recipes)
+    expect(result[0].ingredients[0].quantity).toBe(6)
+    expect(String(result[0].ingredients[0].quantity)).toBe('6')
+  })
+
+  it('preserves non-integer quantities that are already clean', () => {
+    const occurrences = new Map([[RID_A, 3]])
+    const recipes = new Map([
+      [RID_A, makeRecipe(RID_A, 'Soup', [
+        { id: 'i1', position: 1, rawText: '0.5 l milk', name: 'milk', quantity: 0.5, unit: 'l' },
+      ])],
+    ])
+    const result = buildShoppingList(occurrences, recipes)
+    expect(result[0].ingredients[0].quantity).toBe(1.5)
+  })
+
+  it('rounds floating-point noise to at most 2 decimal places', () => {
+    const occurrences = new Map([[RID_A, 3]])
+    const recipes = new Map([
+      [RID_A, makeRecipe(RID_A, 'Soup', [
+        { id: 'i1', position: 1, rawText: '0.1 l oil', name: 'oil', quantity: 0.1, unit: 'l' },
+      ])],
+    ])
+    const result = buildShoppingList(occurrences, recipes)
+    // 0.1 * 3 = 0.30000000000000004 in JS — should round to 0.3
+    expect(result[0].ingredients[0].quantity).toBe(0.3)
+  })
+
+  it('rounds multi-occurrence scaling that produces FP noise', () => {
+    const occurrences = new Map([[RID_A, 7]])
+    const recipes = new Map([
+      [RID_A, makeRecipe(RID_A, 'Toast', [
+        { id: 'i1', position: 1, rawText: '0.1 kg butter', name: 'butter', quantity: 0.1, unit: 'kg' },
+        { id: 'i2', position: 2, rawText: '0.2 l cream', name: 'cream', quantity: 0.2, unit: 'l' },
+      ])],
+    ])
+    const result = buildShoppingList(occurrences, recipes)
+    // 0.1 * 7 = 0.7000000000000001 → 0.7
+    expect(result[0].ingredients[0].quantity).toBe(0.7)
+    // 0.2 * 7 = 1.4000000000000001 → 1.4
+    expect(result[0].ingredients[1].quantity).toBe(1.4)
+  })
+})
+
 describe('formatShoppingListIngredient', () => {
   it('preserves a zero quantity when formatting a quantified ingredient', () => {
     expect(formatShoppingListIngredient({

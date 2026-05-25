@@ -3,7 +3,7 @@ import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
 import type { MonthPlanV1, WeekPlanV1 } from '~~/types/planning'
 import { deepCloneWeek, emptyMonthPlan, emptyWeekPlan, getDuplicateRecipeIds, isWeekPlanValid } from '~~/utils/weekPlan'
 import { duplicatePlannerMessage } from '~~/utils/plannerDuplicateMessages'
-import { fetchMonthPlanBodyForPlanner, fetchWeekTemplateRowForPlanner } from '~~/utils/planningHydration'
+import { fetchMonthPlanBodyForPlanner, fetchSavedWeekplanForPlanner } from '~~/utils/planningHydration'
 import {
   clearPlannerWeekDraftSnapshot,
   plannerDraftHasMeaningfulEdits,
@@ -30,7 +30,7 @@ const monthPlan = ref<MonthPlanV1>(emptyMonthPlan())
 const activeTemplateId = ref<string | null>(null)
 const activeMonthId = ref<string | null>(null)
 const weekPlanTitle = ref('')
-const weekPersistenceKind = ref<'none' | 'saved-weekplan' | 'week-template'>('none')
+const weekPersistenceKind = ref<'none' | 'saved-weekplan'>('none')
 const firstSaveBusy = ref(false)
 /** Set to the plan ID immediately after the first-save POST succeeds; drives the nudge banner. */
 const shoppingListNudgeId = ref<string | null>(null)
@@ -69,7 +69,7 @@ function pushRecent(id: string): void {
 }
 
 const { data: templateList, refresh: refreshTemplates } = await useFetch<Array<{ id: string, name: string, updatedAt: string }>>(
-  '/api/v1/planning/week-templates',
+  '/api/v1/saved-weekplans',
   { immediate: false },
 )
 const { data: monthList, refresh: refreshMonthList } = await useFetch<Array<{ id: string, name: string | null, updatedAt: string }>>(
@@ -199,7 +199,7 @@ async function hydrateTemplateFromRoute(): Promise<void> {
   if (!tid) {
     return
   }
-  const loaded = await fetchWeekTemplateRowForPlanner($fetch, tid)
+  const loaded = await fetchSavedWeekplanForPlanner($fetch, tid)
   if (!loaded.ok) {
     saveStatus.value = 'error'
     return
@@ -208,8 +208,9 @@ async function hydrateTemplateFromRoute(): Promise<void> {
   weekPlan.value = loaded.body
   activeTemplateId.value = loaded.id
   weekPlanTitle.value = loaded.name
-  weekPersistenceKind.value = loaded.source
+  weekPersistenceKind.value = 'saved-weekplan'
   saveStatus.value = 'saved'
+  shoppingListNudgeId.value = null
 }
 
 onMounted(async () => {
@@ -306,14 +307,15 @@ function confirmRemove(): void {
 }
 
 async function loadTemplateIntoWeek(id: string): Promise<void> {
+  shoppingListNudgeId.value = null
   templateBusyId.value = id
   try {
-    const row = await $fetch<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/planning/week-templates/${id}`)
+    const row = await $fetch<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/saved-weekplans/${id}`)
     clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
     weekPlan.value = row.body
     activeTemplateId.value = row.id
     weekPlanTitle.value = row.name
-    weekPersistenceKind.value = 'week-template'
+    weekPersistenceKind.value = 'saved-weekplan'
     const q = { ...route.query, template: row.id }
     await router.replace({ query: q })
     activeTab.value = 'week'
@@ -330,7 +332,7 @@ async function deleteTemplate(id: string): Promise<void> {
   }
   templateBusyId.value = id
   try {
-    await $fetch(`/api/v1/planning/week-templates/${id}`, { method: 'DELETE' })
+    await $fetch(`/api/v1/saved-weekplans/${id}`, { method: 'DELETE' })
     if (activeTemplateId.value === id) {
       activeTemplateId.value = null
       weekPlan.value = emptyWeekPlan()

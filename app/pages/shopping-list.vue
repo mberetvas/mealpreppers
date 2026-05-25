@@ -1,74 +1,14 @@
 <script setup lang="ts">
-import type { WeekPlanV1 } from '~~/types/planning'
-import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
-import {
-  collectRecipeOccurrences,
-  buildShoppingList,
-  formatShoppingListIngredient as formatIngredient,
-  type ShoppingListSection,
-} from '~~/utils/shoppingList'
+import { formatShoppingListIngredient as formatIngredient } from '~~/utils/shoppingList'
 
 const route = useRoute()
 const planId = computed(() => (route.query.plan as string | undefined) ?? '')
 
-const loading = ref(true)
-const planName = ref('')
-const sections = ref<ShoppingListSection[]>([])
-const planLoaded = ref(false)
-const planError = ref(false)
-const failedRecipeCount = ref(0)
+const { loading, planName, sections, planLoaded, planError, failedRecipeCount, load } = useShoppingList(planId)
 
 useHead(() => ({
   title: planName.value ? `Shopping list — ${planName.value}` : 'Shopping list',
 }))
-
-/** Fetches the weekplan, fans out to all recipe endpoints, and builds the shopping list. */
-async function load(): Promise<void> {
-  loading.value = true
-  planError.value = false
-  failedRecipeCount.value = 0
-  planLoaded.value = false
-
-  if (!planId.value) {
-    planError.value = true
-    loading.value = false
-    return
-  }
-
-  try {
-    const plan = await $fetch<{ id: string; name: string; body: WeekPlanV1 }>(
-      `/api/v1/saved-weekplans/${planId.value}`,
-    )
-    planName.value = plan.name
-    const occurrences = collectRecipeOccurrences(plan.body)
-    const recipeIds = [...occurrences.keys()]
-    const settled = await Promise.allSettled(
-      recipeIds.map(id => $fetch<RecipeCatalogItem>(`/api/v1/recipes/${id}`)),
-    )
-    const recipeMap = new Map<string, RecipeCatalogItem>()
-    let failures = 0
-    for (const [index, recipeId] of recipeIds.entries()) {
-      const result = settled[index]
-      if (result && result.status === 'fulfilled') {
-        recipeMap.set(recipeId, result.value)
-      }
-      else {
-        failures++
-      }
-    }
-    failedRecipeCount.value = failures
-    sections.value = buildShoppingList(occurrences, recipeMap)
-    planLoaded.value = true
-  }
-  catch {
-    planError.value = true
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-onMounted(load)
 </script>
 
 <template>
@@ -121,7 +61,30 @@ onMounted(load)
       />
     </section>
 
-    <!-- Plan error / missing ID (mutually exclusive with all other states) -->
+    <!-- No plan selected: missing ?plan= query parameter -->
+    <section
+      v-else-if="planError && !planId"
+      class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
+    >
+      <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
+        <span class="material-symbols-outlined text-[28px]" aria-hidden="true">link_off</span>
+      </div>
+      <h2 class="mt-5 font-headline text-2xl font-semibold text-atelier-heading md:text-3xl">
+        No plan selected
+      </h2>
+      <p class="mx-auto mt-3 max-w-md text-sm text-atelier-description">
+        Open a saved weekplan to view its shopping list.
+      </p>
+      <NuxtLink
+        to="/saved-weekplans"
+        class="mt-8 inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+      >
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">list_alt</span>
+        Browse saved weekplans
+      </NuxtLink>
+    </section>
+
+    <!-- Plan access failure: non-empty planId but fetch failed -->
     <section
       v-else-if="planError"
       class="rounded-[28px] bg-atelier-cream-error p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
@@ -166,6 +129,40 @@ onMounted(load)
         Open in Planner
       </NuxtLink>
     </section>
+
+    <!-- Total recipe resolution failure: plan loaded, every catalog fetch failed -->
+    <template v-else-if="planLoaded && sections.length === 0 && failedRecipeCount > 0">
+      <div
+        class="rounded-2xl bg-atelier-cream-warning px-5 py-4 text-sm font-semibold text-atelier-warning-foreground"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
+        Could not load any recipes for this plan.
+      </div>
+
+      <section
+        class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
+      >
+        <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
+          <span class="material-symbols-outlined text-[28px]" aria-hidden="true">menu_book</span>
+        </div>
+        <h2 class="mt-5 font-headline text-2xl font-semibold text-atelier-heading md:text-3xl">
+          Could not load recipes for this plan
+        </h2>
+        <p class="mx-auto mt-3 max-w-md text-sm text-atelier-description">
+          Some recipes could not be loaded from the catalog. Try Refresh or open the plan in the planner.
+        </p>
+        <NuxtLink
+          :to="{ path: '/weekly-plan', query: { template: planId } }"
+          class="mt-8 inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+        >
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">edit_calendar</span>
+          Open in Planner
+        </NuxtLink>
+      </section>
+    </template>
 
     <!-- Loaded state: recipe sections (with optional partial-load warning) -->
     <template v-else-if="planLoaded">
