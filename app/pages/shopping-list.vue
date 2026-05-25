@@ -61,7 +61,30 @@ useHead(() => ({
       />
     </section>
 
-    <!-- Plan error / missing ID (mutually exclusive with all other states) -->
+    <!-- No plan selected: missing ?plan= query parameter -->
+    <section
+      v-else-if="planError && !planId"
+      class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
+    >
+      <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
+        <span class="material-symbols-outlined text-[28px]" aria-hidden="true">link_off</span>
+      </div>
+      <h2 class="mt-5 font-headline text-2xl font-semibold text-atelier-heading md:text-3xl">
+        No plan selected
+      </h2>
+      <p class="mx-auto mt-3 max-w-md text-sm text-atelier-description">
+        Open a saved weekplan to view its shopping list.
+      </p>
+      <NuxtLink
+        to="/saved-weekplans"
+        class="mt-8 inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+      >
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">list_alt</span>
+        Browse saved weekplans
+      </NuxtLink>
+    </section>
+
+    <!-- Plan access failure: non-empty planId but fetch failed -->
     <section
       v-else-if="planError"
       class="rounded-[28px] bg-atelier-cream-error p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
@@ -116,7 +139,7 @@ useHead(() => ({
         aria-atomic="true"
       >
         <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
-        {{ failedRecipeCount }} recipe(s) could not be loaded — this list may be incomplete.
+        Could not load any recipes for this plan.
       </div>
 
       <section
