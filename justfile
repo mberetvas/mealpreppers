@@ -18,7 +18,7 @@ bump level='patch':
 
 # Agent automation (PowerShell). Requires `agent` / `copilot` on PATH where noted.
 
-# Headless code review via Cursor Agent CLI; writes feedback to review.txt.
+# Headless code review via Cursor Agent CLI; writes feedback to review.md.
 # Usage: `just code-review` or `just code-review model=opus-4.6`
 code-review model='composer-2.5':
 	pwsh -NoProfile -File scripts/code-review.ps1 -Model "{{model}}"
