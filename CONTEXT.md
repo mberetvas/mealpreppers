@@ -82,9 +82,16 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 - **Desktop** top navigation includes **Saved Weekplans** (`/saved-weekplans`).
 - **Mobile** bottom bar focuses Recipes, Plan, Shopping List, and More; the **More** hub lists the same primary destinations as desktop, including Saved Weekplans.
 
+## Recipe Catalog
+
+**Public Recipe Catalog**:
+All Recipe Catalog entries are publicly readable. `GET /api/v1/recipes/:id` performs no **Planning Principal** check by design — any client may fetch any recipe without authentication. This keeps the catalog a shared reference layer that the Shopping list and Planner consume without ownership constraints.
+_Future consideration_: any batch endpoint or private-recipe feature must revisit visibility enforcement consistent with the requesting **Planning Principal**.
+_Avoid_: per-user recipe gating (unless explicitly designed)
+
 ## Shopping list
 
-Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is built from one **Saved Weekplan** and the **Recipe Catalog**.
+Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is built from one **Saved Weekplan** and the **Public Recipe Catalog**.
 
 **Shopping list**:
 Ingredients for all meals in a **Saved Weekplan**, grouped into **recipe sections** (one block per distinct recipe in slot order), with quantities scaled by how often that recipe appears in the week grid.
