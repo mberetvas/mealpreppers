@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { formatShoppingListIngredient } from '../../utils/shoppingList'
 import ShoppingListPage from '../../app/pages/shopping-list.vue'
 

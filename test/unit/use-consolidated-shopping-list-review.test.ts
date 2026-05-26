@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ref } from 'vue'
 import { useConsolidatedShoppingList, type ConsolidationResponse } from '../../app/composables/useConsolidatedShoppingList'
-import type { PolishHint } from '../../server/services/shopping-list/polishHintBuilder'
 
 function makePendingReviewResponse(): ConsolidationResponse {
   return {

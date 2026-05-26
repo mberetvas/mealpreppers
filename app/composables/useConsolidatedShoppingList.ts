@@ -4,6 +4,7 @@ import type { PolishResponseChange } from '~~/server/services/shopping-list/poli
 import type { PolishStatus } from '~~/server/services/shopping-list/consolidationService'
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
 import type { SavedConsolidatedShoppingListRecord, SavedShoppingListLine, ShoppingListFlags } from '~~/server/services/shopping-list/consolidatedShoppingListRepository'
+import type { WeekTemplateRowWithShoppingListFlags } from '~~/server/services/planning/savedWeekplansRepository'
 
 export interface ConsolidationResponse {
   consolidatedLines: MergedLine[]
@@ -37,9 +38,9 @@ export function useConsolidatedShoppingList(
     savelist = (id: string, lines: SavedShoppingListLine[]) =>
       $fetch<SavedConsolidatedShoppingListRecord>(`/api/v1/saved-weekplans/${id}/consolidated-shopping-list`, { method: 'PUT', body: { lines } }),
     fetchPlanFlags = (id: string) =>
-      $fetch<ShoppingListFlags>(`/api/v1/saved-weekplans/${id}`, { method: 'GET' }).then(r => ({
-        hasSavedShoppingList: (r as any).hasSavedShoppingList ?? false,
-        shoppingListDeprecated: (r as any).shoppingListDeprecated ?? false,
+      $fetch<WeekTemplateRowWithShoppingListFlags>(`/api/v1/saved-weekplans/${id}`, { method: 'GET' }).then(r => ({
+        hasSavedShoppingList: r.hasSavedShoppingList,
+        shoppingListDeprecated: r.shoppingListDeprecated,
       })),
   } = options
 

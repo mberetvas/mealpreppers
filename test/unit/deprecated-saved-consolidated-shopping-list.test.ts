@@ -204,8 +204,8 @@ describe('useConsolidatedShoppingList — deprecated state', () => {
       confirmedAt: '2026-05-26T10:00:00.000Z',
     }
 
-    // The plan body has since changed
-    const changedFingerprint = computeSourceFingerprint(makeWeekPlanBody({
+    // The plan body has since changed (fingerprint no longer matches savedRecord.sourceFingerprint)
+    const _changedFingerprint = computeSourceFingerprint(makeWeekPlanBody({
       '1': { breakfast: { recipeId: 'recipe-b' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
     }))
 
