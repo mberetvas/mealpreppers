@@ -78,16 +78,21 @@ describe('useConsolidatedShoppingList — pending_review flow', () => {
     expect(reviewLines.value.find(l => l.id === 'INVENTED')).toBeUndefined()
   })
 
-  it('confirmReview applies edited lines to consolidatedLines and sets status to polished', async () => {
+  it('confirmReview applies edited lines to consolidatedLines and sets status to polished after save succeeds', async () => {
     const planId = ref('plan-1')
     const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
+    const savelist = vi.fn().mockResolvedValue({
+      lines: [{ id: 'L1', name: 'cherry tomaten', quantity: 400, unit: 'g' }],
+      sourceFingerprint: 'fp',
+      confirmedAt: '2026-05-26T12:00:00.000Z',
+    })
 
     const { consolidate, updateReviewLine, confirmReview, consolidatedLines, polishStatus } =
-      useConsolidatedShoppingList(planId, { fetchConsolidate })
+      useConsolidatedShoppingList(planId, { fetchConsolidate, savelist })
 
     await consolidate()
     updateReviewLine('L1', { name: 'cherry tomaten', quantity: 400 })
-    confirmReview()
+    await confirmReview()
 
     expect(polishStatus.value).toBe('polished')
     expect(consolidatedLines.value[0].name).toBe('cherry tomaten')
@@ -95,18 +100,50 @@ describe('useConsolidatedShoppingList — pending_review flow', () => {
     expect(consolidatedLines.value[1].name).toBe('olijfolie')
   })
 
-  it('confirmReview clears hints', async () => {
+  it('confirmReview clears hints after save succeeds', async () => {
     const planId = ref('plan-1')
     const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
+    const savelist = vi.fn().mockResolvedValue({
+      lines: [],
+      sourceFingerprint: 'fp',
+      confirmedAt: '2026-05-26T12:00:00.000Z',
+    })
 
     const { consolidate, confirmReview, hints } =
-      useConsolidatedShoppingList(planId, { fetchConsolidate })
+      useConsolidatedShoppingList(planId, { fetchConsolidate, savelist })
 
     await consolidate()
     expect(hints.value).toHaveLength(1)
 
-    confirmReview()
+    await confirmReview()
     expect(hints.value).toHaveLength(0)
+  })
+
+  it('confirmReview keeps pending_review and sets saveError when persistence fails', async () => {
+    const planId = ref('plan-1')
+    const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
+    const savelist = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    const {
+      consolidate,
+      updateReviewLine,
+      confirmReview,
+      polishStatus,
+      saveError,
+      reviewLines,
+      consolidatedLines,
+    } = useConsolidatedShoppingList(planId, { fetchConsolidate, savelist })
+
+    await consolidate()
+    updateReviewLine('L1', { name: 'cherry tomaten', quantity: 400 })
+    const linesBeforeConfirm = reviewLines.value.map(l => ({ ...l }))
+
+    await confirmReview()
+
+    expect(saveError.value).toBe('Network error')
+    expect(polishStatus.value).toBe('pending_review')
+    expect(reviewLines.value).toEqual(linesBeforeConfirm)
+    expect(consolidatedLines.value[0]?.name).toBe('tomaten')
   })
 
   it('baseline_fallback still shows existing warning UX without review', async () => {

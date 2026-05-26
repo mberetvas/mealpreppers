@@ -55,6 +55,8 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     reset: vi.fn(),
     hints: ref<unknown[]>([]),
     reviewLines: ref<unknown[]>([]),
+    saving: ref(false),
+    saveError: ref<string | null>(null),
     updateReviewLine: vi.fn(),
     confirmReview: vi.fn(),
   }
@@ -92,6 +94,22 @@ describe('shopping-list page: polish review entry', () => {
     ]
 
     const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(wrapper.find('[data-testid="polish-review"]').exists()).toBe(true)
+  })
+
+  it('shows save error banner during review when persistence failed', () => {
+    const { consolidatedState } = setupGlobals({ plan: 'plan-1', view: 'consolidated' })
+    consolidatedState.hasConsolidated.value = true
+    consolidatedState.polishStatus.value = 'pending_review'
+    consolidatedState.reviewLines.value = [
+      { id: 'L1', name: 'tomaten', quantity: 600, unit: 'g', provenance: [] },
+    ]
+    consolidatedState.saveError.value = 'Could not save the shopping list.'
+
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    const banner = wrapper.find('[data-testid="save-error"]')
+    expect(banner.exists()).toBe(true)
+    expect(banner.text()).toContain('Could not save the shopping list.')
     expect(wrapper.find('[data-testid="polish-review"]').exists()).toBe(true)
   })
 

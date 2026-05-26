@@ -161,18 +161,18 @@ export function useConsolidatedShoppingList(
       quantity: l.quantity,
       unit: l.unit,
     }))
+    const confirmedLines = reviewLines.value.map(l => ({ ...l }))
 
-    consolidatedLines.value = reviewLines.value.map(l => ({ ...l }))
-    polishStatus.value = 'polished'
-    hints.value = []
-    reviewLines.value = []
-
-    // Persist in background
     saving.value = true
     saveError.value = null
     try {
       const result = await savelist(planId.value, linesToSave)
+      consolidatedLines.value = confirmedLines
+      polishStatus.value = 'polished'
+      hints.value = []
+      reviewLines.value = []
       savedList.value = result
+      shoppingListDeprecated.value = false
     }
     catch (error: unknown) {
       saveError.value = error instanceof Error ? error.message : 'Could not save the shopping list.'

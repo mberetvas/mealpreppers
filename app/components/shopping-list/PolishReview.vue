@@ -5,12 +5,15 @@ import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuil
 import type { ShoppingListSection } from '~~/utils/shoppingList'
 import { formatMergedLine, formatShoppingListIngredient } from '~~/utils/shoppingList'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   reviewLines: MergedLine[]
   baselineLines: MergedLine[]
   hints: PolishHint[]
   sections: ShoppingListSection[]
-}>()
+  saving?: boolean
+}>(), {
+  saving: false,
+})
 
 const emit = defineEmits<{
   'update-line': [lineId: string, fields: Partial<Pick<MergedLine, 'name' | 'quantity' | 'unit'>>]
@@ -49,7 +52,7 @@ function acknowledgeHint(hint: PolishHint): void {
 }
 
 function handleConfirm(): void {
-  if (confirmBlocked.value) return
+  if (confirmBlocked.value || props.saving) return
   emit('confirm')
 }
 </script>
@@ -177,11 +180,12 @@ function handleConfirm(): void {
           type="button"
           data-testid="confirm-review"
           class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
-          :disabled="confirmBlocked"
+          :disabled="confirmBlocked || saving"
+          :aria-busy="saving"
           @click="handleConfirm"
         >
           <span class="material-symbols-outlined text-[20px]" aria-hidden="true">check</span>
-          Confirm
+          {{ saving ? 'Saving…' : 'Confirm' }}
         </button>
         <span
           v-if="confirmBlocked"

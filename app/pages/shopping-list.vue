@@ -19,6 +19,8 @@ const {
   reviewLines,
   shoppingListDeprecated,
   savedList,
+  saving,
+  saveError,
   consolidate,
   editSaved,
   updateReviewLine,
@@ -383,11 +385,22 @@ useHead(() => ({
 
         <!-- Pending review: polish needs human review -->
         <template v-else-if="hasConsolidated && polishStatus === 'pending_review'">
+          <div
+            v-if="saveError"
+            data-testid="save-error"
+            class="rounded-2xl bg-atelier-cream-error px-5 py-4 text-sm font-semibold text-atelier-error-foreground"
+            role="alert"
+            aria-live="assertive"
+          >
+            <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">error</span>
+            {{ saveError }}
+          </div>
           <ShoppingListPolishReview
             :review-lines="reviewLines"
             :baseline-lines="baselineLines"
             :hints="hints"
             :sections="sections"
+            :saving="saving"
             @update-line="updateReviewLine"
             @confirm="confirmReview"
           />
