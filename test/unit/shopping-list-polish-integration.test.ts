@@ -113,10 +113,9 @@ describe('consolidation service with harness validation (issue #022)', () => {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'Fusilli', quantity: 400, unit: 'g' },
-              { id: 'L2', name: 'Olijfolie', quantity: 2, unit: 'el' },
+              { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
+              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
-            changes: [{ id: 'L1', reason: 'Renamed to store label' }],
           },
         }),
       }
@@ -130,8 +129,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('polished')
-      expect(result.consolidatedLines[0].name).toBe('Fusilli')
-      expect(result.changes).toHaveLength(1)
+      expect(result.consolidatedLines[0].name).toBe('pasta')
     })
 
     it('uses polished lines as consolidatedLines when harness passes', async () => {
@@ -139,12 +137,8 @@ describe('consolidation service with harness validation (issue #022)', () => {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'Penne', quantity: 400, unit: 'g' },
-              { id: 'L2', name: 'Extra vierge olijfolie', quantity: 2, unit: 'el' },
-            ],
-            changes: [
-              { id: 'L1', reason: 'Specific pasta type' },
-              { id: 'L2', reason: 'Dutch store label' },
+              { id: 'L1', name: 'pasta', quantity: 0.4, unit: 'kg' },
+              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
         }),
@@ -160,8 +154,8 @@ describe('consolidation service with harness validation (issue #022)', () => {
 
       expect(result.polishStatus).toBe('polished')
       expect(result.consolidatedLines).toHaveLength(2)
-      expect(result.consolidatedLines[0].name).toBe('Penne')
-      expect(result.consolidatedLines[1].name).toBe('Extra vierge olijfolie')
+      expect(result.consolidatedLines[0].name).toBe('pasta')
+      expect(result.consolidatedLines[0].unit).toBe('kg')
       expect(result.baselineLines[0].name).toBe('pasta')
     })
 
@@ -246,7 +240,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'pasta', quantity: 400, unit: 'kg' }, // unit-policy violation
+              { id: 'L1', name: 'fusilli', quantity: 400, unit: 'g' },
               { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
@@ -262,9 +256,8 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('pending_review')
-      // AI lines are preserved, not replaced with baseline
-      expect(result.consolidatedLines[0].unit).toBe('kg')
-      expect(result.hints).toContainEqual(expect.objectContaining({ rule: 'unit-policy' }))
+      expect(result.consolidatedLines.find(l => l.id === 'L1')?.name).toBe('fusilli')
+      expect(result.hints).toContainEqual(expect.objectContaining({ rule: 'name-unchanged' }))
     })
 
     it('includes polishResponse and hints in pending_review result', async () => {
@@ -344,6 +337,69 @@ describe('consolidation service with harness validation (issue #022)', () => {
           failuresByRule: expect.any(Object),
         }),
       )
+    })
+  })
+
+  describe('cross-unit baseline (deterministic pre-polish)', () => {
+    it('merges g and kg into fewer baselineLines when AI is skipped', async () => {
+      const crossUnitPlan = {
+        ...makeSavedWeekplan(),
+        body: {
+          version: 'week_v1' as const,
+          days: {
+            '1': { breakfast: { recipeId: 'recipe-1' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+            '2': { breakfast: { recipeId: 'recipe-2' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+            '3': { breakfast: { recipeId: null }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+            '4': { breakfast: { recipeId: null }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+            '5': { breakfast: { recipeId: null }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+            '6': { breakfast: { recipeId: null }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+            '7': { breakfast: { recipeId: null }, lunch: { recipeId: null }, dinner: { recipeId: null } },
+          },
+        },
+      }
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: crossUnitPlan })
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-1', 'Salad', [{ name: 'tomaten', quantity: 400, unit: 'g' }]),
+          makeRecipe('recipe-2', 'Stew', [{ name: 'tomaten', quantity: 0.5, unit: 'kg' }]),
+        ],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.polishStatus).toBe('ai_skipped')
+      expect(result.baselineLines).toHaveLength(1)
+      expect(result.baselineLines[0]).toMatchObject({ name: 'tomaten', quantity: 900, unit: 'g' })
+      expect(result.consolidatedLines).toEqual(result.baselineLines)
+    })
+
+    it('sorts consolidatedLines by supermarket aisle when AI is skipped', async () => {
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [makeRecipe('recipe-1', 'Mix', [
+          { name: 'melk', quantity: 1, unit: 'l' },
+          { name: 'tomaten', quantity: 500, unit: 'g' },
+        ])],
+      })
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.polishStatus).toBe('ai_skipped')
+      expect(result.consolidatedLines.map(l => l.name)).toEqual(['tomaten', 'melk'])
+      expect(result.baselineLines.map(l => l.name)).toEqual(['melk', 'tomaten'])
     })
   })
 

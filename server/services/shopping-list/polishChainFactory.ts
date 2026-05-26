@@ -20,12 +20,13 @@ const PolishResponseSchema = z.object({
   changes: z.array(z.object({
     id: z.string(),
     reason: z.string(),
+    absorbedIds: z.array(z.string()).optional(),
   })).optional(),
 })
 
 // --- Prompt templates (TypeScript-owned, no external markdown) ---
 
-const SYSTEM_PROMPT = `You are a Dutch shopping list optimizer for Belgian/Dutch households.
+const SYSTEM_PROMPT = `You are a shopping list quantity consolidator.
 
 You receive a JSON object with this shape:
 {{
@@ -40,17 +41,18 @@ You receive a JSON object with this shape:
   ]
 }}
 
-Your task:
-1. Rename ingredients to Dutch supermarket-style labels (e.g., "tomaten" → "cherry tomaten" if appropriate based on provenance context).
-2. Keep all line IDs from the input — do NOT invent new IDs or remove existing ones.
-3. Do NOT increase any quantity beyond what is provided.
-4. Do NOT change units — keep the exact same unit for each line.
-5. Do NOT add ingredients that are not in the input.
-6. Optionally provide a "changes" array explaining what you renamed and why.
+Hard rules:
+1. Copy every "name" field verbatim — no translate, synonym, pluralize, or strip preparation suffix.
+2. Only merge lines with identical "name" strings. When merging, convert units only within allowed families: g↔kg, ml↔dl↔l. Never convert mass↔volume or mass↔count.
+3. Keep one row per baseline id unless merging identical names — then keep the lowest id (e.g. L1) and list absorbed ids in "changes".
+4. Do NOT invent new line ids. Do NOT add ingredients not in the input.
+5. Do NOT increase total quantity for an ingredient name beyond the sum already present in the input (after unit conversion).
+6. Optionally provide "changes" with "id", "reason", and "absorbedIds" when lines are merged.
+7. Do not reorder lines for store aisles — the server sorts the final list after your response.
 
 Return ONLY the structured output with "lines" and optional "changes".`
 
-const USER_TEMPLATE = `Polish this shopping list:
+const USER_TEMPLATE = `Consolidate this shopping list. Preserve every ingredient name exactly.
 
 {polishContextJson}`
 

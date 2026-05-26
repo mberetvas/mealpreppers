@@ -145,9 +145,13 @@ _Avoid_: fuzzy merge, synonym merge
 The second step of **Shopping list consolidation**; the model may refine the entire post–exact-merge list (names, grouping, quantities where units align)—not limited to leftover unmerged lines.
 _Avoid_: leftover-only merge, fuzzy pass
 
+**Shopping list cross-unit merge**:
+Deterministic step after **Shopping list exact merge** that combines lines with the same exact ingredient name and convertible units (g↔kg, ml↔dl↔l) within one dimension; survivor line keeps the lowest line id and its unit.
+_Avoid_: fuzzy synonym merge, AI unit conversion
+
 **Shopping list polish baseline**:
-The ingredient list immediately after **Shopping list exact merge**; used by the server harness to validate **Shopping list AI polish** and by the UI to show what changed.
-_Avoid_: raw list, pre-AI snapshot
+The ingredient list immediately after **Shopping list cross-unit merge**; used by the server harness to validate **Shopping list AI polish** and by the UI to show what changed.
+_Avoid_: raw list, post–exact-merge only
 
 **Shopping list polish diff**:
 UI indication of lines that differ between the **Shopping list polish baseline** and the **Consolidated shopping list** after AI polish.
@@ -162,7 +166,7 @@ The payload for **Shopping list AI polish**: exact-merge lines plus provenance (
 _Avoid_: full prompt dump, raw catalog blob
 
 **Shopping list consolidation service**:
-Server-side orchestration that loads the **Saved Weekplan**, resolves catalog recipes, runs **Shopping list exact merge**, then **Shopping list AI polish**; the client triggers it via **Consolidate action** and renders the result.
+Server-side orchestration that loads the **Saved Weekplan**, resolves catalog recipes, runs **Shopping list exact merge**, **Shopping list cross-unit merge**, then **Shopping list AI polish**; the client triggers it via **Consolidate action** and renders the result.
 _Avoid_: client-side merge API, browser LLM
 
 **Shopping list polish response**:
@@ -173,13 +177,13 @@ _Avoid_: markdown list, free text
 When **Shopping list AI polish** cannot run (missing API key, timeout, parse error), the UI falls back to **Shopping list polish baseline** with a warning. Harness rule violations no longer trigger fallback; they produce **Shopping list polish hint**s during **Shopping list polish review** instead.
 _Avoid_: harness reject hides AI output, hard fail empty view
 
-**Shopping list unit policy (v1)**:
-**Shopping list AI polish** may merge or rename only when units already match; no unit conversion in the first release.
-_Avoid_: smart units, auto-convert
+**Shopping list unit policy (v2)**:
+**Shopping list cross-unit merge** converts g↔kg and ml↔dl↔l deterministically. **Shopping list AI polish** may use the same conversions within a dimension but must not convert mass↔volume or mass↔count; `el`↔`ml` is not supported.
+_Avoid_: smart units across dimensions, AI-only conversion
 
-**Shopping list polish locale (v1)**:
-Canonical ingredient names and `changes` rationale from **Shopping list AI polish** are Dutch store-style labels, regardless of mixed input languages.
-_Avoid_: auto-detect language, English defaults
+**Shopping list name policy (v2)**:
+Ingredient `name` values are copied verbatim through consolidation; **Shopping list AI polish** must not rename, translate, or pluralize. The harness enforces **name-unchanged** per baseline line id.
+_Avoid_: Dutch store labels, synonym merge in AI
 
 **Consolidated shopping list persistence**:
 User-confirmed **Consolidated shopping list** is stored on the **Saved Weekplan** and reused on later visits until the plan’s shopping source changes; otherwise the user runs **Consolidate action** again.
@@ -234,7 +238,7 @@ _Avoid_: sign-in required, public consolidate
 _Avoid_: block consolidate, all-or-nothing merge
 
 **Shopping list polish reference (planned)**:
-During human review of **Shopping list AI polish**, the left pane switches by tab between **Recipe sections view** (per-recipe source) and **Shopping list polish baseline** (post–exact-merge reference with stable line IDs).
+During human review of **Shopping list AI polish**, the left pane switches by tab between **Recipe sections view** (per-recipe source) and **Shopping list polish baseline** (post–cross-unit-merge reference with stable line IDs).
 _Avoid_: split screen only, single reference column
 
 **Shopping list polish review (planned)**:
@@ -242,7 +246,7 @@ After **Consolidate action** succeeds at the model, the UI shows an editable AI 
 _Avoid_: auto-apply polish, harness-only gate
 
 **Shopping list polish hint (planned)**:
-A non-blocking warning on an editable AI line when it still violates a former harness rule (e.g. unit-policy, quantity cap); the user may fix or ignore before confirm.
+A non-blocking warning on an editable AI line when it still violates a harness rule (e.g. name-unchanged, unit-conversion, quantity cap); the user may fix or ignore before confirm.
 _Avoid_: validation error modal, hard reject
 
 **Shopping list polish confirm (planned)**:
@@ -294,16 +298,17 @@ _Avoid_: public URL (overloaded), CORS origin
 - **Shopping list consolidation service** owns exact merge and AI polish; the page does not post ingredient payloads for consolidation
 - **Shopping list AI polish** must return a **Shopping list polish response** (JSON lines + optional changes), not prose or markdown
 - On AI polish failure, **Shopping list polish fallback** applies: baseline visible, retry available
-- **Shopping list unit policy (v1)** forbids AI unit conversion; different units remain separate lines
-- **Shopping list polish locale (v1)** requires Dutch canonical names in **Shopping list polish response**
+- **Shopping list unit policy (v2)** allows deterministic and AI unit conversion only within g↔kg and ml↔dl↔l; never mass↔volume or mass↔count
+- **Shopping list name policy (v2)** requires verbatim ingredient names; AI renames fail harness **name-unchanged**
 - **Consolidated shopping list persistence** stores user-confirmed lists on the **Saved Weekplan**; ephemeral-only behavior (ADR 0002 v1) is superseded by ADR 0003
 - **Shopping list polish retry policy (v1)** is single-attempt AI; failures go straight to **Shopping list polish fallback**
 - **Shopping list consolidation access** mirrors **Saved Weekplan** read access for the linked plan
 - **Shopping list partial consolidation** applies under **Shopping list recipe resolution failure**; missing recipes are excluded, not fatal
-- **Shopping list consolidation** always runs **Shopping list exact merge** before **Shopping list AI polish**
+- **Shopping list consolidation** always runs **Shopping list exact merge**, then **Shopping list cross-unit merge**, before **Shopping list AI polish**
 - **Shopping list exact merge** never merges lines with different normalized names or units
-- **Shopping list AI polish** may change any line produced by **Shopping list exact merge**, not only unmerged leftovers
-- The consolidation harness rejects or clamps AI output that invents ingredients or increases quantities beyond the **Shopping list polish baseline** sums per name and unit
+- **Shopping list cross-unit merge** merges only lines with the same exact `name` and convertible units within one dimension
+- **Shopping list AI polish** may further consolidate identical names with allowed unit conversion; it must not rename ingredients
+- The consolidation harness rejects AI output that renames ingredients, invents line ids, or exceeds quantity caps for the ingredient name and unit dimension
 - **Shopping list polish diff** compares **Consolidated shopping list** to **Shopping list polish baseline** for user trust
 
 ## Example dialogue

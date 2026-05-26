@@ -9,10 +9,12 @@ import { getSavedWeekplanById } from '../planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../utils/planningErrors'
 import { collectRecipeOccurrences, buildShoppingList } from '../../../utils/shoppingList'
 import { exactMerge, buildPolishContext } from './exactMerge'
+import { crossUnitMerge } from './crossUnitMerge'
 import { canonicalizePolishResponse, validatePolishResponse } from './polishHarness'
 import { buildPolishHints } from './polishHintBuilder'
 import { computeSourceFingerprint } from './sourceFingerprint'
 import { isPolishAbortTimeout } from './polishChainFactory'
+import { sortShoppingListLines } from './aisleSort'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
@@ -105,9 +107,10 @@ export async function consolidateShoppingList(
     }
   }
 
-  // Exact merge
-  const baseline = exactMerge(sections)
-  const baselineLines = baseline.lines
+  // Exact merge then deterministic cross-unit merge (baseline for polish + harness)
+  const exactBaseline = exactMerge(sections)
+  const { lines: baselineLines, mergeChanges: crossUnitChanges } = crossUnitMerge(exactBaseline)
+  const baseline = { lines: baselineLines }
 
   // Polish port delegation
   const warnings: string[] = []
@@ -203,12 +206,22 @@ export async function consolidateShoppingList(
     }
   }
 
+  consolidatedLines = sortShoppingListLines(consolidatedLines)
+  if (polishResponse) {
+    polishResponse = {
+      ...polishResponse,
+      lines: sortShoppingListLines(polishResponse.lines),
+    }
+  }
+
   const latencyMs = Date.now() - startTime
   logger.info('shopping_list.consolidate_complete', {
     planId,
     latencyMs,
+    exactLineCount: exactBaseline.lines.length,
     baselineLineCount: baselineLines.length,
     consolidatedLineCount: consolidatedLines.length,
+    crossUnitMergeCount: crossUnitChanges.length,
     polishStatus,
     ...(hints ? { hintCount: hints.length } : {}),
   })

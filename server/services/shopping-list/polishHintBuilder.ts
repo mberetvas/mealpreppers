@@ -2,6 +2,7 @@ import type { MergedLine, PolishBaseline } from './exactMerge'
 import type { PolishResponse, PolishResponseLine, ValidationRule } from './polishHarness'
 import { normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 import { canonicalizePolishResponse } from './polishHarness'
+import { convertQuantity, unitDimension } from './crossUnitMerge'
 
 export type HintSeverity = 'info' | 'error'
 
@@ -16,7 +17,8 @@ export interface PolishHint {
 const SEVERITY_BY_RULE: Record<ValidationRule, HintSeverity> = {
   'no-invented-ingredients': 'error',
   'quantity-cap': 'error',
-  'unit-policy': 'error',
+  'unit-conversion': 'error',
+  'name-unchanged': 'error',
   'no-removed-lines': 'info',
 }
 
@@ -30,8 +32,8 @@ export function buildPolishHints(response: PolishResponse, baseline: PolishBasel
   const canonicalized = canonicalizePolishResponse(response, baseline)
 
   const baselineLineById = new Map<string, MergedLine>(baseline.lines.map(l => [l.id, l]))
-  const baselineQuantityByNameUnit = buildQuantityMap(baseline)
-  const baselineUnitsByName = buildUnitsMap(baseline)
+  const absorbedBaselineIds = collectAbsorbedBaselineIds(canonicalized.changes)
+  const quantityCapByNameDimension = buildNameDimensionQuantityCapMap(baseline)
 
   const seenIds = new Set<string>()
 
@@ -58,12 +60,13 @@ export function buildPolishHints(response: PolishResponse, baseline: PolishBasel
       continue
     }
 
-    checkUnitPolicy(line, baselineLine, baselineUnitsByName, hints)
-    checkQuantityCap(line, baselineLine, baselineQuantityByNameUnit, hints)
+    checkNameUnchanged(line, baselineLine, hints)
+    checkUnitConversion(line, baselineLine, baseline, hints)
+    checkQuantityCap(line, baselineLine, quantityCapByNameDimension, hints)
   }
 
   for (const baselineLine of baseline.lines) {
-    if (!seenIds.has(baselineLine.id)) {
+    if (!seenIds.has(baselineLine.id) && !absorbedBaselineIds.has(baselineLine.id)) {
       hints.push({
         lineId: baselineLine.id,
         rule: 'no-removed-lines',
@@ -76,60 +79,124 @@ export function buildPolishHints(response: PolishResponse, baseline: PolishBasel
   return hints
 }
 
-function buildQuantityMap(baseline: PolishBaseline): Map<string, number> {
-  const map = new Map<string, number>()
+function collectAbsorbedBaselineIds(changes: PolishResponse['changes']): Set<string> {
+  const absorbed = new Set<string>()
+  if (!changes) return absorbed
+  for (const change of changes) {
+    for (const id of change.absorbedIds ?? []) {
+      absorbed.add(id)
+    }
+  }
+  return absorbed
+}
+
+type NameDimensionKey = string
+
+function nameDimensionKey(name: string, unit: string | undefined): NameDimensionKey {
+  const dim = unitDimension(unit)
+  return `${name}::${dim}`
+}
+
+function buildNameDimensionQuantityCapMap(baseline: PolishBaseline): Map<NameDimensionKey, number> {
+  const map = new Map<NameDimensionKey, number>()
+  const linesByKey = new Map<NameDimensionKey, MergedLine[]>()
+
   for (const line of baseline.lines) {
     if (line.quantity === undefined) continue
-    const key = quantityKey(line.name, line.unit)
-    map.set(key, (map.get(key) ?? 0) + line.quantity)
+    const key = nameDimensionKey(line.name, line.unit)
+    const group = linesByKey.get(key) ?? []
+    group.push(line)
+    linesByKey.set(key, group)
   }
+
+  for (const [key, lines] of linesByKey) {
+    const targetUnit = normalizeShoppingListUnit(lines[0].unit)
+    if (!targetUnit) continue
+    let total = 0
+    for (const line of lines) {
+      if (line.quantity === undefined || line.unit === undefined) continue
+      const converted = convertQuantity(line.quantity, line.unit, targetUnit)
+      total += converted ?? line.quantity
+    }
+    map.set(key, roundPolishQuantity(total))
+  }
+
   return map
 }
 
-function buildUnitsMap(baseline: PolishBaseline): Map<string, Set<string | undefined>> {
-  const map = new Map<string, Set<string | undefined>>()
-  for (const line of baseline.lines) {
-    const name = line.name.toLowerCase()
-    if (!map.has(name)) map.set(name, new Set())
-    map.get(name)!.add(line.unit)
-  }
-  return map
-}
-
-function quantityKey(name: string, unit: string | undefined): string {
-  return `${name.toLowerCase()}::${normalizeShoppingListUnit(unit) ?? ''}`
-}
-
-function checkUnitPolicy(
+function checkNameUnchanged(
   line: PolishResponseLine,
   baselineLine: MergedLine,
-  baselineUnitsByName: Map<string, Set<string | undefined>>,
   hints: PolishHint[],
 ): void {
-  const allowedUnits = baselineUnitsByName.get(baselineLine.name.toLowerCase())
-  const normalizedUnit = normalizeShoppingListUnit(line.unit)
-
-  if (!allowedUnits?.has(normalizedUnit)) {
+  if (line.name.trim() !== baselineLine.name.trim()) {
     hints.push({
       lineId: line.id,
-      rule: 'unit-policy',
-      severity: SEVERITY_BY_RULE['unit-policy'],
-      message: `Unit "${normalizedUnit ?? ''}" not present in baseline for line "${line.id}"`,
+      rule: 'name-unchanged',
+      severity: SEVERITY_BY_RULE['name-unchanged'],
+      message: `Name "${line.name}" differs from baseline "${baselineLine.name}"`,
     })
   }
+}
+
+function checkUnitConversion(
+  line: PolishResponseLine,
+  baselineLine: MergedLine,
+  baseline: PolishBaseline,
+  hints: PolishHint[],
+): void {
+  const responseUnit = normalizeShoppingListUnit(line.unit)
+  const baselineUnit = normalizeShoppingListUnit(baselineLine.unit)
+
+  if (responseUnit === baselineUnit) return
+  if (baselineUnit && responseUnit && convertQuantity(1, baselineUnit, responseUnit) !== null) return
+
+  const allowedUnits = baselineUnitsForNameAndDimension(baseline, baselineLine.name, baselineLine.unit)
+  if (responseUnit && allowedUnits.has(responseUnit)) return
+
+  hints.push({
+    lineId: line.id,
+    rule: 'unit-conversion',
+    severity: SEVERITY_BY_RULE['unit-conversion'],
+    message: `Unit "${responseUnit ?? ''}" is not allowed for line "${line.id}"`,
+  })
+}
+
+function baselineUnitsForNameAndDimension(
+  baseline: PolishBaseline,
+  name: string,
+  referenceUnit: string | undefined,
+): Set<string> {
+  const dim = unitDimension(referenceUnit)
+  const units = new Set<string>()
+  for (const line of baseline.lines) {
+    if (line.name !== name) continue
+    if (unitDimension(line.unit) !== dim) continue
+    const normalized = normalizeShoppingListUnit(line.unit)
+    if (normalized) units.add(normalized)
+  }
+  return units
 }
 
 function checkQuantityCap(
   line: PolishResponseLine,
   baselineLine: MergedLine,
-  baselineQuantityByNameUnit: Map<string, number>,
+  quantityCapByNameDimension: Map<NameDimensionKey, number>,
   hints: PolishHint[],
 ): void {
-  const key = quantityKey(baselineLine.name, line.unit)
-  const cap = baselineQuantityByNameUnit.get(key)
   const quantity = line.quantity === undefined ? undefined : roundPolishQuantity(line.quantity)
+  if (quantity === undefined) return
 
-  if (cap === undefined || quantity === undefined) return
+  const capInBaselineUnit = quantityCapByNameDimension.get(
+    nameDimensionKey(baselineLine.name, baselineLine.unit),
+  )
+  if (capInBaselineUnit === undefined) return
+
+  const responseUnit = normalizeShoppingListUnit(line.unit) ?? normalizeShoppingListUnit(baselineLine.unit)
+  if (!responseUnit) return
+
+  const capConverted = convertQuantity(capInBaselineUnit, baselineLine.unit!, responseUnit)
+  const cap = capConverted ?? capInBaselineUnit
 
   if (quantity > cap) {
     hints.push({

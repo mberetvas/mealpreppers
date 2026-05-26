@@ -169,8 +169,34 @@ describe('createShoppingListPolishChain config validation', () => {
   })
 })
 
-describe('validatePolishResponse model output quirks (issue harness)', () => {
-  it('accepts renamed lines when the model returns Dutch unit aliases', async () => {
+describe('shopping list polish prompt (v2)', () => {
+  it('system prompt preserves names and forbids Dutch supermarket renames', async () => {
+    const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
+
+    const prompt = await createShoppingListPolishPromptTemplate()
+    const messages = await prompt.formatMessages({ polishContextJson: '{}' })
+    const system = messages.find(m => m.getType() === 'system')!
+    const systemText = typeof system.content === 'string' ? system.content : String(system.content)
+
+    expect(systemText).toMatch(/verbatim|exact/i)
+    expect(systemText).not.toMatch(/Rename ingredients/i)
+    expect(systemText).not.toMatch(/supermarket-style/i)
+  })
+
+  it('user template asks to preserve ingredient names', async () => {
+    const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
+
+    const prompt = await createShoppingListPolishPromptTemplate()
+    const messages = await prompt.formatMessages({ polishContextJson: '{}' })
+    const user = messages.find(m => m.getType() === 'human')!
+    const userText = typeof user.content === 'string' ? user.content : String(user.content)
+
+    expect(userText).toMatch(/Preserve every ingredient name/i)
+  })
+})
+
+describe('validatePolishResponse model output quirks (v2 harness)', () => {
+  it('rejects renames but accepts unit aliases when names match', async () => {
     const { validatePolishResponse } = await import('../../server/services/shopping-list/polishHarness')
     const baseline = {
       lines: [
@@ -181,8 +207,8 @@ describe('validatePolishResponse model output quirks (issue harness)', () => {
 
     const result = validatePolishResponse({
       lines: [
-        { id: 'L1', name: 'Olijfolie extra vierge', quantity: 2, unit: 'eetlepel' },
-        { id: 'L2', name: 'Cherry tomaten', quantity: 500, unit: 'gram' },
+        { id: 'L1', name: 'olijfolie', quantity: 2, unit: 'eetlepel' },
+        { id: 'L2', name: 'tomaten', quantity: 500, unit: 'gram' },
       ],
     }, baseline)
 
