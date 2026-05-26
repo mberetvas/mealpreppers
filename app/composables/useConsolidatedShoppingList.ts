@@ -1,5 +1,6 @@
 import { ref, watch, type Ref } from 'vue'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
+import { sortShoppingListLines } from '~~/server/services/shopping-list/aisleSort'
 import type { PolishResponseChange } from '~~/server/services/shopping-list/polishHarness'
 import type { PolishStatus } from '~~/server/services/shopping-list/consolidationService'
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
@@ -78,12 +79,12 @@ export function useConsolidatedShoppingList(
       if (planId.value !== planAtStart) return
       if (result) {
         savedList.value = result
-        const lines = result.lines.map(l => ({
+        const lines = sortShoppingListLines(result.lines.map(l => ({
           ...l,
           quantity: l.quantity,
           unit: l.unit,
           provenance: [] as { recipeId: string, recipeTitle: string }[],
-        }))
+        })))
         consolidatedLines.value = lines
         baselineLines.value = lines.map(l => ({ ...l }))
         changes.value = []
@@ -127,7 +128,7 @@ export function useConsolidatedShoppingList(
       warnings.value = result.warnings
       hints.value = result.hints ?? []
       reviewLines.value = result.polishStatus === 'pending_review'
-        ? result.consolidatedLines.map(l => ({ ...l }))
+        ? sortShoppingListLines(result.consolidatedLines.map(l => ({ ...l })))
         : []
       hasConsolidated.value = true
     }
@@ -162,7 +163,7 @@ export function useConsolidatedShoppingList(
       quantity: l.quantity,
       unit: l.unit,
     }))
-    const confirmedLines = reviewLines.value.map(l => ({ ...l }))
+    const confirmedLines = sortShoppingListLines(reviewLines.value.map(l => ({ ...l })))
 
     saving.value = true
     saveError.value = null
@@ -188,12 +189,12 @@ export function useConsolidatedShoppingList(
     if (!savedList.value) return
     if (shoppingListDeprecated.value) return
 
-    const lines = savedList.value.lines.map(l => ({
+    const lines = sortShoppingListLines(savedList.value.lines.map(l => ({
       ...l,
       quantity: l.quantity,
       unit: l.unit,
       provenance: [] as { recipeId: string, recipeTitle: string }[],
-    }))
+    })))
 
     reviewLines.value = lines.map(l => ({ ...l }))
     baselineLines.value = lines.map(l => ({ ...l }))
