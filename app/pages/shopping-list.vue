@@ -18,7 +18,9 @@ const {
   hints,
   reviewLines,
   shoppingListDeprecated,
+  savedList,
   consolidate,
+  editSaved,
   updateReviewLine,
   confirmReview,
 } = useConsolidatedShoppingList(planId)
@@ -466,7 +468,17 @@ useHead(() => ({
               </span>
             </li>
           </ul>
-          <div class="flex justify-center">
+          <div class="flex justify-center gap-3">
+            <button
+              v-if="savedList && !shoppingListDeprecated"
+              type="button"
+              data-testid="edit-saved-btn"
+              class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+              @click="editSaved"
+            >
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">edit</span>
+              Edit list
+            </button>
             <button
               type="button"
               data-testid="consolidate-btn"

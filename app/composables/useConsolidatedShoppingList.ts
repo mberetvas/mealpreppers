@@ -170,6 +170,24 @@ export function useConsolidatedShoppingList(
     }
   }
 
+  /** Enters edit mode for a saved shopping list: pre-fills reviewLines from savedList without calling consolidation. Skips hints (edit-only path). */
+  function editSaved(): void {
+    if (!savedList.value) return
+    if (shoppingListDeprecated.value) return
+
+    const lines = savedList.value.lines.map(l => ({
+      ...l,
+      quantity: l.quantity,
+      unit: l.unit,
+      provenance: [] as { recipeId: string, recipeTitle: string }[],
+    }))
+
+    reviewLines.value = lines.map(l => ({ ...l }))
+    baselineLines.value = lines.map(l => ({ ...l }))
+    hints.value = []
+    polishStatus.value = 'pending_review'
+  }
+
   /** Resets all consolidated state (e.g. on page leave or explicit clear). */
   function reset(): void {
     consolidating.value = false
@@ -205,6 +223,7 @@ export function useConsolidatedShoppingList(
     shoppingListDeprecated,
     consolidate,
     loadSavedList,
+    editSaved,
     updateReviewLine,
     confirmReview,
     reset,
