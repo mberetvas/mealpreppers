@@ -119,10 +119,14 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
+      // Both consolidatedLines and baselineLines are sorted, so they are equal for ai_skipped
       expect(result.consolidatedLines).toEqual(result.baselineLines)
       // recipe-1 appears twice (day 1 breakfast + day 2 breakfast), so 400*2 = 800g pasta
       const pastaLine = result.baselineLines.find(l => l.name === 'pasta')
       expect(pastaLine?.quantity).toBe(800)
+      // sla (produce) sorts before pasta (dry_goods)
+      expect(result.consolidatedLines[0].name).toBe('sla')
+      expect(result.consolidatedLines[1].name).toBe('pasta')
     })
 
     it('merges same ingredient from multiple recipes', async () => {
@@ -268,7 +272,10 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('polished')
-      expect(result.consolidatedLines[0].name).toBe('Pasta')
+      // Verify polished name is preserved (sla/produce sorts first, Pasta/dry_goods second)
+      const pastaLine = result.consolidatedLines.find(l => l.name === 'Pasta')
+      expect(pastaLine).toBeDefined()
+      expect(result.consolidatedLines[0].name).toBe('sla')
       expect(result.changes).toHaveLength(1)
       expect(mockPort.polish).toHaveBeenCalledOnce()
     })
@@ -287,7 +294,10 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('baseline_fallback')
+      // Both are sorted versions of the same baseline data
       expect(result.consolidatedLines).toEqual(result.baselineLines)
+      // sla (produce) sorts before pasta (dry_goods)
+      expect(result.consolidatedLines[0].name).toBe('sla')
       expect(result.warnings[0]).toContain('failed')
     })
 
@@ -316,8 +326,10 @@ describe('consolidateShoppingList service', () => {
       expect(result.polishResponse).toBeDefined()
       expect(result.hints).toBeDefined()
       expect(result.hints!.length).toBeGreaterThan(0)
-      // AI lines are NOT discarded
-      expect(result.consolidatedLines[0].quantity).toBe(9999)
+      // AI lines (L1=Pasta/dry_goods) are NOT discarded; sla/produce sorts before Pasta/dry_goods
+      const pastaLine = result.consolidatedLines.find(l => l.id === 'L1')
+      expect(pastaLine?.quantity).toBe(9999)
+      expect(result.consolidatedLines[0].name).toBe('sla')
     })
 
     it('returns sourceFingerprint in result', async () => {
@@ -603,6 +615,193 @@ describe('consolidateShoppingList service', () => {
         polishPort: null,
         openrouterApiKey: undefined,
       })).rejects.toMatchObject({ statusCode: 500 })
+    })
+  })
+
+  describe('store walk order sorting at server boundaries', () => {
+    /**
+     * Setup: recipe-1 has paprikapoeder (spices), recipe-2 has sla (produce) and melk (dairy).
+     * After exact merge (day-1 breakfast=recipe-1, day-1 lunch=recipe-2, day-2 breakfast=recipe-1):
+     *   L1 = paprikapoeder (spices), L2 = sla (produce), L3 = melk (dairy)
+     * Expected sorted order by store walk: L2 (produce) → L3 (dairy) → L1 (spices)
+     */
+    const SORTED_IDS = ['L2', 'L3', 'L1']
+
+    beforeEach(() => {
+      mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
+      mocks.listRecipes.mockResolvedValue({
+        ok: true,
+        value: [
+          makeRecipe('recipe-1', 'Spice Dish', [
+            { name: 'paprikapoeder', quantity: 1, unit: 'tl' },
+          ]),
+          makeRecipe('recipe-2', 'Salad', [
+            { name: 'sla', quantity: 1, unit: 'krop' },
+            { name: 'melk', quantity: 200, unit: 'ml' },
+          ]),
+        ],
+      })
+    })
+
+    it('ai_skipped: consolidatedLines are sorted by store walk order', async () => {
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.polishStatus).toBe('ai_skipped')
+      expect(result.consolidatedLines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('ai_skipped: baselineLines are sorted by store walk order', async () => {
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.polishStatus).toBe('ai_skipped')
+      expect(result.baselineLines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('baseline_fallback: consolidatedLines are sorted by store walk order', async () => {
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockRejectedValue(new Error('AI call failed')),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('baseline_fallback')
+      expect(result.consolidatedLines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('baseline_fallback: baselineLines are sorted by store walk order', async () => {
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockRejectedValue(new Error('AI call failed')),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('baseline_fallback')
+      expect(result.baselineLines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('polished: consolidatedLines are sorted by store walk order', async () => {
+      // Port returns lines in insertion order (L1=spices, L2=produce, L3=dairy); after polish consolidatedLines must be sorted
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockResolvedValue({
+          response: {
+            lines: [
+              { id: 'L1', name: 'paprikapoeder', quantity: 2, unit: 'tl' },
+              { id: 'L2', name: 'sla', quantity: 1, unit: 'krop' },
+              { id: 'L3', name: 'melk', quantity: 200, unit: 'ml' },
+            ],
+            changes: [],
+          },
+        }),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('polished')
+      expect(result.consolidatedLines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('pending_review: consolidatedLines are sorted by store walk order', async () => {
+      // Inflated quantity on L1 triggers quantity-cap violation → pending_review
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockResolvedValue({
+          response: {
+            lines: [
+              { id: 'L1', name: 'paprikapoeder', quantity: 9999, unit: 'tl' },
+              { id: 'L2', name: 'sla', quantity: 1, unit: 'krop' },
+              { id: 'L3', name: 'melk', quantity: 200, unit: 'ml' },
+            ],
+            changes: [{ id: 'L1', reason: 'Inflated quantity' }],
+          },
+        }),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('pending_review')
+      expect(result.consolidatedLines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('pending_review: polishResponse.lines are sorted by store walk order', async () => {
+      // Inflated quantity on L1 triggers quantity-cap violation → pending_review
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockResolvedValue({
+          response: {
+            lines: [
+              { id: 'L1', name: 'paprikapoeder', quantity: 9999, unit: 'tl' },
+              { id: 'L2', name: 'sla', quantity: 1, unit: 'krop' },
+              { id: 'L3', name: 'melk', quantity: 200, unit: 'ml' },
+            ],
+            changes: [{ id: 'L1', reason: 'Inflated quantity' }],
+          },
+        }),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('pending_review')
+      expect(result.polishResponse?.lines.map(l => l.id)).toEqual(SORTED_IDS)
+    })
+
+    it('sorting preserves ingredient names, quantities, units, IDs, and provenance', async () => {
+      // recipe-1 appears twice (day1-breakfast + day2-breakfast) → paprikapoeder quantity = 2 tl
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      const slaLine = result.consolidatedLines.find(l => l.id === 'L2')
+      const melkLine = result.consolidatedLines.find(l => l.id === 'L3')
+      const paprikapoederLine = result.consolidatedLines.find(l => l.id === 'L1')
+
+      expect(slaLine).toMatchObject({ id: 'L2', name: 'sla', quantity: 1, unit: 'krop' })
+      expect(melkLine).toMatchObject({ id: 'L3', name: 'melk', quantity: 200, unit: 'ml' })
+      expect(paprikapoederLine).toMatchObject({ id: 'L1', name: 'paprikapoeder', quantity: 2, unit: 'tl' })
+      expect(paprikapoederLine?.provenance).toHaveLength(1)
     })
   })
 })

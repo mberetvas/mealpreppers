@@ -9,6 +9,7 @@ export const AISLE_CATEGORY_ORDER = [
   'dairy',
   'frozen',
   'dry_goods',
+  'spices',
   'canned_sauces',
   'oils',
   'beverages',
@@ -22,7 +23,10 @@ interface AisleRule {
   keywords: string[]
 }
 
-/** First matching rule wins; frozen and proteins are checked before broad produce/dairy. */
+/** First matching rule wins; frozen and proteins are checked before broad produce/dairy.
+ *  Spices, oils, and canned_sauces are checked before produce to prevent false prefix
+ *  matches (e.g. paprikapoeder → paprika, appelazijn → appel, tomatenpuree → tomaten).
+ */
 const AISLE_RULES: AisleRule[] = [
   {
     category: 'frozen',
@@ -58,6 +62,34 @@ const AISLE_RULES: AisleRule[] = [
     ],
   },
   {
+    // Checked before produce so compound forms like paprikapoeder do not match
+    // the produce keyword paprika via prefix matching.
+    category: 'spices',
+    keywords: [
+      'paprikapoeder', 'kerriepoeder', 'currypoeder', 'chilipoeder', 'cayennepeper',
+      'kurkuma', 'komijn', 'kaneel', 'nootmuskaat', 'kardemom', 'oregano',
+      'kruidenmix', 'specerijenmix',
+    ],
+  },
+  {
+    // Checked before produce so compound forms like appelazijn do not match
+    // the produce keyword appel via prefix matching.
+    category: 'oils',
+    keywords: [
+      'olie', 'olijfolie', 'azijn', 'appelazijn', 'margarine', 'bakboter',
+    ],
+  },
+  {
+    // Checked before produce so tomaten-prefixed sauces (tomatenpuree, tomatenblokjes,
+    // gepelde tomaten) do not match the produce keyword tomaten via prefix matching.
+    category: 'canned_sauces',
+    keywords: [
+      'passata', 'gepelde tomaten', 'tomatenblokjes', 'tomatenpuree', 'tomatensaus',
+      'bouillon', 'sojasaus', 'ketjap', 'mosterd', 'ketchup', 'mayonaise', 'pesto',
+      'concentraat', 'blik', 'conserv', 'kappertjes', 'augurk', 'mais conserv',
+    ],
+  },
+  {
     category: 'produce',
     keywords: [
       'tomaat', 'tomaten', 'ui', 'uien', 'wortel', 'wortelen', 'paprika', 'komkommer',
@@ -76,20 +108,6 @@ const AISLE_RULES: AisleRule[] = [
       'rozijnen', 'noot', 'noten', 'amandel', 'amandelen', 'walnoot', 'linzen', 'kikkererwt',
       'kikkererwten', 'couscous', 'quinoa', 'havermout', 'muesli', 'cornflakes', 'paneermeel',
       'gist', 'chocolade',
-    ],
-  },
-  {
-    category: 'canned_sauces',
-    keywords: [
-      'passata', 'gepelde tomaten', 'tomatenblokjes', 'bouillon', 'sojasaus', 'ketjap',
-      'mosterd', 'ketchup', 'mayonaise', 'pesto', 'concentraat', 'blik', 'conserv',
-      'kappertjes', 'augurk', 'mais conserv',
-    ],
-  },
-  {
-    category: 'oils',
-    keywords: [
-      'olie', 'olijfolie', 'azijn', 'margarine', 'bakboter',
     ],
   },
   {

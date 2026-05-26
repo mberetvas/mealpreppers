@@ -69,4 +69,72 @@ describe('AISLE_CATEGORY_ORDER', () => {
   it('ends with other as catch-all', () => {
     expect(AISLE_CATEGORY_ORDER[AISLE_CATEGORY_ORDER.length - 1]).toBe('other')
   })
+
+  it('places spices between dry_goods and canned_sauces', () => {
+    const dryGoodsIdx = AISLE_CATEGORY_ORDER.indexOf('dry_goods')
+    const spicesIdx = AISLE_CATEGORY_ORDER.indexOf('spices')
+    const cannedIdx = AISLE_CATEGORY_ORDER.indexOf('canned_sauces')
+    expect(spicesIdx).toBeGreaterThan(dryGoodsIdx)
+    expect(spicesIdx).toBeLessThan(cannedIdx)
+  })
+})
+
+describe('inferAisleCategory — spices and sauces', () => {
+  it('classifies paprikapoeder as spices', () => {
+    expect(inferAisleCategory('paprikapoeder')).toBe('spices')
+  })
+
+  it('classifies kerriepoeder as spices', () => {
+    expect(inferAisleCategory('kerriepoeder')).toBe('spices')
+  })
+
+  it('keeps fresh herb peterselie as produce, not spices', () => {
+    expect(inferAisleCategory('peterselie')).toBe('produce')
+  })
+
+  it('keeps fresh herb basilicum as produce, not spices', () => {
+    expect(inferAisleCategory('basilicum')).toBe('produce')
+  })
+
+  it('classifies tomatenpuree as canned_sauces', () => {
+    expect(inferAisleCategory('tomatenpuree')).toBe('canned_sauces')
+  })
+
+  it('classifies pesto as canned_sauces', () => {
+    expect(inferAisleCategory('pesto')).toBe('canned_sauces')
+  })
+
+  it('classifies representative PRD items into correct areas', () => {
+    expect(inferAisleCategory('appelazijn')).toBe('oils')
+    expect(inferAisleCategory('bloemkool')).toBe('produce')
+    expect(inferAisleCategory('gember')).toBe('produce')
+    expect(inferAisleCategory('knoflook')).toBe('produce')
+    expect(inferAisleCategory('paprikapoeder')).toBe('spices')
+    expect(inferAisleCategory('peterselie')).toBe('produce')
+    expect(inferAisleCategory('rode appel')).toBe('produce')
+    expect(inferAisleCategory('rode paprika')).toBe('produce')
+    expect(inferAisleCategory('tomatenblokjes')).toBe('canned_sauces')
+    expect(inferAisleCategory('tomatenpuree')).toBe('canned_sauces')
+  })
+})
+
+describe('sortShoppingListLines — spice area ordering', () => {
+  it('sorts spices after dry_goods and before canned_sauces', () => {
+    const input = [
+      line('L3', 'tomatenblokjes'),
+      line('L1', 'pasta'),
+      line('L2', 'paprikapoeder'),
+    ]
+    const sorted = sortShoppingListLines(input)
+    expect(sorted.map(l => l.id)).toEqual(['L1', 'L2', 'L3'])
+  })
+
+  it('sorts alphabetically within spices area (Dutch locale)', () => {
+    const input = [
+      line('L2', 'paprikapoeder'),
+      line('L1', 'kerriepoeder'),
+    ]
+    const sorted = sortShoppingListLines(input)
+    expect(sorted.map(l => l.name)).toEqual(['kerriepoeder', 'paprikapoeder'])
+  })
 })

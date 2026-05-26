@@ -133,6 +133,18 @@ _Avoid_: tab, layout switch
 A single store-oriented ingredient list for the same **Saved Weekplan**, with duplicates merged and quantities combined, produced from the current **Shopping list** data.
 _Avoid_: normalized list (overlaps recipe-ingestion wording), grocery list
 
+**Shopping list store walk order**:
+The default line order for a **Consolidated shopping list** only (not **Recipe sections view**): supermarket-area sequence (produce → bakery → meat → fish → dairy → frozen → dry goods → spices → canned/sauces → oils → beverages → other), then alphabetical by ingredient name within each area (Dutch locale). Applied server-side whenever consolidated lines are returned or displayed (consolidate, saved-list load, baseline fallback); does not rename lines or add UI section headers. Older saved lists are re-sorted on load without re-consolidating.
+_Avoid_: recipe section order, aisle (when meaning **Recipe section**), category headers
+
+**Shopping list spice area**:
+Dried spices and seasonings (e.g. paprikapoeder, kerriepoeder) in the **Shopping list store walk order**; distinct from fresh herbs in produce and from bulk **dry goods**.
+_Avoid_: spice rack UI label, herb (when fresh produce)
+
+**Shopping list sauce area (walk order)**:
+Jarred/tubed sauces and pastes (e.g. tomatenpuree, pesto) grouped under the canned/sauces step of **Shopping list store walk order** via keyword rules—not a separate UI section.
+_Avoid_: spice area, recipe section
+
 **Shopping list consolidation**:
 A two-step derivation of a **Consolidated shopping list**: **Shopping list exact merge** first, then an AI polish pass over the full candidate list (may re-group, rename, and adjust lines—including rows already merged programmatically).
 _Avoid_: AI shopping list, smart list
@@ -200,6 +212,10 @@ _Avoid_: client hash, raw JSON.stringify, updated_at only
 **Shopping list polish review layout (planned)**:
 Desktop: **Shopping list polish reference** tabs (recipe sections | polish baseline) left, editable AI column right. Mobile: stacked, reference tabs on top.
 _Avoid_: side-by-side on small screens, single column only
+
+**Shopping list polish review order**:
+On entering **Shopping list polish review**, editable lines are sorted once using **Shopping list store walk order**; order stays fixed while the user edits until confirm. After confirm, consolidated display continues to use **Shopping list store walk order** on every serve (re-sort allowed).
+_Avoid_: live re-sort on every field change, model submission order as final store order
 
 **Deprecated saved consolidated shopping list (planned)**:
 A **Saved consolidated shopping list** whose **Shopping list source fingerprint** no longer matches the current **Saved Weekplan** `body`; the UI warns the user, shows the old lines read-only for comparison, and requires **Consolidate action** before a new list can be confirmed.
