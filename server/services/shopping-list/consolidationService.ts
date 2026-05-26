@@ -8,7 +8,8 @@ import { getSavedWeekplanById } from '../planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../utils/planningErrors'
 import { collectRecipeOccurrences, buildShoppingList } from '../../../utils/shoppingList'
 import { exactMerge, buildPolishContext } from './exactMerge'
-import { validatePolishResponse } from './polishHarness'
+import { canonicalizePolishResponse, validatePolishResponse } from './polishHarness'
+import { isPolishAbortTimeout } from './polishChainFactory'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
@@ -130,11 +131,12 @@ export async function consolidateShoppingList(
       const result = await polishPort.polish(polishContext)
 
       // Harness validation — single attempt, no repair loop (retry policy v1)
-      const validation = validatePolishResponse(result.response, baseline)
+      const polishedResponse = canonicalizePolishResponse(result.response, baseline)
+      const validation = validatePolishResponse(polishedResponse, baseline)
 
       if (validation.valid) {
         const baselineById = new Map(baselineLines.map(bl => [bl.id, bl]))
-        consolidatedLines = result.response.lines.map((line) => {
+        consolidatedLines = polishedResponse.lines.map((line) => {
           const baselineLine = baselineById.get(line.id)
           return {
             id: line.id,
@@ -144,14 +146,21 @@ export async function consolidateShoppingList(
             provenance: baselineLine?.provenance ?? [],
           }
         })
-        changes = result.response.changes ?? []
+        changes = polishedResponse.changes ?? []
         polishStatus = 'polished'
       }
       else {
         logger.warn('shopping_list.polish_harness_failed', {
           planId,
+          baselineLineCount: baselineLines.length,
+          responseLineCount: result.response.lines.length,
           failureCount: validation.failures.length,
-          failures: validation.failures.map(f => `${f.rule}:${f.lineId}`),
+          failuresByRule: summarizeFailuresByRule(validation.failures),
+          failures: validation.failures.slice(0, 10).map(f => ({
+            rule: f.rule,
+            lineId: f.lineId,
+            message: f.message,
+          })),
         })
         warnings.push('AI polish output rejected by harness validation; returning baseline.')
         polishStatus = 'baseline_fallback'
@@ -159,11 +168,18 @@ export async function consolidateShoppingList(
       }
     }
     catch (err) {
+      const abortedDueToTimeout = isPolishAbortTimeout(err)
       logger.warn('shopping_list.polish_failed', {
         planId,
+        abortedDueToTimeout,
+        polishStatus: 'baseline_fallback',
         error: err instanceof Error ? err.message : String(err),
       })
-      warnings.push('AI polish failed; returning baseline.')
+      warnings.push(
+        abortedDueToTimeout
+          ? 'AI polish timed out; returning baseline. Try increasing OPENROUTER_SHOPPING_LIST_TIMEOUT_MS.'
+          : 'AI polish failed; returning baseline.',
+      )
       polishStatus = 'baseline_fallback'
       consolidatedLines = baselineLines
     }
@@ -179,4 +195,15 @@ export async function consolidateShoppingList(
   })
 
   return { consolidatedLines, baselineLines, changes, polishStatus, warnings }
+}
+
+/** Counts harness validation failures per rule for structured logging. */
+function summarizeFailuresByRule(
+  failures: Array<{ rule: string }>,
+): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const failure of failures) {
+    counts[failure.rule] = (counts[failure.rule] ?? 0) + 1
+  }
+  return counts
 }

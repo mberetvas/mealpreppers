@@ -307,7 +307,17 @@ describe('consolidation service with harness validation (issue #022)', () => {
 
       expect(logger.warn).toHaveBeenCalledWith(
         'shopping_list.polish_harness_failed',
-        expect.objectContaining({ failureCount: expect.any(Number) }),
+        expect.objectContaining({
+          failureCount: expect.any(Number),
+          failuresByRule: expect.any(Object),
+          failures: expect.arrayContaining([
+            expect.objectContaining({
+              rule: 'no-invented-ingredients',
+              lineId: 'L99',
+              message: expect.any(String),
+            }),
+          ]),
+        }),
       )
     })
   })
@@ -315,7 +325,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
   describe('polish port throws (network/timeout error)', () => {
     it('returns baseline_fallback when polish port throws', async () => {
       const mockPort: ShoppingListPolishPort = {
-        polish: vi.fn().mockRejectedValue(new Error('Network timeout')),
+        polish: vi.fn().mockRejectedValue(new Error('Connection reset')),
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {

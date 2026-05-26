@@ -7,6 +7,34 @@ import type { StructuredLogger } from '../../server/utils/structuredLogger'
 
 // --- Tests ---
 
+describe('createShoppingListPolishPromptTemplate', () => {
+  it('does not throw when building the prompt template', async () => {
+    const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
+
+    await expect(createShoppingListPolishPromptTemplate()).resolves.toBeDefined()
+  })
+
+  it('formatMessages substitutes polishContextJson and keeps literal JSON braces in system text', async () => {
+    const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
+
+    const prompt = await createShoppingListPolishPromptTemplate()
+    const messages = await prompt.formatMessages({ polishContextJson: '{"lines":[]}' })
+
+    expect(messages.length).toBeGreaterThanOrEqual(2)
+    const system = messages.find(m => m.getType() === 'system')
+    expect(system).toBeDefined()
+    const systemText = typeof system!.content === 'string' ? system!.content : String(system!.content)
+    expect(systemText).toContain('{\n  "lines":')
+    expect(systemText).toContain('"provenance": [{ "recipeId"')
+
+    const user = messages.find(m => m.getType() === 'human')
+    expect(user).toBeDefined()
+    const userText = typeof user!.content === 'string' ? user!.content : String(user!.content)
+    expect(userText).toContain('{"lines":[]}')
+    expect(userText).not.toContain('{polishContextJson}')
+  })
+})
+
 describe('createShoppingListPolishChain config validation', () => {
   it('returns null when OPENROUTER_API_KEY is missing', async () => {
     const { createShoppingListPolishChain } = await import('../../server/services/shopping-list/polishChainFactory')
@@ -40,6 +68,32 @@ describe('createShoppingListPolishChain config validation', () => {
     expect(result!.temperature).toBe(0)
     expect(result!.maxTokens).toBe(4096)
     expect(result!.timeoutMs).toBe(30000)
+  })
+
+  it('defaults timeout to 60000 when config value is invalid or empty', async () => {
+    const { createShoppingListPolishChain, DEFAULT_SHOPPING_LIST_POLISH_TIMEOUT_MS } = await import('../../server/services/shopping-list/polishChainFactory')
+
+    const empty = createShoppingListPolishChain({
+      openrouterApiKey: 'sk-or-v1-test-key',
+      openrouterShoppingListModel: 'deepseek/deepseek-v4-flash',
+      openrouterShoppingListTimeoutMs: '',
+      openrouterAppUrl: '',
+      openrouterAppTitle: 'Mealprepper',
+      langsmithApiKey: '',
+    })
+
+    const invalid = createShoppingListPolishChain({
+      openrouterApiKey: 'sk-or-v1-test-key',
+      openrouterShoppingListModel: 'deepseek/deepseek-v4-flash',
+      openrouterShoppingListTimeoutMs: 'not-a-number',
+      openrouterAppUrl: '',
+      openrouterAppTitle: 'Mealprepper',
+      langsmithApiKey: '',
+    })
+
+    expect(empty!.timeoutMs).toBe(DEFAULT_SHOPPING_LIST_POLISH_TIMEOUT_MS)
+    expect(invalid!.timeoutMs).toBe(DEFAULT_SHOPPING_LIST_POLISH_TIMEOUT_MS)
+    expect(DEFAULT_SHOPPING_LIST_POLISH_TIMEOUT_MS).toBe(60_000)
   })
 
   it('uses custom model and timeout from config', async () => {
@@ -115,6 +169,27 @@ describe('createShoppingListPolishChain config validation', () => {
   })
 })
 
+describe('validatePolishResponse model output quirks (issue harness)', () => {
+  it('accepts renamed lines when the model returns Dutch unit aliases', async () => {
+    const { validatePolishResponse } = await import('../../server/services/shopping-list/polishHarness')
+    const baseline = {
+      lines: [
+        { id: 'L1', name: 'olijfolie', quantity: 2, unit: 'el', provenance: [] },
+        { id: 'L2', name: 'tomaten', quantity: 500, unit: 'g', provenance: [] },
+      ],
+    }
+
+    const result = validatePolishResponse({
+      lines: [
+        { id: 'L1', name: 'Olijfolie extra vierge', quantity: 2, unit: 'eetlepel' },
+        { id: 'L2', name: 'Cherry tomaten', quantity: 500, unit: 'gram' },
+      ],
+    }, baseline)
+
+    expect(result.valid).toBe(true)
+  })
+})
+
 describe('LangChainShoppingListPolishPort', () => {
   function makeLogger(): StructuredLogger {
     return {
@@ -138,6 +213,7 @@ describe('LangChainShoppingListPolishPort', () => {
     const port = new LangChainShoppingListPolishPort({
       invoke: mockInvoke,
       model: 'deepseek/deepseek-v4-flash',
+      timeoutMs: 60_000,
     }, logger)
 
     await port.polish({
@@ -146,6 +222,7 @@ describe('LangChainShoppingListPolishPort', () => {
 
     expect(logger.info).toHaveBeenCalledWith('shopping_list.polish_start', expect.objectContaining({
       model: 'deepseek/deepseek-v4-flash',
+      timeoutMs: 60_000,
     }))
   })
 
@@ -161,6 +238,7 @@ describe('LangChainShoppingListPolishPort', () => {
     const port = new LangChainShoppingListPolishPort({
       invoke: mockInvoke,
       model: 'deepseek/deepseek-v4-flash',
+      timeoutMs: 60_000,
     }, logger)
 
     await port.polish({
@@ -183,6 +261,7 @@ describe('LangChainShoppingListPolishPort', () => {
     const port = new LangChainShoppingListPolishPort({
       invoke: mockInvoke,
       model: 'deepseek/deepseek-v4-flash',
+      timeoutMs: 30_000,
     }, logger)
 
     await expect(port.polish({
@@ -192,6 +271,32 @@ describe('LangChainShoppingListPolishPort', () => {
     expect(logger.error).toHaveBeenCalledWith('shopping_list.polish_fail', expect.objectContaining({
       latencyMs: expect.any(Number),
       model: 'deepseek/deepseek-v4-flash',
+      timeoutMs: 30_000,
+      abortedDueToTimeout: true,
+      fallback: 'baseline_fallback',
+    }))
+  })
+
+  it('marks abortedDueToTimeout false for non-timeout errors', async () => {
+    const { LangChainShoppingListPolishPort, isPolishAbortTimeout } = await import('../../server/services/shopping-list/polishChainFactory')
+
+    expect(isPolishAbortTimeout(new Error('The operation was aborted due to timeout'))).toBe(true)
+    expect(isPolishAbortTimeout(new Error('rate limit'))).toBe(false)
+
+    const mockInvoke = vi.fn().mockRejectedValue(new Error('rate limit'))
+    const logger = makeLogger()
+    const port = new LangChainShoppingListPolishPort({
+      invoke: mockInvoke,
+      model: 'deepseek/deepseek-v4-flash',
+      timeoutMs: 60_000,
+    }, logger)
+
+    await expect(port.polish({
+      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] }],
+    })).rejects.toThrow('rate limit')
+
+    expect(logger.error).toHaveBeenCalledWith('shopping_list.polish_fail', expect.objectContaining({
+      abortedDueToTimeout: false,
     }))
   })
 })

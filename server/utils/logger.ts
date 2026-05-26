@@ -115,7 +115,7 @@ export function createAppLogger(overrides: Partial<LogConfig> = {}): AppLogger {
 
   const instance = createConsola({
     level: LEVEL_MAP[config.level],
-    reporters: config.json ? [jsonReporter] : undefined,
+    ...(config.json ? { reporters: [jsonReporter] } : {}),
   })
 
   return wrapConsola(instance)

@@ -57,6 +57,51 @@ describe('validatePolishResponse', () => {
       expect(result.valid).toBe(true)
     })
 
+    it('accepts polish when model returns a unit alias that matches baseline canonical unit', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'fusilli', quantity: 400, unit: 'gram' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts polish when line ids differ only by case from baseline', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'l1', name: 'fusilli', quantity: 400, unit: 'g' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts polish when model returns empty string unit and baseline has no unit', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'peper', quantity: undefined, unit: undefined, provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'zwarte peper', quantity: undefined, unit: '' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(true)
+    })
+
     it('accepts polish with optional changes field', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'kaas', quantity: 500, unit: 'g', provenance: [] },

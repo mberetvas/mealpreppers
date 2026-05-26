@@ -184,6 +184,27 @@ describe('createAppLogger', () => {
     expect((parsed?.data as Record<string, unknown>).requestId).toBe('abc')
   })
 
+  it('emits pretty console output when LOG_JSON is false', () => {
+    process.env.LOG_JSON = 'false'
+    const stdout = captureStdout()
+    const logger = createAppLogger({ level: 'debug' })
+
+    logger.info('hello from pretty console')
+    stdout.restore()
+
+    expect(stdout.lines.join('')).toContain('hello from pretty console')
+  })
+
+  it('emits pretty console output when json override is false', () => {
+    const stdout = captureStdout()
+    const logger = createAppLogger({ json: false, level: 'debug' })
+
+    logger.info('hello from pretty override')
+    stdout.restore()
+
+    expect(stdout.lines.join('')).toContain('hello from pretty override')
+  })
+
   it('exports a singleton appLogger', async () => {
     const { appLogger } = await import('../../server/utils/logger')
     expect(typeof appLogger.info).toBe('function')

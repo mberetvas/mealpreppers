@@ -1,4 +1,5 @@
 import type { MergedLine, PolishBaseline } from './exactMerge'
+import { normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 
 export interface PolishResponseLine {
   id: string
@@ -36,8 +37,33 @@ export interface ValidationResult {
  * drop baseline lines, or produce duplicate line ids.
  * Returns a structured pass/fail result for orchestration flow control (never throws).
  */
+/**
+ * Aligns model polish output with baseline conventions (line id casing, unit aliases, quantity rounding).
+ */
+export function canonicalizePolishResponse(response: PolishResponse, baseline: PolishBaseline): PolishResponse {
+  const baselineLineById = buildBaselineLineByIdMap(baseline)
+  const baselineIdByLower = new Map(baseline.lines.map(line => [line.id.toLowerCase(), line.id]))
+
+  return {
+    lines: response.lines.map((line) => {
+      const canonicalId = baselineLineById.has(line.id)
+        ? line.id
+        : baselineIdByLower.get(line.id.toLowerCase()) ?? line.id
+
+      return {
+        id: canonicalId,
+        name: line.name,
+        quantity: line.quantity === undefined ? undefined : roundPolishQuantity(line.quantity),
+        unit: normalizeShoppingListUnit(line.unit),
+      }
+    }),
+    changes: response.changes,
+  }
+}
+
 export function validatePolishResponse(response: PolishResponse, baseline: PolishBaseline): ValidationResult {
   const failures: ValidationFailure[] = []
+  const canonicalResponse = canonicalizePolishResponse(response, baseline)
 
   const baselineLineById = buildBaselineLineByIdMap(baseline)
   const baselineQuantityByNameUnit = buildBaselineQuantityMap(baseline)
@@ -45,7 +71,7 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
 
   const seenIds = new Set<string>()
 
-  for (const line of response.lines) {
+  for (const line of canonicalResponse.lines) {
     if (seenIds.has(line.id)) {
       failures.push({
         rule: 'no-invented-ingredients',
@@ -112,7 +138,7 @@ function buildBaselineUnitsMap(baseline: PolishBaseline): Map<string, Set<string
 }
 
 function quantityKey(name: string, unit: string | undefined): string {
-  return `${name.toLowerCase()}::${unit ?? ''}`
+  return `${name.toLowerCase()}::${normalizeShoppingListUnit(unit) ?? ''}`
 }
 
 function validateUnitPolicy(
@@ -122,12 +148,13 @@ function validateUnitPolicy(
   failures: ValidationFailure[],
 ): void {
   const allowedUnits = baselineUnitsByName.get(baselineLine.name.toLowerCase())
+  const normalizedUnit = normalizeShoppingListUnit(line.unit)
 
-  if (!allowedUnits?.has(line.unit)) {
+  if (!allowedUnits?.has(normalizedUnit)) {
     failures.push({
       rule: 'unit-policy',
       lineId: line.id,
-      message: `Unit "${line.unit}" not present in baseline for ingredient "${line.name}"`,
+      message: `Unit "${normalizedUnit ?? ''}" not present in baseline for line "${line.id}"`,
     })
   }
 }
@@ -140,16 +167,17 @@ function validateQuantityCap(
 ): void {
   const key = quantityKey(baselineLine.name, line.unit)
   const cap = baselineQuantityByNameUnit.get(key)
+  const quantity = line.quantity === undefined ? undefined : roundPolishQuantity(line.quantity)
 
-  if (cap === undefined || line.quantity === undefined) {
+  if (cap === undefined || quantity === undefined) {
     return
   }
 
-  if (line.quantity > cap) {
+  if (quantity > cap) {
     failures.push({
       rule: 'quantity-cap',
       lineId: line.id,
-      message: `Quantity ${line.quantity} exceeds baseline cap ${cap} for "${line.name}" (${line.unit})`,
+      message: `Quantity ${quantity} exceeds baseline cap ${cap} for line "${line.id}"`,
     })
   }
 }

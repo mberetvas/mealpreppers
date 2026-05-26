@@ -64,14 +64,24 @@ export interface PolishContext {
 }
 
 /** Rounds a number to at most 2 decimal places, eliminating floating-point noise. */
-function roundQuantity(value: number): number {
+export function roundPolishQuantity(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 /** Normalizes a unit string using ingestion aliases; returns undefined for absent/empty units, preserves unknown units with lowercase normalization. */
+export function normalizeShoppingListUnit(unit: string | undefined | null): string | undefined {
+  if (unit == null) return undefined
+  const trimmed = unit.trim()
+  if (!trimmed) return undefined
+  return UNIT_ALIASES.get(trimmed.toLowerCase()) ?? trimmed.toLowerCase()
+}
+
+function roundQuantity(value: number): number {
+  return roundPolishQuantity(value)
+}
+
 function normalizeUnit(unit: string | undefined): string | undefined {
-  if (!unit) return undefined
-  return UNIT_ALIASES.get(unit.toLowerCase()) ?? unit.toLowerCase()
+  return normalizeShoppingListUnit(unit)
 }
 
 /** Strips preparation suffixes (e.g. ", in ringen") for merge comparison and display. */
