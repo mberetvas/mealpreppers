@@ -340,7 +340,7 @@ describe('validatePolishResponse', () => {
   })
 
   describe('edge cases', () => {
-    it('handles empty polish response', () => {
+    it('handles empty polish response (missing baseline lines are rejected)', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
       ])
@@ -350,8 +350,10 @@ describe('validatePolishResponse', () => {
 
       const result = validatePolishResponse(response, baseline)
 
-      expect(result.valid).toBe(true)
-      expect(result.failures).toEqual([])
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({ rule: 'no-removed-lines', lineId: 'L1' }),
+      )
     })
 
     it('handles baseline with single line', () => {
@@ -397,6 +399,76 @@ describe('validatePolishResponse', () => {
       const result = validatePolishResponse(response, baseline)
 
       expect(result.valid).toBe(true)
+    })
+  })
+
+  describe('missing baseline lines rejected', () => {
+    it('rejects response that omits a baseline line', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+        { id: 'L2', name: 'tomaten', quantity: 200, unit: 'g', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
+          // L2 dropped
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({ rule: 'no-removed-lines', lineId: 'L2' }),
+      )
+    })
+
+    it('accepts response that includes all baseline lines', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+        { id: 'L2', name: 'tomaten', quantity: 200, unit: 'g', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
+          { id: 'L2', name: 'cherry tomaten', quantity: 200, unit: 'g' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts empty baseline with empty response', () => {
+      const baseline = makeBaseline([])
+      const response: PolishResponse = { lines: [] }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(true)
+      expect(result.failures).toEqual([])
+    })
+  })
+
+  describe('duplicate line ids rejected', () => {
+    it('rejects response with a duplicated line id', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
+          { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({ rule: 'no-invented-ingredients', lineId: 'L1' }),
+      )
     })
   })
 })

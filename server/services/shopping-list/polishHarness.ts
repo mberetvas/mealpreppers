@@ -17,7 +17,7 @@ export interface PolishResponse {
   changes?: PolishResponseChange[]
 }
 
-export type ValidationRule = 'no-invented-ingredients' | 'quantity-cap' | 'unit-policy'
+export type ValidationRule = 'no-invented-ingredients' | 'quantity-cap' | 'unit-policy' | 'no-removed-lines'
 
 export interface ValidationFailure {
   rule: ValidationRule
@@ -32,7 +32,8 @@ export interface ValidationResult {
 
 /**
  * Validates a Shopping list polish response against the Shopping list polish baseline.
- * Ensures the AI model cannot invent ingredients, inflate quantities, or violate unit/locale policy.
+ * Ensures the AI model cannot invent ingredients, inflate quantities, violate unit/locale policy,
+ * drop baseline lines, or produce duplicate line ids.
  * Returns a structured pass/fail result for orchestration flow control (never throws).
  */
 export function validatePolishResponse(response: PolishResponse, baseline: PolishBaseline): ValidationResult {
@@ -40,9 +41,21 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
 
   const baselineLineById = buildBaselineLineByIdMap(baseline)
   const baselineQuantityByNameUnit = buildBaselineQuantityMap(baseline)
-  const baselineUnitsByName = buildBaselineUnitsMap(baseline)
+
+  // Track seen ids to detect duplicates and to find missing baseline lines afterwards
+  const seenIds = new Set<string>()
 
   for (const line of response.lines) {
+    if (seenIds.has(line.id)) {
+      failures.push({
+        rule: 'no-invented-ingredients',
+        lineId: line.id,
+        message: `Line id "${line.id}" appears more than once in polish response`,
+      })
+      continue
+    }
+    seenIds.add(line.id)
+
     const baselineLine = baselineLineById.get(line.id)
     if (!baselineLine) {
       failures.push({
@@ -52,8 +65,19 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
       })
       continue
     }
-    validateUnitPolicy(line, baselineLine, baselineUnitsByName, failures)
+    validateUnitPolicy(line, baselineLine, failures)
     validateQuantityCap(line, baselineLine, baselineQuantityByNameUnit, failures)
+  }
+
+  // Reject responses that drop baseline lines entirely
+  for (const baselineLine of baseline.lines) {
+    if (!seenIds.has(baselineLine.id)) {
+      failures.push({
+        rule: 'no-removed-lines',
+        lineId: baselineLine.id,
+        message: `Baseline line id "${baselineLine.id}" is missing from polish response`,
+      })
+    }
   }
 
   return { valid: failures.length === 0, failures }
@@ -74,36 +98,21 @@ function buildBaselineQuantityMap(baseline: PolishBaseline): Map<string, number>
   return map
 }
 
-/** Builds a map of lowercased name → set of units present in baseline. */
-function buildBaselineUnitsMap(baseline: PolishBaseline): Map<string, Set<string | undefined>> {
-  const map = new Map<string, Set<string | undefined>>()
-  for (const line of baseline.lines) {
-    const name = line.name.toLowerCase()
-    if (!map.has(name)) {
-      map.set(name, new Set())
-    }
-    map.get(name)!.add(line.unit)
-  }
-  return map
-}
-
 function quantityKey(name: string, unit: string | undefined): string {
   return `${name.toLowerCase()}::${unit ?? ''}`
 }
 
+/** Validates that the response line's unit matches the exact unit of its baseline counterpart. */
 function validateUnitPolicy(
   line: PolishResponseLine,
   baselineLine: MergedLine,
-  baselineUnitsByName: Map<string, Set<string | undefined>>,
   failures: ValidationFailure[],
 ): void {
-  const allowedUnits = baselineUnitsByName.get(baselineLine.name.toLowerCase())
-
-  if (!allowedUnits?.has(line.unit)) {
+  if (line.unit !== baselineLine.unit) {
     failures.push({
       rule: 'unit-policy',
       lineId: line.id,
-      message: `Unit "${line.unit}" not present in baseline for ingredient "${line.name}"`,
+      message: `Unit "${line.unit}" not allowed; baseline unit for line "${line.id}" is "${baselineLine.unit}"`,
     })
   }
 }

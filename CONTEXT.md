@@ -93,7 +93,7 @@ _Avoid_: per-user recipe gating (unless explicitly designed)
 
 Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is built from one **Saved Weekplan** and the **Public Recipe Catalog**.
 
-Architecture decision: [ADR 0002 — Shopping list AI consolidation](docs/adr/0002-shopping-list-ai-consolidation.md).
+Architecture decision: [ADR 0002 — Shopping list AI consolidation](Docs/adr/0002-shopping-list-ai-consolidation.md).
 
 **Shopping list**:
 Ingredients for all meals in a **Saved Weekplan**, grouped into **recipe sections** (one block per distinct recipe in slot order), with quantities scaled by how often that recipe appears in the week grid.
