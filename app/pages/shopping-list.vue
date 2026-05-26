@@ -46,10 +46,10 @@ const changedLineIds = computed<Set<string>>(() => {
     return new Set()
   }
   const baselineMap = new Map(
-    baselineLines.value.map((l: any) => [l.id, l]),
+    baselineLines.value.map(l => [l.id, l]),
   )
   const changed = new Set<string>()
-  for (const line of consolidatedLines.value as any[]) {
+  for (const line of consolidatedLines.value) {
     const baseline = baselineMap.get(line.id)
     if (!baseline || baseline.name !== line.name || baseline.quantity !== line.quantity || baseline.unit !== line.unit) {
       changed.add(line.id)

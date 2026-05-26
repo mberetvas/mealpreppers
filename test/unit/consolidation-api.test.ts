@@ -10,6 +10,7 @@ import type { H3Event } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
 import { createEvent } from 'h3'
+import consolidateHandler from '../../server/api/v1/saved-weekplans/[id]/consolidate-shopping-list.post'
 
 // --- Mocks ---
 
@@ -72,13 +73,9 @@ vi.mock('../../server/services/recipe-catalog/recipeRepository', async (importOr
   }
 })
 
-// --- Import handler after mocks ---
-import consolidateHandler from '../../server/api/v1/saved-weekplans/[id]/consolidate-shopping-list.post'
-
 // --- Test helpers ---
 
 const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
-const OTHER_SESSION_UUID = '660e8400-e29b-41d4-a716-446655440099'
 const PLAN_ID = 'plan-abc-123'
 
 function makeEvent(opts: { traceId?: string, sessionId?: string, planId?: string } = {}): H3Event {

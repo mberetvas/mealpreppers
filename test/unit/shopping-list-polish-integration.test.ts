@@ -3,9 +3,11 @@
  * Tests: polished path (harness passes), baseline_fallback path (harness rejects AI output).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../server/utils/structuredLogger'
 import type { ShoppingListPolishPort } from '../../server/services/shopping-list/polishPort'
 import type { PlanningPrincipal } from '../../server/services/planning/planningPrincipal'
+import { consolidateShoppingList } from '../../server/services/shopping-list/consolidationService'
 
 // --- Mocks ---
 
@@ -21,8 +23,6 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', () => ({
 vi.mock('../../server/services/recipe-catalog/recipeRepository', () => ({
   listRecipes: mocks.listRecipes,
 }))
-
-import { consolidateShoppingList } from '../../server/services/shopping-list/consolidationService'
 
 // --- Test helpers ---
 
@@ -122,7 +122,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -151,7 +151,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -178,7 +178,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -204,7 +204,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -229,7 +229,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -253,7 +253,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -276,7 +276,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -298,7 +298,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -319,7 +319,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as any,
+        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
