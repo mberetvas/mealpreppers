@@ -3,7 +3,7 @@ import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import type { PolishResponseChange } from '~~/server/services/shopping-list/polishHarness'
 import type { PolishStatus } from '~~/server/services/shopping-list/consolidationService'
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
-import type { SavedConsolidatedShoppingListRecord, SavedShoppingListLine } from '~~/server/services/shopping-list/consolidatedShoppingListRepository'
+import type { SavedConsolidatedShoppingListRecord, SavedShoppingListLine, ShoppingListFlags } from '~~/server/services/shopping-list/consolidatedShoppingListRepository'
 
 export interface ConsolidationResponse {
   consolidatedLines: MergedLine[]
@@ -18,6 +18,7 @@ export interface UseConsolidatedShoppingListOptions {
   fetchConsolidate?: (planId: string) => Promise<ConsolidationResponse>
   fetchSavedList?: (planId: string) => Promise<SavedConsolidatedShoppingListRecord | null>
   savelist?: (planId: string, lines: SavedShoppingListLine[]) => Promise<SavedConsolidatedShoppingListRecord>
+  fetchPlanFlags?: (planId: string) => Promise<ShoppingListFlags>
 }
 
 /**
@@ -35,6 +36,11 @@ export function useConsolidatedShoppingList(
       $fetch<SavedConsolidatedShoppingListRecord>(`/api/v1/saved-weekplans/${id}/consolidated-shopping-list`, { method: 'GET' }).catch(() => null),
     savelist = (id: string, lines: SavedShoppingListLine[]) =>
       $fetch<SavedConsolidatedShoppingListRecord>(`/api/v1/saved-weekplans/${id}/consolidated-shopping-list`, { method: 'PUT', body: { lines } }),
+    fetchPlanFlags = (id: string) =>
+      $fetch<ShoppingListFlags>(`/api/v1/saved-weekplans/${id}`, { method: 'GET' }).then(r => ({
+        hasSavedShoppingList: (r as any).hasSavedShoppingList ?? false,
+        shoppingListDeprecated: (r as any).shoppingListDeprecated ?? false,
+      })),
   } = options
 
   const consolidating = ref(false)
@@ -50,13 +56,14 @@ export function useConsolidatedShoppingList(
   const savedList = ref<SavedConsolidatedShoppingListRecord | null>(null)
   const saving = ref(false)
   const saveError = ref<string | null>(null)
+  const shoppingListDeprecated = ref(false)
 
   let consolidateGeneration = 0
 
   // Reset state whenever the active plan changes to avoid showing stale results
   watch(planId, () => reset())
 
-  /** Loads the saved consolidated shopping list from the server. Shows it without running Consolidate action. */
+  /** Loads the saved consolidated shopping list from the server. Checks deprecation status via plan flags. */
   async function loadSavedList(): Promise<void> {
     if (!planId.value) return
 
@@ -72,6 +79,15 @@ export function useConsolidatedShoppingList(
         }))
         polishStatus.value = 'polished'
         hasConsolidated.value = true
+
+        // Check deprecation status
+        try {
+          const flags = await fetchPlanFlags(planId.value)
+          shoppingListDeprecated.value = flags.shoppingListDeprecated
+        }
+        catch {
+          shoppingListDeprecated.value = false
+        }
       }
     }
     catch {
@@ -79,13 +95,14 @@ export function useConsolidatedShoppingList(
     }
   }
 
-  /** Triggers the consolidation API call. Each call refreshes from current plan data. */
+  /** Triggers the consolidation API call. Each call refreshes from current plan data and clears deprecated state. */
   async function consolidate(): Promise<void> {
     if (!planId.value) return
 
     const generation = ++consolidateGeneration
     consolidating.value = true
     consolidationError.value = null
+    shoppingListDeprecated.value = false
 
     try {
       const result = await fetchConsolidate(planId.value)
@@ -121,9 +138,10 @@ export function useConsolidatedShoppingList(
     reviewLines.value[idx] = { ...reviewLines.value[idx], ...fields }
   }
 
-  /** Confirms review edits: applies reviewLines to consolidatedLines, persists via PUT, and marks as polished. */
+  /** Confirms review edits: applies reviewLines to consolidatedLines, persists via PUT, and marks as polished. Blocked when deprecated. */
   async function confirmReview(): Promise<void> {
     if (polishStatus.value !== 'pending_review') return
+    if (shoppingListDeprecated.value) return
 
     const linesToSave: SavedShoppingListLine[] = reviewLines.value.map(l => ({
       id: l.id,
@@ -167,6 +185,7 @@ export function useConsolidatedShoppingList(
     savedList.value = null
     saving.value = false
     saveError.value = null
+    shoppingListDeprecated.value = false
   }
 
   return {
@@ -183,6 +202,7 @@ export function useConsolidatedShoppingList(
     savedList,
     saving,
     saveError,
+    shoppingListDeprecated,
     consolidate,
     loadSavedList,
     updateReviewLine,

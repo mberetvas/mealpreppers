@@ -28,6 +28,11 @@ export function toPlanningHttpError(error: PlanningFailure): HttpErrorPayload {
         statusCode: 403,
         statusMessage: error.message,
       }
+    case 'deprecated_list':
+      return {
+        statusCode: 409,
+        statusMessage: error.message,
+      }
     case 'storage_error':
       return {
         statusCode: 500,

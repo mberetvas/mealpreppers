@@ -98,6 +98,10 @@ function forbidden() {
   return { kind: 'forbidden' as const, entity: 'saved_weekplan' as const, message: 'You do not have access to this saved weekplan.' }
 }
 
+function deprecatedList() {
+  return { kind: 'deprecated_list' as const, message: 'The shopping list is outdated because the plan has changed. Please re-consolidate before saving.' }
+}
+
 /** Loads the saved consolidated shopping list for a plan, with principal access check. */
 export async function getConsolidatedShoppingList(
   client: SupabaseClient,
@@ -130,7 +134,7 @@ export async function getConsolidatedShoppingList(
   return ok(row.consolidated_shopping_list)
 }
 
-/** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. */
+/** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. Rejects if existing list is deprecated. */
 export async function saveConsolidatedShoppingList(
   client: SupabaseClient,
   planId: string,
@@ -140,7 +144,7 @@ export async function saveConsolidatedShoppingList(
   // Load plan to verify ownership and get body for fingerprint
   const { data, error: loadError } = await client
     .from('meal_week_templates')
-    .select('id, body, owner_user_id, anon_session_id')
+    .select('id, body, owner_user_id, anon_session_id, consolidated_shopping_list')
     .eq('id', planId)
     .maybeSingle()
 
@@ -159,6 +163,14 @@ export async function saveConsolidatedShoppingList(
   }
   if (access === 'wrong_owner') {
     return fail(forbidden())
+  }
+
+  // Reject save when existing list is deprecated (fingerprint mismatch)
+  if (row.consolidated_shopping_list) {
+    const currentFingerprint = computeSourceFingerprint(row.body)
+    if (row.consolidated_shopping_list.sourceFingerprint !== currentFingerprint) {
+      return fail(deprecatedList())
+    }
   }
 
   // Server computes fingerprint from current body

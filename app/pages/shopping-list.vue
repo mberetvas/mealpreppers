@@ -17,6 +17,7 @@ const {
   hasConsolidated,
   hints,
   reviewLines,
+  shoppingListDeprecated,
   consolidate,
   updateReviewLine,
   confirmReview,
@@ -388,6 +389,43 @@ useHead(() => ({
             @update-line="updateReviewLine"
             @confirm="confirmReview"
           />
+        </template>
+
+        <!-- Deprecated saved consolidated shopping list: plan changed, read-only old lines -->
+        <template v-else-if="hasConsolidated && shoppingListDeprecated && consolidatedLines.length > 0">
+          <div
+            data-testid="deprecated-banner"
+            class="rounded-2xl bg-atelier-cream-warning px-5 py-4 text-sm font-semibold text-atelier-warning-foreground"
+            role="alert"
+            aria-live="assertive"
+          >
+            <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
+            Your saved shopping list is outdated because the plan has changed. Re-consolidate to build a new list.
+          </div>
+
+          <ul class="space-y-2" aria-label="Deprecated consolidated shopping list (read-only)">
+            <li
+              v-for="line in consolidatedLines"
+              :key="line.id"
+              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10 opacity-70"
+            >
+              <span class="flex-1 text-sm text-atelier-heading">
+                {{ formatMergedLine(line) }}
+              </span>
+            </li>
+          </ul>
+
+          <div class="flex justify-center">
+            <button
+              type="button"
+              data-testid="consolidate-btn"
+              class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover motion-reduce:transition-none"
+              @click="consolidate"
+            >
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">merge_type</span>
+              Re-consolidate shopping list
+            </button>
+          </div>
         </template>
 
         <!-- Successful consolidation result -->
