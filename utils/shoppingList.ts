@@ -80,3 +80,14 @@ export function formatShoppingListIngredient(ingredient: ShoppingListIngredient)
     .filter(isPresentIngredientPart)
     .join(' ')
 }
+
+/** Formats a consolidated merged line for display. */
+export function formatMergedLine(line: { name: string, quantity: number | undefined, unit: string | undefined }): string {
+  if (line.quantity === undefined) {
+    return line.name
+  }
+
+  return [line.quantity, line.unit, line.name]
+    .filter(isPresentIngredientPart)
+    .join(' ')
+}

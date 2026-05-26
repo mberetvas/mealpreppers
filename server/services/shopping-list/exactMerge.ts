@@ -28,7 +28,7 @@ const UNIT_ALIASES = new Map<string, string>([
   ['bakje', 'bakje'],
   ['bakjes', 'bakjes'],
   ['teentje', 'teentje'],
-  ['teentjes', 'teentjes'],
+  ['teentjes', 'teentje'],
   ['scheutje', 'scheutje'],
   ['snuifje', 'snuifje'],
   ['blik', 'blik'],
@@ -39,7 +39,7 @@ const UNIT_ALIASES = new Map<string, string>([
 export interface MergedLine {
   id: string
   name: string
-  quantity: number
+  quantity: number | undefined
   unit: string | undefined
   provenance: RecipeProvenance[]
 }
@@ -57,7 +57,7 @@ export interface PolishContext {
   lines: Array<{
     id: string
     name: string
-    quantity: number
+    quantity: number | undefined
     unit: string | undefined
     provenance: RecipeProvenance[]
   }>
@@ -74,14 +74,35 @@ function normalizeUnit(unit: string | undefined): string | undefined {
   return UNIT_ALIASES.get(unit.toLowerCase()) ?? unit.toLowerCase()
 }
 
+/** Strips preparation suffixes (e.g. ", in ringen") for merge comparison and display. */
+export function canonicalDisplayName(name: string): string {
+  const commaIndex = name.indexOf(',')
+  return (commaIndex === -1 ? name : name.slice(0, commaIndex)).trim()
+}
+
+/** Normalizes ingredient names for merge keys: lowercase, trim, strip preparation suffix. */
+function normalizeIngredientNameForMerge(name: string): string {
+  return canonicalDisplayName(name).toLowerCase()
+}
+
+/** Picks the shorter canonical label when merging differently worded variants. */
+function pickDisplayName(current: string, incoming: string): string {
+  const currentCanonical = canonicalDisplayName(current)
+  const incomingCanonical = canonicalDisplayName(incoming)
+  if (incomingCanonical.length < currentCanonical.length) return incomingCanonical
+  if (currentCanonical.length < incomingCanonical.length) return currentCanonical
+  return current
+}
+
 /**
- * Builds a merge key from normalized ingredient name and unit.
+ * Builds a merge key from normalized ingredient name, unit, and quantification mode.
  * Lines with the same key are combined; different keys remain separate.
  */
-function mergeKey(name: string, unit: string | undefined): string {
-  const normalizedName = name.toLowerCase().trim()
+function mergeKey(name: string, unit: string | undefined, hasQuantity: boolean): string {
+  const normalizedName = normalizeIngredientNameForMerge(name)
   const normalizedUnit = normalizeUnit(unit) ?? ''
-  return `${normalizedName}::${normalizedUnit}`
+  const quantification = hasQuantity ? 'q' : 'nq'
+  return `${normalizedName}::${normalizedUnit}::${quantification}`
 }
 
 /**
@@ -92,7 +113,7 @@ function mergeKey(name: string, unit: string | undefined): string {
 export function exactMerge(sections: ShoppingListSection[]): PolishBaseline {
   const mergeMap = new Map<string, {
     name: string
-    quantity: number
+    quantity: number | undefined
     unit: string | undefined
     provenance: RecipeProvenance[]
   }>()
@@ -100,20 +121,22 @@ export function exactMerge(sections: ShoppingListSection[]): PolishBaseline {
 
   for (const section of sections) {
     for (const ingredient of section.ingredients) {
-      if (ingredient.quantity === undefined) continue
-
-      const key = mergeKey(ingredient.name, ingredient.unit)
+      const hasQuantity = ingredient.quantity !== undefined
+      const key = mergeKey(ingredient.name, ingredient.unit, hasQuantity)
 
       const existing = mergeMap.get(key)
       if (existing) {
-        existing.quantity = roundQuantity(existing.quantity + ingredient.quantity)
+        if (hasQuantity && existing.quantity !== undefined) {
+          existing.quantity = roundQuantity(existing.quantity + ingredient.quantity!)
+        }
+        existing.name = pickDisplayName(existing.name, ingredient.name)
         if (!existing.provenance.some(p => p.recipeId === section.recipeId)) {
           existing.provenance.push({ recipeId: section.recipeId, recipeTitle: section.recipeTitle })
         }
       }
       else {
         mergeMap.set(key, {
-          name: ingredient.name,
+          name: canonicalDisplayName(ingredient.name),
           quantity: ingredient.quantity,
           unit: normalizeUnit(ingredient.unit),
           provenance: [{ recipeId: section.recipeId, recipeTitle: section.recipeTitle }],

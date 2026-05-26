@@ -340,7 +340,29 @@ describe('validatePolishResponse', () => {
   })
 
   describe('edge cases', () => {
-    it('handles empty polish response', () => {
+    it('rejects polish response that omits baseline line ids', () => {
+      const baseline = makeBaseline([
+        { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
+        { id: 'L2', name: 'ui', quantity: 2, unit: undefined, provenance: [] },
+      ])
+      const response: PolishResponse = {
+        lines: [
+          { id: 'L1', name: 'pasta', quantity: 800, unit: 'g' },
+        ],
+      }
+
+      const result = validatePolishResponse(response, baseline)
+
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({
+          rule: 'missing-baseline-line',
+          lineId: 'L2',
+        }),
+      )
+    })
+
+    it('rejects empty polish response when baseline has lines', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
       ])
@@ -350,8 +372,13 @@ describe('validatePolishResponse', () => {
 
       const result = validatePolishResponse(response, baseline)
 
-      expect(result.valid).toBe(true)
-      expect(result.failures).toEqual([])
+      expect(result.valid).toBe(false)
+      expect(result.failures).toContainEqual(
+        expect.objectContaining({
+          rule: 'missing-baseline-line',
+          lineId: 'L1',
+        }),
+      )
     })
 
     it('handles baseline with single line', () => {

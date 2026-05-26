@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatShoppingListIngredient as formatIngredient } from '~~/utils/shoppingList'
+import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
 
 const route = useRoute()
 const router = useRouter()
@@ -322,7 +322,7 @@ useHead(() => ({
               class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
             >
               <span class="flex-1 text-sm text-atelier-heading">
-                {{ line.quantity }} {{ line.unit }} {{ line.name }}
+                {{ formatMergedLine(line) }}
               </span>
             </li>
           </ul>
@@ -357,7 +357,7 @@ useHead(() => ({
               class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
             >
               <span class="flex-1 text-sm text-atelier-heading">
-                {{ line.quantity }} {{ line.unit }} {{ line.name }}
+                {{ formatMergedLine(line) }}
               </span>
             </li>
           </ul>
@@ -408,7 +408,7 @@ useHead(() => ({
                 aria-hidden="true"
               >auto_fix_high</span>
               <span class="flex-1 text-sm text-atelier-heading">
-                {{ line.quantity }} {{ line.unit }} {{ line.name }}
+                {{ formatMergedLine(line) }}
               </span>
             </li>
           </ul>

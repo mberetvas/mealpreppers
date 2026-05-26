@@ -3,7 +3,7 @@ import type { MergedLine, PolishBaseline } from './exactMerge'
 export interface PolishResponseLine {
   id: string
   name: string
-  quantity: number
+  quantity: number | undefined
   unit: string | undefined
 }
 
@@ -17,7 +17,7 @@ export interface PolishResponse {
   changes?: PolishResponseChange[]
 }
 
-export type ValidationRule = 'no-invented-ingredients' | 'quantity-cap' | 'unit-policy'
+export type ValidationRule = 'no-invented-ingredients' | 'missing-baseline-line' | 'quantity-cap' | 'unit-policy'
 
 export interface ValidationFailure {
   rule: ValidationRule
@@ -41,6 +41,18 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
   const baselineLineById = buildBaselineLineByIdMap(baseline)
   const baselineQuantityByNameUnit = buildBaselineQuantityMap(baseline)
   const baselineUnitsByName = buildBaselineUnitsMap(baseline)
+
+  const responseLineIds = new Set(response.lines.map(line => line.id))
+
+  for (const baselineLine of baseline.lines) {
+    if (!responseLineIds.has(baselineLine.id)) {
+      failures.push({
+        rule: 'missing-baseline-line',
+        lineId: baselineLine.id,
+        message: `Baseline line id "${baselineLine.id}" is missing from polish response`,
+      })
+    }
+  }
 
   for (const line of response.lines) {
     const baselineLine = baselineLineById.get(line.id)
@@ -68,6 +80,7 @@ function buildBaselineLineByIdMap(baseline: PolishBaseline): Map<string, MergedL
 function buildBaselineQuantityMap(baseline: PolishBaseline): Map<string, number> {
   const map = new Map<string, number>()
   for (const line of baseline.lines) {
+    if (line.quantity === undefined) continue
     const key = quantityKey(line.name, line.unit)
     map.set(key, (map.get(key) ?? 0) + line.quantity)
   }
@@ -117,7 +130,7 @@ function validateQuantityCap(
   const key = quantityKey(baselineLine.name, line.unit)
   const cap = baselineQuantityByNameUnit.get(key)
 
-  if (cap === undefined) {
+  if (cap === undefined || line.quantity === undefined) {
     return
   }
 

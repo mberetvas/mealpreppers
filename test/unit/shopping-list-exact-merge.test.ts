@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { ShoppingListSection } from '../../utils/shoppingList'
-import { exactMerge, buildPolishContext } from '../../server/services/shopping-list/exactMerge'
+import { exactMerge, buildPolishContext, canonicalDisplayName } from '../../server/services/shopping-list/exactMerge'
 
 const RID_A = '11111111-1111-1111-1111-111111111111'
 const RID_B = '22222222-2222-2222-2222-222222222222'
@@ -13,6 +13,17 @@ function makeSection(
 ): ShoppingListSection {
   return { recipeId, recipeTitle, occurrenceCount: 1, ingredients }
 }
+
+describe('canonicalDisplayName', () => {
+  it('strips preparation suffix after comma', () => {
+    expect(canonicalDisplayName('ui, in ringen')).toBe('ui')
+    expect(canonicalDisplayName('chorizo, in plakjes')).toBe('chorizo')
+  })
+
+  it('returns name unchanged when no comma', () => {
+    expect(canonicalDisplayName('bloemkool')).toBe('bloemkool')
+  })
+})
 
 describe('exactMerge', () => {
   it('merges identical name + unit lines and sums quantities', () => {
@@ -31,6 +42,22 @@ describe('exactMerge', () => {
     expect(result.lines[0].name).toBe('pasta')
   })
 
+  it('merges lines that differ only by preparation suffix after comma', () => {
+    const sections: ShoppingListSection[] = [
+      makeSection(RID_A, 'Stoofschotel', [
+        { rawText: '1 ui, in ringen', name: 'ui, in ringen', quantity: 1, unit: undefined },
+      ]),
+      makeSection(RID_B, 'Bloemkool', [
+        { rawText: '1 ui', name: 'ui', quantity: 1, unit: undefined },
+      ]),
+    ]
+    const result = exactMerge(sections)
+    expect(result.lines).toHaveLength(1)
+    expect(result.lines[0].quantity).toBe(2)
+    expect(result.lines[0].name).toBe('ui')
+    expect(result.lines[0].provenance).toHaveLength(2)
+  })
+
   it('applies unit aliases before comparison so gr and g merge', () => {
     const sections: ShoppingListSection[] = [
       makeSection(RID_A, 'Soup', [
@@ -44,6 +71,21 @@ describe('exactMerge', () => {
     expect(result.lines).toHaveLength(1)
     expect(result.lines[0].quantity).toBe(800)
     expect(result.lines[0].unit).toBe('g')
+  })
+
+  it('merges teentje and teentjes unit aliases', () => {
+    const sections: ShoppingListSection[] = [
+      makeSection(RID_A, 'A', [
+        { rawText: '1 teentje knoflook', name: 'knoflook', quantity: 1, unit: 'teentje' },
+      ]),
+      makeSection(RID_B, 'B', [
+        { rawText: '2 teentjes knoflook', name: 'knoflook', quantity: 2, unit: 'teentjes' },
+      ]),
+    ]
+    const result = exactMerge(sections)
+    expect(result.lines).toHaveLength(1)
+    expect(result.lines[0].quantity).toBe(3)
+    expect(result.lines[0].unit).toBe('teentje')
   })
 
   it('keeps lines with different units separate', () => {
@@ -141,16 +183,35 @@ describe('exactMerge', () => {
     expect(result.lines[0].quantity).toBe(0.3)
   })
 
-  it('skips ingredients without a quantity', () => {
+  it('includes and merges quantity-less ingredients by normalized name', () => {
     const sections: ShoppingListSection[] = [
       makeSection(RID_A, 'Soup', [
-        { rawText: 'a pinch of salt', name: 'salt', quantity: undefined, unit: undefined },
+        { rawText: 'zout', name: 'zout', quantity: undefined, unit: undefined },
         { rawText: '500 ml water', name: 'water', quantity: 500, unit: 'ml' },
+      ]),
+      makeSection(RID_B, 'Salad', [
+        { rawText: 'zout', name: 'zout', quantity: undefined, unit: undefined },
       ]),
     ]
     const result = exactMerge(sections)
-    expect(result.lines).toHaveLength(1)
-    expect(result.lines[0].name).toBe('water')
+    expect(result.lines).toHaveLength(2)
+    expect(result.lines.find(l => l.name === 'water')).toMatchObject({ quantity: 500, unit: 'ml' })
+    const zout = result.lines.find(l => l.name === 'zout')
+    expect(zout).toMatchObject({ quantity: undefined, unit: undefined })
+    expect(zout?.provenance).toHaveLength(2)
+  })
+
+  it('keeps quantity-less lines separate from quantified lines with the same name', () => {
+    const sections: ShoppingListSection[] = [
+      makeSection(RID_A, 'A', [
+        { rawText: 'peper', name: 'peper', quantity: undefined, unit: undefined },
+        { rawText: '1 tl peper', name: 'peper', quantity: 1, unit: 'tl' },
+      ]),
+    ]
+    const result = exactMerge(sections)
+    expect(result.lines).toHaveLength(2)
+    expect(result.lines.find(l => l.quantity === undefined)?.name).toBe('peper')
+    expect(result.lines.find(l => l.quantity === 1)?.unit).toBe('tl')
   })
 
   it('merges case-insensitively on ingredient name', () => {

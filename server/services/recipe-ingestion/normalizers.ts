@@ -41,7 +41,7 @@ const UNIT_ALIASES = new Map<string, string>([
   ['bakje', 'bakje'],
   ['bakjes', 'bakjes'],
   ['teentje', 'teentje'],
-  ['teentjes', 'teentjes'],
+  ['teentjes', 'teentje'],
   ['scheutje', 'scheutje'],
   ['snuifje', 'snuifje'],
   ['blik', 'blik'],

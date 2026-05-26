@@ -8,7 +8,7 @@ import type { PolishContext } from './exactMerge'
 const PolishResponseLineSchema = z.object({
   id: z.string(),
   name: z.string(),
-  quantity: z.number(),
+  quantity: z.number().optional(),
   unit: z.string().optional(),
 })
 
