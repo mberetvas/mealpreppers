@@ -1,6 +1,6 @@
 /**
- * Unit tests for consolidation service with harness validation (issue #022).
- * Tests: polished path (harness passes), baseline_fallback path (harness rejects AI output).
+ * Unit tests for consolidation service with harness validation (issue #022, updated for #027).
+ * Tests: polished path (harness passes), pending_review path (harness finds violations, model succeeded).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -189,8 +189,8 @@ describe('consolidation service with harness validation (issue #022)', () => {
     })
   })
 
-  describe('baseline_fallback path (harness rejects AI output)', () => {
-    it('returns polishStatus "baseline_fallback" when AI output invents ingredients', async () => {
+  describe('pending_review path (harness finds violations but model succeeded)', () => {
+    it('returns polishStatus "pending_review" when AI output invents ingredients', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
@@ -211,12 +211,13 @@ describe('consolidation service with harness validation (issue #022)', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('baseline_fallback')
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
-      expect(result.warnings.length).toBeGreaterThan(0)
+      expect(result.polishStatus).toBe('pending_review')
+      expect(result.hints).toBeDefined()
+      expect(result.hints!.length).toBeGreaterThan(0)
+      expect(result.polishResponse).toBeDefined()
     })
 
-    it('returns polishStatus "baseline_fallback" when AI inflates quantity', async () => {
+    it('returns polishStatus "pending_review" when AI inflates quantity', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
@@ -236,11 +237,11 @@ describe('consolidation service with harness validation (issue #022)', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('baseline_fallback')
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
+      expect(result.polishStatus).toBe('pending_review')
+      expect(result.hints).toContainEqual(expect.objectContaining({ rule: 'quantity-cap' }))
     })
 
-    it('returns baseline_fallback with warning when harness rejects', async () => {
+    it('does not discard AI lines on harness violations', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
@@ -260,8 +261,38 @@ describe('consolidation service with harness validation (issue #022)', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('baseline_fallback')
-      expect(result.warnings[0]).toContain('harness')
+      expect(result.polishStatus).toBe('pending_review')
+      // AI lines are preserved, not replaced with baseline
+      expect(result.consolidatedLines[0].unit).toBe('kg')
+      expect(result.hints).toContainEqual(expect.objectContaining({ rule: 'unit-policy' }))
+    })
+
+    it('includes polishResponse and hints in pending_review result', async () => {
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockResolvedValue({
+          response: {
+            lines: [
+              { id: 'L1', name: 'pasta', quantity: 400, unit: 'kg' },
+              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+            ],
+            changes: [{ id: 'L1', reason: 'unit changed' }],
+          },
+        }),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('pending_review')
+      expect(result.polishResponse).toBeDefined()
+      expect(result.polishResponse!.lines).toHaveLength(2)
+      expect(result.hints).toBeDefined()
+      expect(result.baselineLines).toHaveLength(2)
     })
 
     it('does not retry when harness fails (single attempt per retry policy v1)', async () => {
@@ -286,7 +317,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       expect(mockPort.polish).toHaveBeenCalledOnce()
     })
 
-    it('logs warning on harness failure', async () => {
+    it('logs pending_review with hint counts and failuresByRule', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
@@ -305,18 +336,12 @@ describe('consolidation service with harness validation (issue #022)', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(logger.warn).toHaveBeenCalledWith(
-        'shopping_list.polish_harness_failed',
+      expect(logger.info).toHaveBeenCalledWith(
+        'shopping_list.polish_pending_review',
         expect.objectContaining({
-          failureCount: expect.any(Number),
+          planId: PLAN_ID,
+          hintCount: expect.any(Number),
           failuresByRule: expect.any(Object),
-          failures: expect.arrayContaining([
-            expect.objectContaining({
-              rule: 'no-invented-ingredients',
-              lineId: 'L99',
-              message: expect.any(String),
-            }),
-          ]),
         }),
       )
     })

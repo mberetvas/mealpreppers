@@ -5,6 +5,7 @@ import { fail, ok, type PlanningResult } from './planningResult'
 import { interpretSavedWeekplanAccess } from './savedWeekplanAccess'
 import type { WeekTemplateListItem, WeekTemplateRow } from './planningRepository'
 import { anonymousSavedWeekplanIdleCutoffIso } from './anonymousSavedWeekplansIdlePurge'
+import { computeShoppingListFlags, type SavedConsolidatedShoppingListRecord } from '../shopping-list/consolidatedShoppingListRepository'
 
 interface WeekTemplateDbRow {
   id: string
@@ -14,6 +15,7 @@ interface WeekTemplateDbRow {
   updated_at: string
   owner_user_id: string | null
   anon_session_id: string | null
+  consolidated_shopping_list?: SavedConsolidatedShoppingListRecord | null
 }
 
 function mapWeekTemplateRow(row: WeekTemplateDbRow): WeekTemplateRow {
@@ -113,6 +115,44 @@ export async function getSavedWeekplanById(
   }
 
   return ok(mapWeekTemplateRow(row))
+}
+
+export interface WeekTemplateRowWithShoppingListFlags extends WeekTemplateRow {
+  hasSavedShoppingList: boolean
+  shoppingListDeprecated: boolean
+}
+
+/** Fetches one saved weekplan by id with embedded shopping list flags. */
+export async function getSavedWeekplanWithShoppingListFlags(
+  client: SupabaseClient,
+  id: string,
+  principal: PlanningPrincipal,
+): Promise<PlanningResult<WeekTemplateRowWithShoppingListFlags>> {
+  const { data, error } = await client
+    .from('meal_week_templates')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    return fail(storageError(error.message, 'Saved weekplan could not be loaded.'))
+  }
+
+  if (!data) {
+    return fail(savedNotFound())
+  }
+
+  const row = data as WeekTemplateDbRow
+  const access = interpretSavedWeekplanAccess(row, principal)
+  if (access === 'legacy_unowned') {
+    return fail(savedNotFound())
+  }
+  if (access === 'wrong_owner') {
+    return fail(savedForbidden())
+  }
+
+  const flags = computeShoppingListFlags(row.consolidated_shopping_list ?? null, row.body)
+  return ok({ ...mapWeekTemplateRow(row), ...flags })
 }
 
 /** Creates a saved weekplan row owned by the current principal. */

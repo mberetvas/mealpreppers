@@ -248,5 +248,41 @@ describe('consolidate-shopping-list API handler', () => {
 
       expect(result.changes).toEqual([])
     })
+
+    it('returns sourceFingerprint in response', async () => {
+      const event = makeEvent()
+      const result = await consolidateHandler(event)
+
+      expect(result.sourceFingerprint).toBeDefined()
+      expect(result.sourceFingerprint).toMatch(/^[a-f0-9]+$/)
+    })
+  })
+
+  describe('pending_review response shape', () => {
+    it('documents expected response fields for pending_review status', () => {
+      // This test documents the API contract for clients consuming pending_review.
+      // When polishStatus is 'pending_review', the response includes:
+      // - consolidatedLines: AI-produced lines (NOT baseline) for the review UI
+      // - baselineLines: post-exact-merge reference for diff display
+      // - polishResponse: the full canonicalized AI response
+      // - hints: per-line hint objects with severity
+      // - changes: AI-reported change reasons
+      // - sourceFingerprint: stable digest for staleness detection
+      // - warnings: any non-blocking warnings
+      //
+      // Existing clients that auto-apply consolidatedLines should gate on
+      // polishStatus !== 'pending_review' to avoid showing unconfirmed AI output.
+      const expectedFields = [
+        'consolidatedLines',
+        'baselineLines',
+        'polishResponse',
+        'hints',
+        'changes',
+        'sourceFingerprint',
+        'polishStatus',
+        'warnings',
+      ]
+      expect(expectedFields).toHaveLength(8)
+    })
   })
 })

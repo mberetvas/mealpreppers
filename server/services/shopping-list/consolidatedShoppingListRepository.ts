@@ -1,0 +1,186 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import type { WeekPlanV1 } from '../../../types/planning'
+import type { PlanningPrincipal } from '../planning/planningPrincipal'
+import type { PlanningResult } from '../planning/planningResult'
+import { fail, ok } from '../planning/planningResult'
+import { interpretSavedWeekplanAccess } from '../planning/savedWeekplanAccess'
+import { computeSourceFingerprint } from './sourceFingerprint'
+
+/** Persisted shape stored in the `consolidated_shopping_list` JSONB column. */
+export interface SavedConsolidatedShoppingListRecord {
+  lines: SavedShoppingListLine[]
+  sourceFingerprint: string
+  confirmedAt: string
+}
+
+export interface SavedShoppingListLine {
+  id: string
+  name: string
+  quantity: number | undefined
+  unit: string | undefined
+}
+
+export interface ShoppingListFlags {
+  hasSavedShoppingList: boolean
+  shoppingListDeprecated: boolean
+}
+
+// --- Validation schema ---
+
+const savedLineSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  quantity: z.number().optional(),
+  unit: z.string().optional(),
+})
+
+const consolidatedShoppingListInputSchema = z.object({
+  lines: z.array(savedLineSchema).min(1),
+})
+
+export interface ValidationResult {
+  valid: boolean
+  lines?: SavedShoppingListLine[]
+  error?: string
+}
+
+/** Validates client input for PUT consolidated shopping list. Strips any client-supplied fingerprint. */
+export function validateConsolidatedShoppingListInput(input: unknown): ValidationResult {
+  if (!input || typeof input !== 'object') {
+    return { valid: false, error: 'Request body must be an object with a lines array.' }
+  }
+
+  const parsed = consolidatedShoppingListInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { valid: false, error: parsed.error.issues[0]?.message ?? 'Invalid line shape.' }
+  }
+
+  return { valid: true, lines: parsed.data.lines }
+}
+
+/** Computes hasSavedShoppingList and shoppingListDeprecated flags for a Saved Weekplan GET response. */
+export function computeShoppingListFlags(
+  record: SavedConsolidatedShoppingListRecord | null,
+  body: WeekPlanV1,
+): ShoppingListFlags {
+  if (!record) {
+    return { hasSavedShoppingList: false, shoppingListDeprecated: false }
+  }
+
+  const currentFingerprint = computeSourceFingerprint(body)
+  const deprecated = record.sourceFingerprint !== currentFingerprint
+
+  return { hasSavedShoppingList: true, shoppingListDeprecated: deprecated }
+}
+
+// --- DB row shape ---
+
+interface WeekTemplateDbRowForShoppingList {
+  id: string
+  body: WeekPlanV1
+  consolidated_shopping_list: SavedConsolidatedShoppingListRecord | null
+  owner_user_id: string | null
+  anon_session_id: string | null
+}
+
+// --- Error helpers ---
+
+function storageError(message: string | undefined, fallback: string) {
+  return { kind: 'storage_error' as const, message: message ?? fallback }
+}
+
+function notFound() {
+  return { kind: 'not_found' as const, entity: 'saved_weekplan' as const, message: 'Saved weekplan not found.' }
+}
+
+function forbidden() {
+  return { kind: 'forbidden' as const, entity: 'saved_weekplan' as const, message: 'You do not have access to this saved weekplan.' }
+}
+
+/** Loads the saved consolidated shopping list for a plan, with principal access check. */
+export async function getConsolidatedShoppingList(
+  client: SupabaseClient,
+  planId: string,
+  principal: PlanningPrincipal,
+): Promise<PlanningResult<SavedConsolidatedShoppingListRecord | null>> {
+  const { data, error } = await client
+    .from('meal_week_templates')
+    .select('id, body, consolidated_shopping_list, owner_user_id, anon_session_id')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (error) {
+    return fail(storageError(error.message, 'Consolidated shopping list could not be loaded.'))
+  }
+
+  if (!data) {
+    return fail(notFound())
+  }
+
+  const row = data as WeekTemplateDbRowForShoppingList
+  const access = interpretSavedWeekplanAccess(row, principal)
+  if (access === 'legacy_unowned') {
+    return fail(notFound())
+  }
+  if (access === 'wrong_owner') {
+    return fail(forbidden())
+  }
+
+  return ok(row.consolidated_shopping_list)
+}
+
+/** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. */
+export async function saveConsolidatedShoppingList(
+  client: SupabaseClient,
+  planId: string,
+  principal: PlanningPrincipal,
+  lines: SavedShoppingListLine[],
+): Promise<PlanningResult<SavedConsolidatedShoppingListRecord>> {
+  // Load plan to verify ownership and get body for fingerprint
+  const { data, error: loadError } = await client
+    .from('meal_week_templates')
+    .select('id, body, owner_user_id, anon_session_id')
+    .eq('id', planId)
+    .maybeSingle()
+
+  if (loadError) {
+    return fail(storageError(loadError.message, 'Consolidated shopping list could not be saved.'))
+  }
+
+  if (!data) {
+    return fail(notFound())
+  }
+
+  const row = data as WeekTemplateDbRowForShoppingList
+  const access = interpretSavedWeekplanAccess(row, principal)
+  if (access === 'legacy_unowned') {
+    return fail(notFound())
+  }
+  if (access === 'wrong_owner') {
+    return fail(forbidden())
+  }
+
+  // Server computes fingerprint from current body
+  const sourceFingerprint = computeSourceFingerprint(row.body)
+  const confirmedAt = new Date().toISOString()
+
+  const record: SavedConsolidatedShoppingListRecord = {
+    lines,
+    sourceFingerprint,
+    confirmedAt,
+  }
+
+  const { error: updateError } = await client
+    .from('meal_week_templates')
+    .update({ consolidated_shopping_list: record })
+    .eq('id', planId)
+    .select('id')
+    .single()
+
+  if (updateError) {
+    return fail(storageError(updateError.message, 'Consolidated shopping list could not be saved.'))
+  }
+
+  return ok(record)
+}

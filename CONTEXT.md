@@ -93,7 +93,9 @@ _Avoid_: per-user recipe gating (unless explicitly designed)
 
 Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is built from one **Saved Weekplan** and the **Public Recipe Catalog**.
 
-Architecture decision: [ADR 0002 — Shopping list AI consolidation](Docs/adr/0002-shopping-list-ai-consolidation.md).
+Architecture decisions:
+- [ADR 0002 — Shopping list AI consolidation](Docs/adr/0002-shopping-list-ai-consolidation.md).
+- [ADR 0003 — Shopping list human review and persistence](docs/adr/0003-shopping-list-human-review-and-persistence.md).
 
 **Shopping list**:
 Ingredients for all meals in a **Saved Weekplan**, grouped into **recipe sections** (one block per distinct recipe in slot order), with quantities scaled by how often that recipe appears in the week grid.
@@ -294,7 +296,7 @@ _Avoid_: public URL (overloaded), CORS origin
 - On AI polish failure, **Shopping list polish fallback** applies: baseline visible, retry available
 - **Shopping list unit policy (v1)** forbids AI unit conversion; different units remain separate lines
 - **Shopping list polish locale (v1)** requires Dutch canonical names in **Shopping list polish response**
-- **Consolidated shopping list persistence (v1)** is ephemeral; no DB column for consolidated output in the first release
+- **Consolidated shopping list persistence** stores user-confirmed lists on the **Saved Weekplan**; ephemeral-only behavior (ADR 0002 v1) is superseded by ADR 0003
 - **Shopping list polish retry policy (v1)** is single-attempt AI; failures go straight to **Shopping list polish fallback**
 - **Shopping list consolidation access** mirrors **Saved Weekplan** read access for the linked plan
 - **Shopping list partial consolidation** applies under **Shopping list recipe resolution failure**; missing recipes are excluded, not fatal

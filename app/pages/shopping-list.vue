@@ -15,7 +15,11 @@ const {
   warnings,
   changes,
   hasConsolidated,
+  hints,
+  reviewLines,
   consolidate,
+  updateReviewLine,
+  confirmReview,
 } = useConsolidatedShoppingList(planId)
 
 const viewMode = computed(() => route.query.view === 'consolidated' ? 'consolidated' : 'sections')
@@ -372,6 +376,18 @@ useHead(() => ({
               Retry consolidation
             </button>
           </div>
+        </template>
+
+        <!-- Pending review: polish needs human review -->
+        <template v-else-if="hasConsolidated && polishStatus === 'pending_review'">
+          <ShoppingListPolishReview
+            :review-lines="reviewLines"
+            :baseline-lines="baselineLines"
+            :hints="hints"
+            :sections="sections"
+            @update-line="updateReviewLine"
+            @confirm="confirmReview"
+          />
         </template>
 
         <!-- Successful consolidation result -->

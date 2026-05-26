@@ -2,19 +2,22 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../utils/structuredLogger'
 import type { PlanningPrincipal } from '../planning/planningPrincipal'
 import type { MergedLine } from './exactMerge'
-import type { PolishResponseChange } from './polishHarness'
+import type { PolishResponse, PolishResponseChange } from './polishHarness'
 import type { ShoppingListPolishPort } from './polishPort'
+import type { PolishHint } from './polishHintBuilder'
 import { getSavedWeekplanById } from '../planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../utils/planningErrors'
 import { collectRecipeOccurrences, buildShoppingList } from '../../../utils/shoppingList'
 import { exactMerge, buildPolishContext } from './exactMerge'
 import { canonicalizePolishResponse, validatePolishResponse } from './polishHarness'
+import { buildPolishHints } from './polishHintBuilder'
+import { computeSourceFingerprint } from './sourceFingerprint'
 import { isPolishAbortTimeout } from './polishChainFactory'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
 
-export type PolishStatus = 'ai_skipped' | 'polished' | 'baseline_fallback'
+export type PolishStatus = 'ai_skipped' | 'polished' | 'pending_review' | 'baseline_fallback'
 
 export interface ConsolidationResult {
   consolidatedLines: MergedLine[]
@@ -22,6 +25,9 @@ export interface ConsolidationResult {
   changes: PolishResponseChange[]
   polishStatus: PolishStatus
   warnings: string[]
+  polishResponse?: PolishResponse
+  hints?: PolishHint[]
+  sourceFingerprint?: string
 }
 
 export interface ConsolidationDeps {
@@ -108,6 +114,9 @@ export async function consolidateShoppingList(
   let consolidatedLines = baselineLines
   let changes: PolishResponseChange[] = []
   let polishStatus: PolishStatus = 'ai_skipped'
+  let polishResponse: PolishResponse | undefined
+  let hints: PolishHint[] | undefined
+  const sourceFingerprint = computeSourceFingerprint(plan.body)
 
   // Partial recipe resolution: some recipes missing from catalog
   if (missingCount > 0) {
@@ -130,13 +139,15 @@ export async function consolidateShoppingList(
       const polishContext = buildPolishContext(baseline)
       const result = await polishPort.polish(polishContext)
 
-      // Harness validation — single attempt, no repair loop (retry policy v1)
-      const polishedResponse = canonicalizePolishResponse(result.response, baseline)
-      const validation = validatePolishResponse(polishedResponse, baseline)
+      // Canonicalize and validate
+      const canonicalized = canonicalizePolishResponse(result.response, baseline)
+      const validation = validatePolishResponse(canonicalized, baseline)
+      const polishHints = buildPolishHints(result.response, baseline)
 
       if (validation.valid) {
+        // Clean pass: apply polished lines directly
         const baselineById = new Map(baselineLines.map(bl => [bl.id, bl]))
-        consolidatedLines = polishedResponse.lines.map((line) => {
+        consolidatedLines = canonicalized.lines.map((line) => {
           const baselineLine = baselineById.get(line.id)
           return {
             id: line.id,
@@ -146,25 +157,32 @@ export async function consolidateShoppingList(
             provenance: baselineLine?.provenance ?? [],
           }
         })
-        changes = polishedResponse.changes ?? []
+        changes = canonicalized.changes ?? []
         polishStatus = 'polished'
       }
       else {
-        logger.warn('shopping_list.polish_harness_failed', {
-          planId,
-          baselineLineCount: baselineLines.length,
-          responseLineCount: result.response.lines.length,
-          failureCount: validation.failures.length,
-          failuresByRule: summarizeFailuresByRule(validation.failures),
-          failures: validation.failures.slice(0, 10).map(f => ({
-            rule: f.rule,
-            lineId: f.lineId,
-            message: f.message,
-          })),
+        // Model succeeded but harness found violations → pending_review with hints
+        const baselineById = new Map(baselineLines.map(bl => [bl.id, bl]))
+        consolidatedLines = canonicalized.lines.map((line) => {
+          const baselineLine = baselineById.get(line.id)
+          return {
+            id: line.id,
+            name: line.name,
+            quantity: line.quantity,
+            unit: line.unit,
+            provenance: baselineLine?.provenance ?? [],
+          }
         })
-        warnings.push('AI polish output rejected by harness validation; returning baseline.')
-        polishStatus = 'baseline_fallback'
-        consolidatedLines = baselineLines
+        changes = canonicalized.changes ?? []
+        polishStatus = 'pending_review'
+        polishResponse = canonicalized
+        hints = polishHints
+
+        logger.info('shopping_list.polish_pending_review', {
+          planId,
+          hintCount: polishHints.length,
+          failuresByRule: summarizeFailuresByRule(validation.failures),
+        })
       }
     }
     catch (err) {
@@ -192,9 +210,10 @@ export async function consolidateShoppingList(
     baselineLineCount: baselineLines.length,
     consolidatedLineCount: consolidatedLines.length,
     polishStatus,
+    ...(hints ? { hintCount: hints.length } : {}),
   })
 
-  return { consolidatedLines, baselineLines, changes, polishStatus, warnings }
+  return { consolidatedLines, baselineLines, changes, polishStatus, warnings, polishResponse, hints, sourceFingerprint }
 }
 
 /** Counts harness validation failures per rule for structured logging. */

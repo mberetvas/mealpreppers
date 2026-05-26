@@ -290,6 +290,48 @@ describe('consolidateShoppingList service', () => {
       expect(result.consolidatedLines).toEqual(result.baselineLines)
       expect(result.warnings[0]).toContain('failed')
     })
+
+    it('returns pending_review with hints when harness finds violations', async () => {
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockResolvedValue({
+          response: {
+            lines: [
+              { id: 'L1', name: 'Pasta', quantity: 9999, unit: 'g' },
+              { id: 'L2', name: 'sla', quantity: 1, unit: 'krop' },
+            ],
+            changes: [{ id: 'L1', reason: 'Increased quantity' }],
+          },
+        }),
+      }
+
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(result.polishStatus).toBe('pending_review')
+      expect(result.polishResponse).toBeDefined()
+      expect(result.hints).toBeDefined()
+      expect(result.hints!.length).toBeGreaterThan(0)
+      // AI lines are NOT discarded
+      expect(result.consolidatedLines[0].quantity).toBe(9999)
+    })
+
+    it('returns sourceFingerprint in result', async () => {
+      const result = await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: null,
+        openrouterApiKey: undefined,
+      })
+
+      expect(result.sourceFingerprint).toBeDefined()
+      expect(result.sourceFingerprint).toMatch(/^[a-f0-9]+$/)
+    })
   })
 
   describe('partial recipe resolution', () => {
