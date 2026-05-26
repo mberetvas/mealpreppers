@@ -17,7 +17,7 @@ export interface PolishResponse {
   changes?: PolishResponseChange[]
 }
 
-export type ValidationRule = 'no-invented-ingredients' | 'missing-baseline-line' | 'quantity-cap' | 'unit-policy'
+export type ValidationRule = 'no-invented-ingredients' | 'quantity-cap' | 'unit-policy' | 'no-removed-lines'
 
 export interface ValidationFailure {
   rule: ValidationRule
@@ -32,7 +32,8 @@ export interface ValidationResult {
 
 /**
  * Validates a Shopping list polish response against the Shopping list polish baseline.
- * Ensures the AI model cannot invent ingredients, inflate quantities, or violate unit/locale policy.
+ * Ensures the AI model cannot invent ingredients, inflate quantities, violate unit/locale policy,
+ * drop baseline lines, or produce duplicate line ids.
  * Returns a structured pass/fail result for orchestration flow control (never throws).
  */
 export function validatePolishResponse(response: PolishResponse, baseline: PolishBaseline): ValidationResult {
@@ -42,19 +43,19 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
   const baselineQuantityByNameUnit = buildBaselineQuantityMap(baseline)
   const baselineUnitsByName = buildBaselineUnitsMap(baseline)
 
-  const responseLineIds = new Set(response.lines.map(line => line.id))
-
-  for (const baselineLine of baseline.lines) {
-    if (!responseLineIds.has(baselineLine.id)) {
-      failures.push({
-        rule: 'missing-baseline-line',
-        lineId: baselineLine.id,
-        message: `Baseline line id "${baselineLine.id}" is missing from polish response`,
-      })
-    }
-  }
+  const seenIds = new Set<string>()
 
   for (const line of response.lines) {
+    if (seenIds.has(line.id)) {
+      failures.push({
+        rule: 'no-invented-ingredients',
+        lineId: line.id,
+        message: `Line id "${line.id}" appears more than once in polish response`,
+      })
+      continue
+    }
+    seenIds.add(line.id)
+
     const baselineLine = baselineLineById.get(line.id)
     if (!baselineLine) {
       failures.push({
@@ -66,6 +67,16 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
     }
     validateUnitPolicy(line, baselineLine, baselineUnitsByName, failures)
     validateQuantityCap(line, baselineLine, baselineQuantityByNameUnit, failures)
+  }
+
+  for (const baselineLine of baseline.lines) {
+    if (!seenIds.has(baselineLine.id)) {
+      failures.push({
+        rule: 'no-removed-lines',
+        lineId: baselineLine.id,
+        message: `Baseline line id "${baselineLine.id}" is missing from polish response`,
+      })
+    }
   }
 
   return { valid: failures.length === 0, failures }

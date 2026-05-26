@@ -68,7 +68,7 @@ function roundQuantity(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-/** Normalizes a unit string using ingestion aliases, returns undefined for unknown/absent units. */
+/** Normalizes a unit string using ingestion aliases; returns undefined for absent/empty units, preserves unknown units with lowercase normalization. */
 function normalizeUnit(unit: string | undefined): string | undefined {
   if (!unit) return undefined
   return UNIT_ALIASES.get(unit.toLowerCase()) ?? unit.toLowerCase()

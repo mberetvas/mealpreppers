@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import type { PolishResponseChange } from '~~/server/services/shopping-list/polishHarness'
 import type { PolishStatus } from '~~/server/services/shopping-list/consolidationService'
@@ -37,15 +37,22 @@ export function useConsolidatedShoppingList(
   const hasConsolidated = ref(false)
   const changes = ref<PolishResponseChange[]>([])
 
+  let consolidateGeneration = 0
+
+  // Reset state whenever the active plan changes to avoid showing stale results
+  watch(planId, () => reset())
+
   /** Triggers the consolidation API call. Each call refreshes from current plan data. */
   async function consolidate(): Promise<void> {
     if (!planId.value) return
 
+    const generation = ++consolidateGeneration
     consolidating.value = true
     consolidationError.value = null
 
     try {
       const result = await fetchConsolidate(planId.value)
+      if (generation !== consolidateGeneration) return
       consolidatedLines.value = result.consolidatedLines
       baselineLines.value = result.baselineLines
       changes.value = result.changes
@@ -54,12 +61,15 @@ export function useConsolidatedShoppingList(
       hasConsolidated.value = true
     }
     catch (error: unknown) {
+      if (generation !== consolidateGeneration) return
       const message = error instanceof Error ? error.message : 'Consolidation failed. Please try again.'
       consolidationError.value = message
       hasConsolidated.value = true
     }
     finally {
-      consolidating.value = false
+      if (generation === consolidateGeneration) {
+        consolidating.value = false
+      }
     }
   }
 

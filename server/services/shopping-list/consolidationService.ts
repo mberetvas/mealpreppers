@@ -133,8 +133,9 @@ export async function consolidateShoppingList(
       const validation = validatePolishResponse(result.response, baseline)
 
       if (validation.valid) {
+        const baselineById = new Map(baselineLines.map(bl => [bl.id, bl]))
         consolidatedLines = result.response.lines.map((line) => {
-          const baselineLine = baselineLines.find(bl => bl.id === line.id)
+          const baselineLine = baselineById.get(line.id)
           return {
             id: line.id,
             name: line.name,
@@ -157,8 +158,11 @@ export async function consolidateShoppingList(
         consolidatedLines = baselineLines
       }
     }
-    catch {
-      logger.warn('shopping_list.polish_failed', { planId })
+    catch (err) {
+      logger.warn('shopping_list.polish_failed', {
+        planId,
+        error: err instanceof Error ? err.message : String(err),
+      })
       warnings.push('AI polish failed; returning baseline.')
       polishStatus = 'baseline_fallback'
       consolidatedLines = baselineLines

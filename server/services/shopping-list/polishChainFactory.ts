@@ -89,18 +89,20 @@ export function createShoppingListPolishChain(config: PolishChainConfig): Polish
   const temperature = 0
   const tracingEnabled = Boolean(config.langsmithApiKey)
 
+  // Configure LangChain tracing once at chain creation, not on every invocation,
+  // to avoid per-request global mutation races in concurrent environments.
+  if (tracingEnabled) {
+    process.env.LANGCHAIN_TRACING_V2 = 'true'
+    process.env.LANGSMITH_API_KEY = config.langsmithApiKey
+    process.env.LANGCHAIN_PROJECT = 'mealprepper-shopping-list'
+  }
+  else {
+    process.env.LANGCHAIN_TRACING_V2 = 'false'
+  }
+
   const invoke = async (context: PolishContext): Promise<z.infer<typeof PolishResponseSchema>> => {
     const { ChatOpenRouter } = await import('@langchain/openrouter')
     const { ChatPromptTemplate } = await import('@langchain/core/prompts')
-
-    if (tracingEnabled) {
-      process.env.LANGCHAIN_TRACING_V2 = 'true'
-      process.env.LANGSMITH_API_KEY = config.langsmithApiKey
-      process.env.LANGCHAIN_PROJECT = 'mealprepper-shopping-list'
-    }
-    else {
-      process.env.LANGCHAIN_TRACING_V2 = 'false'
-    }
 
     const llm = new ChatOpenRouter({
       model,

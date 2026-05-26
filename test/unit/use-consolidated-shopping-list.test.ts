@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { ref } from 'vue'
+import { ref, nextTick, effectScope } from 'vue'
 import { useConsolidatedShoppingList, type ConsolidationResponse } from '../../app/composables/useConsolidatedShoppingList'
 
 function makeSuccessResponse(): ConsolidationResponse {
@@ -173,5 +173,60 @@ describe('useConsolidatedShoppingList', () => {
 
     await consolidate()
     expect(consolidationError.value).toBeNull()
+  })
+
+  it('resets state when planId changes', async () => {
+    const scope = effectScope()
+    const planId = ref('plan-1')
+    const fetchConsolidate = vi.fn().mockResolvedValue(makeSuccessResponse())
+
+    let composable!: ReturnType<typeof useConsolidatedShoppingList>
+    scope.run(() => {
+      composable = useConsolidatedShoppingList(planId, { fetchConsolidate })
+    })
+
+    const { consolidatedLines, hasConsolidated, consolidate, polishStatus } = composable
+
+    await consolidate()
+    expect(hasConsolidated.value).toBe(true)
+    expect(consolidatedLines.value).toHaveLength(2)
+    expect(polishStatus.value).toBe('polished')
+
+    planId.value = 'plan-2'
+    await nextTick()
+
+    expect(hasConsolidated.value).toBe(false)
+    expect(consolidatedLines.value).toEqual([])
+    expect(polishStatus.value).toBeNull()
+
+    scope.stop()
+  })
+
+  it('discards stale response when a newer consolidation starts before the first completes', async () => {
+    const planId = ref('plan-1')
+    let resolveFirst: (v: ConsolidationResponse) => void
+    let resolveSecond: (v: ConsolidationResponse) => void
+
+    const fetchConsolidate = vi.fn()
+      .mockImplementationOnce(() => new Promise<ConsolidationResponse>((res) => { resolveFirst = res }))
+      .mockImplementationOnce(() => new Promise<ConsolidationResponse>((res) => { resolveSecond = res }))
+
+    const { consolidatedLines, consolidate } = useConsolidatedShoppingList(planId, { fetchConsolidate })
+
+    const first = consolidate()
+    const second = consolidate()
+
+    const staleResponse = makeAiSkippedResponse()
+    const freshResponse = makeSuccessResponse()
+
+    // Resolve the newer (second) request first, then the stale (first) request
+    resolveSecond!(freshResponse)
+    await second
+
+    resolveFirst!(staleResponse)
+    await first
+
+    // Only the fresh (second) response should be reflected in state
+    expect(consolidatedLines.value).toEqual(freshResponse.consolidatedLines)
   })
 })
