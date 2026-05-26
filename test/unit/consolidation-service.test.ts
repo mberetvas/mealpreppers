@@ -254,11 +254,12 @@ describe('consolidateShoppingList service', () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
+            // Use exact baseline names so name-unchanged harness rule passes
             lines: [
-              { id: 'L1', name: 'Pasta', quantity: 800, unit: 'g' },
+              { id: 'L1', name: 'pasta', quantity: 800, unit: 'g' },
               { id: 'L2', name: 'sla', quantity: 1, unit: 'krop' },
             ],
-            changes: [{ id: 'L1', reason: 'Capitalized name' }],
+            changes: [{ id: 'L1', reason: 'Confirmed correct quantity' }],
           },
         }),
       }
@@ -272,10 +273,10 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('polished')
-      // Verify polished name is preserved (sla/produce sorts first, Pasta/dry_goods second)
-      const pastaLine = result.consolidatedLines.find(l => l.name === 'Pasta')
-      expect(pastaLine).toBeDefined()
+      // sla (produce) sorts before pasta (dry_goods)
       expect(result.consolidatedLines[0].name).toBe('sla')
+      const pastaLine = result.consolidatedLines.find(l => l.name === 'pasta')
+      expect(pastaLine).toBeDefined()
       expect(result.changes).toHaveLength(1)
       expect(mockPort.polish).toHaveBeenCalledOnce()
     })

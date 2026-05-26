@@ -207,6 +207,7 @@ export async function consolidateShoppingList(
   }
 
   consolidatedLines = sortShoppingListLines(consolidatedLines)
+  const sortedBaselineLines = sortShoppingListLines(baselineLines)
   if (polishResponse) {
     polishResponse = {
       ...polishResponse,
@@ -226,7 +227,7 @@ export async function consolidateShoppingList(
     ...(hints ? { hintCount: hints.length } : {}),
   })
 
-  return { consolidatedLines, baselineLines, changes, polishStatus, warnings, polishResponse, hints, sourceFingerprint }
+  return { consolidatedLines, baselineLines: sortedBaselineLines, changes, polishStatus, warnings, polishResponse, hints, sourceFingerprint }
 }
 
 /** Counts harness validation failures per rule for structured logging. */

@@ -380,7 +380,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       expect(result.consolidatedLines).toEqual(result.baselineLines)
     })
 
-    it('sorts consolidatedLines by supermarket aisle when AI is skipped', async () => {
+    it('sorts consolidatedLines and baselineLines by supermarket aisle when AI is skipped', async () => {
       mocks.listRecipes.mockResolvedValue({
         ok: true,
         value: [makeRecipe('recipe-1', 'Mix', [
@@ -398,8 +398,9 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
+      // tomaten (produce) sorts before melk (dairy) in both consolidatedLines and baselineLines
       expect(result.consolidatedLines.map(l => l.name)).toEqual(['tomaten', 'melk'])
-      expect(result.baselineLines.map(l => l.name)).toEqual(['melk', 'tomaten'])
+      expect(result.baselineLines.map(l => l.name)).toEqual(['tomaten', 'melk'])
     })
   })
 
