@@ -60,37 +60,49 @@ export function useConsolidatedShoppingList(
 
   let consolidateGeneration = 0
 
-  // Reset state whenever the active plan changes to avoid showing stale results
-  watch(planId, () => reset())
+  // Reset state whenever the active plan changes, then hydrate any saved consolidated list
+  watch(planId, () => {
+    reset()
+    void loadSavedList()
+  }, { immediate: true })
 
   /** Loads the saved consolidated shopping list from the server. Checks deprecation status via plan flags. */
   async function loadSavedList(): Promise<void> {
     if (!planId.value) return
 
+    const planAtStart = planId.value
+
     try {
-      const result = await fetchSavedList(planId.value)
+      const result = await fetchSavedList(planAtStart)
+      if (planId.value !== planAtStart) return
       if (result) {
         savedList.value = result
-        consolidatedLines.value = result.lines.map(l => ({
+        const lines = result.lines.map(l => ({
           ...l,
           quantity: l.quantity,
           unit: l.unit,
-          provenance: [],
+          provenance: [] as { recipeId: string, recipeTitle: string }[],
         }))
+        consolidatedLines.value = lines
+        baselineLines.value = lines.map(l => ({ ...l }))
+        changes.value = []
         polishStatus.value = 'polished'
         hasConsolidated.value = true
 
         // Check deprecation status
         try {
-          const flags = await fetchPlanFlags(planId.value)
+          const flags = await fetchPlanFlags(planAtStart)
+          if (planId.value !== planAtStart) return
           shoppingListDeprecated.value = flags.shoppingListDeprecated
         }
         catch {
+          if (planId.value !== planAtStart) return
           shoppingListDeprecated.value = false
         }
       }
     }
     catch {
+      if (planId.value !== planAtStart) return
       // No saved list — user must consolidate
     }
   }

@@ -346,7 +346,7 @@ describe('useConsolidatedShoppingList — load + save flow', () => {
     const fetchSavedList = vi.fn().mockResolvedValue(savedRecord)
     const savelist = vi.fn()
 
-    const { loadSavedList, consolidatedLines, polishStatus, hasConsolidated } =
+    const { loadSavedList, consolidatedLines, baselineLines, polishStatus, hasConsolidated } =
       useConsolidatedShoppingList(planId, { fetchConsolidate, fetchSavedList, savelist })
 
     await loadSavedList()
@@ -354,6 +354,7 @@ describe('useConsolidatedShoppingList — load + save flow', () => {
     expect(fetchConsolidate).not.toHaveBeenCalled()
     expect(consolidatedLines.value).toHaveLength(1)
     expect(consolidatedLines.value[0].name).toBe('pasta')
+    expect(baselineLines.value).toEqual(consolidatedLines.value)
     expect(polishStatus.value).toBe('polished')
     expect(hasConsolidated.value).toBe(true)
   })
@@ -395,6 +396,32 @@ describe('useConsolidatedShoppingList — load + save flow', () => {
     // Wait for the save promise
     await vi.waitFor(() => expect(savedList.value).not.toBeNull())
     expect(savedList.value!.sourceFingerprint).toBe('computed-by-server')
+  })
+
+  it('hydrates saved list when planId is set without an explicit loadSavedList call', async () => {
+    const { ref } = await import('vue')
+    const { useConsolidatedShoppingList } = await import('../../app/composables/useConsolidatedShoppingList')
+
+    const planId = ref('plan-1')
+    const savedRecord: SavedConsolidatedShoppingListRecord = {
+      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g' }],
+      sourceFingerprint: 'abc123',
+      confirmedAt: '2026-05-26T10:00:00.000Z',
+    }
+    const fetchSavedList = vi.fn().mockResolvedValue(savedRecord)
+    const fetchPlanFlags = vi.fn().mockResolvedValue({
+      hasSavedShoppingList: true,
+      shoppingListDeprecated: false,
+    })
+
+    const { consolidatedLines, savedList, hasConsolidated } =
+      useConsolidatedShoppingList(planId, { fetchSavedList, fetchPlanFlags })
+
+    await vi.waitFor(() => expect(hasConsolidated.value).toBe(true))
+
+    expect(fetchSavedList).toHaveBeenCalledWith('plan-1')
+    expect(savedList.value).toEqual(savedRecord)
+    expect(consolidatedLines.value[0]?.name).toBe('pasta')
   })
 
   it('loadSavedList does nothing when no saved list exists', async () => {
