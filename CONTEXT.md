@@ -168,8 +168,8 @@ Structured model output for consolidation: consolidated `lines` plus optional `c
 _Avoid_: markdown list, free text
 
 **Shopping list polish fallback**:
-When **Shopping list AI polish** fails, the UI still shows the **Shopping list polish baseline** as the **Consolidated shopping list**, with a warning and retry—not an empty consolidated view.
-_Avoid_: hard fail, merge error only
+When **Shopping list AI polish** cannot run (missing API key, timeout, parse error), the UI falls back to **Shopping list polish baseline** with a warning. Harness rule violations no longer trigger fallback; they produce **Shopping list polish hint**s during **Shopping list polish review** instead.
+_Avoid_: harness reject hides AI output, hard fail empty view
 
 **Shopping list unit policy (v1)**:
 **Shopping list AI polish** may merge or rename only when units already match; no unit conversion in the first release.
@@ -179,13 +179,49 @@ _Avoid_: smart units, auto-convert
 Canonical ingredient names and `changes` rationale from **Shopping list AI polish** are Dutch store-style labels, regardless of mixed input languages.
 _Avoid_: auto-detect language, English defaults
 
-**Consolidated shopping list persistence (v1)**:
-The consolidated result is not stored on the **Saved Weekplan**; each **Consolidate action** derives it again (client may hold it only for the current session).
-_Avoid_: saved consolidated list, cached merge row
+**Consolidated shopping list persistence**:
+User-confirmed **Consolidated shopping list** is stored on the **Saved Weekplan** and reused on later visits until the plan’s shopping source changes; otherwise the user runs **Consolidate action** again.
+_Avoid_: session-only cache, ephemeral merge row
+
+**Saved consolidated shopping list (planned)**:
+The **Consolidated shopping list** the user confirmed after **Shopping list polish review**, stored on the **Saved Weekplan** so repeat visits do not require re-running **Consolidate action** when the underlying plan is unchanged.
+_Avoid_: session cache, ephemeral merge
+
+**Shopping list source fingerprint**:
+A server-computed digest of canonical **Saved Weekplan** `body` (stable JSON: sorted keys, days `1`–`7`, normalized slots). Stored on save and recomputed on load; the client never supplies or trusts its own hash. Mismatch → **Deprecated saved consolidated shopping list**.
+_Avoid_: client hash, raw JSON.stringify, updated_at only
+
+**Shopping list polish review layout (planned)**:
+Desktop: **Shopping list polish reference** tabs (recipe sections | polish baseline) left, editable AI column right. Mobile: stacked, reference tabs on top.
+_Avoid_: side-by-side on small screens, single column only
+
+**Deprecated saved consolidated shopping list (planned)**:
+A **Saved consolidated shopping list** whose **Shopping list source fingerprint** no longer matches the current **Saved Weekplan** `body`; the UI warns the user, shows the old lines read-only for comparison, and requires **Consolidate action** before a new list can be confirmed.
+_Avoid_: stale badge only, silent overwrite, hidden history
+
+**Saved consolidated shopping list record (planned)**:
+JSON stored on the **Saved Weekplan** row: confirmed `lines`, `sourceFingerprint` (hash of `body`), and `confirmedAt`.
+_Avoid_: separate shopping-list table, session storage
+
+**Consolidated shopping list API (planned)**:
+`PUT /api/v1/saved-weekplans/:id/consolidated-shopping-list` persists after **Shopping list polish confirm**; `GET` on the same path loads the full record. **Saved Weekplan** `GET` embeds `hasSavedShoppingList` and `shoppingListDeprecated` only. **Consolidate action** (`POST .../consolidate-shopping-list`) returns polish for review; saving is always a separate call.
+_Avoid_: nested plan PATCH, confirm-on-consolidate
+
+**Consolidated shopping list default view (planned)**:
+When a valid **Saved consolidated shopping list** exists, **Consolidated shopping list** view shows it as the active list; **Shopping list polish review** appears only after **Consolidate action** (or an explicit edit flow).
+_Avoid_: always-on review, auto-consolidate on open
+
+**Shopping list polish review status (planned)**:
+`POST consolidate` returns `pending_review` when the model succeeds and the client should show **Shopping list polish review** (with `polishResponse` and hints), distinct from `polished` after **PUT** save or legacy auto-apply.
+_Avoid_: baseline_fallback for harness, ambiguous polishStatus
+
+**Edit saved consolidated shopping list (planned)**:
+**Edit list** reopens **Shopping list polish review** with the **Saved consolidated shopping list** lines editable; **Confirm** persists via **PUT** without a new OpenRouter call.
+_Avoid_: consolidate required for typos, read-only saved list
 
 **Shopping list polish retry policy (v1)**:
-On parse or harness validation failure, **Shopping list consolidation service** does not re-call the model; it applies **Shopping list polish fallback** immediately.
-_Avoid_: repair loop, auto-retry
+On parse failure, **Shopping list consolidation service** does not re-call the model. Harness validation does not block the response; hints are returned for human review. Network/timeout failures still use **Shopping list polish fallback** without review.
+_Avoid_: repair loop, auto-retry, server-side harness gate
 
 **Shopping list consolidation access**:
 The same **Planning Principal** rules as loading the **Saved Weekplan** for the shopping list; anonymous session owners may consolidate their own plans.
@@ -194,6 +230,22 @@ _Avoid_: sign-in required, public consolidate
 **Shopping list partial consolidation**:
 **Consolidate action** is allowed when **Shopping list recipe resolution failure** left some recipes unloaded; consolidation uses only loaded **Recipe section**s and keeps the incomplete warning visible.
 _Avoid_: block consolidate, all-or-nothing merge
+
+**Shopping list polish reference (planned)**:
+During human review of **Shopping list AI polish**, the left pane switches by tab between **Recipe sections view** (per-recipe source) and **Shopping list polish baseline** (post–exact-merge reference with stable line IDs).
+_Avoid_: split screen only, single reference column
+
+**Shopping list polish review (planned)**:
+After **Consolidate action** succeeds at the model, the UI shows an editable AI column (canonicalized **Shopping list polish response** for display) beside **Shopping list polish reference**; server harness failures surface as inline hints, not as **Shopping list polish fallback** that hides AI output. The user confirms the edited list to produce the session **Consolidated shopping list**.
+_Avoid_: auto-apply polish, harness-only gate
+
+**Shopping list polish hint (planned)**:
+A non-blocking warning on an editable AI line when it still violates a former harness rule (e.g. unit-policy, quantity cap); the user may fix or ignore before confirm.
+_Avoid_: validation error modal, hard reject
+
+**Shopping list polish confirm (planned)**:
+The user applies their edited AI column to the session **Consolidated shopping list**. Editing is limited to `name`, `quantity`, and `unit` on existing baseline line IDs. If **error**-level **Shopping list polish hint**s remain, Confirm requires an explicit acknowledgment that the user checked the list.
+_Avoid_: auto-confirm, server harness gate
 
 ## Local full-stack (Docker)
 
