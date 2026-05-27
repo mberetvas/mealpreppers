@@ -13,13 +13,14 @@ const props = withDefaults(defineProps<{
   changedLineIds?: Set<string>
 }>(), {
   readonly: false,
+  changedLineIds: () => new Set<string>(),
 })
 
 /** Lines partitioned by Dutch aisle label in supermarket walk order. Empty groups are omitted. */
 const aisleGroups = computed(() => groupLinesByAisle(props.lines))
 
 /** Resolved set of changed IDs; defaults to empty so callers may omit the prop. */
-const effectiveChangedIds = computed(() => props.changedLineIds ?? new Set<string>())
+const effectiveChangedIds = computed(() => props.changedLineIds)
 </script>
 
 <template>

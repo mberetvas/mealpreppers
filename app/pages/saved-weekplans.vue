@@ -356,10 +356,10 @@ function openPreview(item: SavedWeekplanListItem): void {
 
     <ShoppingListConsolidatedShoppingListPreview
       v-if="previewPlan"
+      v-model:open="previewOpen"
       :plan-id="previewPlan.id"
       :has-saved-shopping-list="previewPlan.hasSavedShoppingList"
       :shopping-list-deprecated="previewPlan.shoppingListDeprecated"
-      v-model:open="previewOpen"
     />
   </div>
 </template>

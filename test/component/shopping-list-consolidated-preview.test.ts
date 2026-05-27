@@ -11,7 +11,6 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref } from 'vue'
 import ConsolidatedShoppingListPreview from '../../app/components/shopping-list/ConsolidatedShoppingListPreview.vue'
 
 const PLAN_ID = 'plan-abc-123'
@@ -365,9 +364,7 @@ describe('ConsolidatedShoppingListPreview: aisle collapse reset on reopen', () =
   })
 
   it('re-fetches and resets lines on each open (no stale collapse state)', async () => {
-    let callCount = 0
     const fetchSavedList = vi.fn().mockImplementation(() => {
-      callCount++
       return Promise.resolve({
         lines: readyLines,
         sourceFingerprint: 'fp1',

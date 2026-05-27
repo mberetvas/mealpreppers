@@ -737,10 +737,10 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
 
     <ShoppingListConsolidatedShoppingListPreview
       v-if="weekPersistenceKind === 'saved-weekplan' && activeTemplateId"
+      v-model:open="previewOpen"
       :plan-id="activeTemplateId"
       :has-saved-shopping-list="hasSavedShoppingList"
       :shopping-list-deprecated="shoppingListDeprecated"
-      v-model:open="previewOpen"
     />
   </div>
 </template>
