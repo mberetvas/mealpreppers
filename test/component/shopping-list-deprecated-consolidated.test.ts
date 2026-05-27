@@ -85,7 +85,7 @@ beforeEach(() => {
 })
 
 describe('shopping-list page: deprecated saved consolidated shopping list', () => {
-  it('shows deprecation warning banner when shoppingListDeprecated is true', () => {
+  it('shows recipes-changed notice when shoppingListDeprecated is true', () => {
     const { consolidatedState } = setupGlobals({ plan: 'plan-1', view: 'consolidated' })
     consolidatedState.hasConsolidated.value = true
     consolidatedState.polishStatus.value = 'polished'
@@ -96,11 +96,11 @@ describe('shopping-list page: deprecated saved consolidated shopping list', () =
 
     const wrapper = mount(ShoppingListPage, mountOptions)
 
-    expect(wrapper.find('[data-testid="deprecated-banner"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('plan has changed')
+    expect(wrapper.find('[data-testid="recipes-changed-notice"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Recipes changed')
   })
 
-  it('does NOT show deprecation warning when shoppingListDeprecated is false', () => {
+  it('does NOT show recipes-changed notice when shoppingListDeprecated is false', () => {
     const { consolidatedState } = setupGlobals({ plan: 'plan-1', view: 'consolidated' })
     consolidatedState.hasConsolidated.value = true
     consolidatedState.polishStatus.value = 'polished'
@@ -111,7 +111,7 @@ describe('shopping-list page: deprecated saved consolidated shopping list', () =
 
     const wrapper = mount(ShoppingListPage, mountOptions)
 
-    expect(wrapper.find('[data-testid="deprecated-banner"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="recipes-changed-notice"]').exists()).toBe(false)
   })
 
   it('deprecated list lines are displayed read-only (no confirm/save button)', () => {
@@ -180,16 +180,16 @@ describe('shopping-list page: deprecated saved consolidated shopping list', () =
     const wrapper = mount(ShoppingListPage, mountOptions)
 
     expect(wrapper.find('[data-testid="polish-review"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="deprecated-banner"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="recipes-changed-notice"]').exists()).toBe(false)
   })
 
-  it('deprecated banner is not shown in recipe sections view', () => {
+  it('recipes-changed notice is not shown in recipe sections view', () => {
     const { consolidatedState } = setupGlobals({ plan: 'plan-1' }) // no view=consolidated
     consolidatedState.hasConsolidated.value = true
     consolidatedState.shoppingListDeprecated.value = true
 
     const wrapper = mount(ShoppingListPage, mountOptions)
 
-    expect(wrapper.find('[data-testid="deprecated-banner"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="recipes-changed-notice"]').exists()).toBe(false)
   })
 })

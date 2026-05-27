@@ -7,7 +7,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { ref, computed, watch, reactive, nextTick, type Ref } from 'vue'
 import { formatShoppingListIngredient, formatMergedLine } from '../../utils/shoppingList'
 import ShoppingListPage from '../../app/pages/shopping-list.vue'
-import { useConsolidatedShoppingList } from '../../app/composables/useConsolidatedShoppingList'
+import { useConsolidatedShoppingList, _sessionDraftStore } from '../../app/composables/useConsolidatedShoppingList'
 import type { SavedConsolidatedShoppingListRecord } from '../../server/services/shopping-list/consolidatedShoppingListRepository'
 
 const mountOptions = {
@@ -34,6 +34,7 @@ const savedRecord: SavedConsolidatedShoppingListRecord = {
 function setupWithRealConsolidatedComposable(
   initialQuery: Record<string, string>,
   fetchPlanFlagsOverride?: ReturnType<typeof vi.fn>,
+  fetchConsolidateOverride?: ReturnType<typeof vi.fn>,
 ) {
   const routeQuery = reactive<Record<string, string>>({ ...initialQuery })
 
@@ -59,6 +60,11 @@ function setupWithRealConsolidatedComposable(
     hasSavedShoppingList: true,
     shoppingListDeprecated: false,
   })
+  const fetchConsolidate = fetchConsolidateOverride ?? vi.fn().mockResolvedValue({
+    status: 'baseline_fallback',
+    lines: [],
+    warnings: ['AI not available'],
+  })
 
   const routerReplaceMock = vi.fn((opts: { path: string, query: Record<string, string> }) => {
     delete routeQuery.plan
@@ -74,16 +80,17 @@ function setupWithRealConsolidatedComposable(
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('useShoppingList', () => shoppingListState)
   vi.stubGlobal('useConsolidatedShoppingList', (id: Ref<string>) =>
-    useConsolidatedShoppingList(id, { fetchSavedList, fetchPlanFlags }),
+    useConsolidatedShoppingList(id, { fetchSavedList, fetchPlanFlags, fetchConsolidate }),
   )
   vi.stubGlobal('formatShoppingListIngredient', formatShoppingListIngredient)
   vi.stubGlobal('formatMergedLine', formatMergedLine)
 
-  return { routeQuery, routerReplaceMock, fetchSavedList, fetchPlanFlags, shoppingListState }
+  return { routeQuery, routerReplaceMock, fetchSavedList, fetchPlanFlags, fetchConsolidate, shoppingListState }
 }
 
 beforeEach(() => {
   vi.unstubAllGlobals()
+  _sessionDraftStore.clear()
 })
 
 describe('shopping-list page: saved consolidated list on return', () => {
@@ -127,7 +134,7 @@ describe('shopping-list page: saved consolidated list on return', () => {
     expect(consolidatedReplace).toBe(false)
   })
 
-  it('does not auto-switch to consolidated when saved list is deprecated', async () => {
+  it('auto-switches to consolidated when saved list is deprecated', async () => {
     const { routerReplaceMock } = setupWithRealConsolidatedComposable(
       { plan: 'plan-1' },
       vi.fn().mockResolvedValue({
@@ -143,6 +150,6 @@ describe('shopping-list page: saved consolidated list on return', () => {
     const consolidatedReplace = routerReplaceMock.mock.calls.some(
       call => call[0]?.query?.view === 'consolidated',
     )
-    expect(consolidatedReplace).toBe(false)
+    expect(consolidatedReplace).toBe(true)
   })
 })

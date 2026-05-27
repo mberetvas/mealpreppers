@@ -138,7 +138,7 @@ describe('shopping-list page: consolidated view — guidance text', () => {
     consolidatedState.hasConsolidated.value = false
     consolidatedState.consolidatedLines.value = []
     const wrapper = mount(ShoppingListPage, mountOptions)
-    expect(wrapper.text()).toContain('consolidat')
+    expect(wrapper.text()).toContain('Consolidate shopping list')
   })
 })
 
