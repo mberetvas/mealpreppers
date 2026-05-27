@@ -18,10 +18,10 @@ import { buildPolishHints } from './polishHintBuilder'
 import { computeSourceFingerprint } from './sourceFingerprint'
 import { isPolishAbortTimeout } from './polishChainFactory'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
-
-const AI_REQUIRED_WARNING = 'A supermarket aisle-grouped list requires successful AI consolidation. Configure OpenRouter or retry.'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
+
+const AI_REQUIRED_WARNING = 'A supermarket aisle-grouped list requires successful AI consolidation. Configure OpenRouter or retry.'
 
 export type PolishStatus = 'ai_skipped' | 'polished' | 'pending_review' | 'baseline_fallback'
 

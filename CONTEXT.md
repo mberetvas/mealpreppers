@@ -147,7 +147,7 @@ Dried spices and seasonings (e.g. paprikapoeder, kerriepoeder) in the **Shopping
 _Avoid_: spice rack UI label, herb (when fresh produce)
 
 **Shopping list sauce area (walk order)**:
-Jarred/tubed sauces and pastes (e.g. tomatenpuree, pesto) grouped under the canned/sauces step of **Shopping list store walk order** via keyword rules—not a separate UI section.
+Jarred/tubed sauces and pastes (e.g. tomatenpuree, pesto) grouped under the canned/sauces step of **Shopping list store walk order** when the model assigns `canned_sauces`—not a separate UI section.
 _Avoid_: spice area, recipe section
 
 **Shopping list consolidation**:
