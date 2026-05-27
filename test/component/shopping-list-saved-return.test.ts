@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, computed, watch, reactive, nextTick } from 'vue'
+import { ref, computed, watch, reactive, nextTick, type Ref } from 'vue'
 import { formatShoppingListIngredient, formatMergedLine } from '../../utils/shoppingList'
 import ShoppingListPage from '../../app/pages/shopping-list.vue'
 import { useConsolidatedShoppingList } from '../../app/composables/useConsolidatedShoppingList'
@@ -36,7 +36,6 @@ function setupWithRealConsolidatedComposable(
   fetchPlanFlagsOverride?: ReturnType<typeof vi.fn>,
 ) {
   const routeQuery = reactive<Record<string, string>>({ ...initialQuery })
-  const planId = computed(() => routeQuery.plan ?? '')
 
   const shoppingListState = {
     loading: ref(false),
@@ -62,9 +61,8 @@ function setupWithRealConsolidatedComposable(
   })
 
   const routerReplaceMock = vi.fn((opts: { path: string, query: Record<string, string> }) => {
-    for (const key of Object.keys(routeQuery)) {
-      delete routeQuery[key]
-    }
+    delete routeQuery.plan
+    delete routeQuery.view
     Object.assign(routeQuery, opts.query)
   })
 
@@ -75,7 +73,7 @@ function setupWithRealConsolidatedComposable(
   vi.stubGlobal('useRouter', () => ({ replace: routerReplaceMock }))
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('useShoppingList', () => shoppingListState)
-  vi.stubGlobal('useConsolidatedShoppingList', (id: typeof planId) =>
+  vi.stubGlobal('useConsolidatedShoppingList', (id: Ref<string>) =>
     useConsolidatedShoppingList(id, { fetchSavedList, fetchPlanFlags }),
   )
   vi.stubGlobal('formatShoppingListIngredient', formatShoppingListIngredient)
