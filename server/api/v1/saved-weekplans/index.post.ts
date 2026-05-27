@@ -5,6 +5,8 @@ import {
 } from '../../../services/planning/planningRepository'
 import { withPlanningHandler } from '../../../services/planning/planningRequestContext'
 import { createSavedWeekplan } from '../../../services/planning/savedWeekplansRepository'
+import { copyConsolidatedListFromMatchingPlan } from '../../../services/shopping-list/consolidatedShoppingListRepository'
+import { computeSourceFingerprint } from '../../../services/shopping-list/sourceFingerprint'
 import { toPlanningHttpError } from '../../../utils/planningErrors'
 import { weekTemplateCreateSchema } from '../../../../types/planning'
 
@@ -28,12 +30,20 @@ export default defineEventHandler(
         throw createError(toPlanningHttpError(result.error))
       }
 
+      // Copy-on-match: if an existing confirmed list for this principal shares the same
+      // fingerprint, copy it immediately. The flag is returned on this response exactly once
+      // so the client can show a copy notice without an extra round-trip.
+      const fingerprint = computeSourceFingerprint(parsed.data.body)
+      const copyResult = await copyConsolidatedListFromMatchingPlan(supabase, result.value.id, ctx.principal, fingerprint)
+      const shoppingListCopiedFromMatch = copyResult.ok && copyResult.value.copied
+
       ctx.logger.info('saved_weekplans.created', {
         id: result.value.id,
         principalKind: ctx.principalKind,
+        shoppingListCopiedFromMatch,
       })
 
-      return result.value
+      return { ...result.value, shoppingListCopiedFromMatch }
     },
   ),
 )

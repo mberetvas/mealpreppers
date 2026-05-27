@@ -4,14 +4,21 @@ import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
 import type { ShoppingListSection } from '~~/utils/shoppingList'
 import { formatShoppingListIngredient } from '~~/utils/shoppingList'
+import ShoppingListAisleSection from '~/components/shopping-list/AisleSection.vue'
 
 const props = withDefaults(defineProps<{
   reviewLines: MergedLine[]
   hints: PolishHint[]
   sections: ShoppingListSection[]
   saving?: boolean
+  /**
+   * When true, the reference panel shows reviewLines grouped by aisle
+   * (using ShoppingListAisleSection, readonly) instead of recipe sections.
+   */
+  showAisleGroups?: boolean
 }>(), {
   saving: false,
+  showAisleGroups: false,
 })
 
 const emit = defineEmits<{
@@ -60,16 +67,23 @@ function handleConfirm(): void {
     data-testid="polish-review"
     class="grid gap-6 lg:grid-cols-2"
   >
-    <!-- Reference panel: recipe sections only -->
+    <!-- Reference panel: aisle-grouped view or recipe sections depending on prop -->
     <section
       data-testid="review-reference"
       class="space-y-4 rounded-2xl bg-atelier-parchment p-4 ring-1 ring-primary/10"
     >
       <h3 class="text-sm font-semibold text-atelier-heading">
-        Recipe sections
+        {{ showAisleGroups ? 'Grouped by aisle' : 'Recipe sections' }}
       </h3>
 
-      <ul data-testid="ref-sections" class="space-y-3" aria-label="Reference: recipe sections">
+      <ShoppingListAisleSection
+        v-if="showAisleGroups"
+        :lines="reviewLines"
+        :readonly="true"
+        data-testid="ref-aisle-groups"
+      />
+
+      <ul v-else data-testid="ref-sections" class="space-y-3" aria-label="Reference: recipe sections">
         <li v-for="section in sections" :key="section.recipeId" class="space-y-1">
           <p class="text-sm font-semibold text-atelier-heading">{{ section.recipeTitle }}</p>
           <ul class="space-y-0.5 pl-3">

@@ -3,6 +3,7 @@ import { watch, ref } from 'vue'
 import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
 import { sortShoppingListLines } from '~~/server/services/shopping-list/aisleSort'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
+import ShoppingListAisleSection from '~/components/shopping-list/AisleSection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,7 +14,7 @@ const viewMode = computed(() =>
   route.query.view === 'consolidated' ? 'consolidated' : 'sections',
 )
 
-const { loading, planName, sections, planLoaded, planError, failedRecipeCount, load } = useShoppingList(planId)
+const { loading, planName, sections, planLoaded, planError, failedRecipeCount, shoppingListCopiedFromMatch, load } = useShoppingList(planId)
 const {
   consolidating,
   consolidatedLines,
@@ -282,6 +283,13 @@ useHead(() => ({
 
     <!-- Loaded state: recipe sections or consolidated view -->
     <template v-else-if="planLoaded">
+      <!-- Copy-on-match notice: shown once when list was inherited from a matching week -->
+      <ShoppingListConsolidatedListCopyNotice
+        v-if="shoppingListCopiedFromMatch"
+        :plan-id="planId"
+        :shopping-list-copied-from-match="shoppingListCopiedFromMatch"
+      />
+
       <!-- View mode toggle -->
       <nav data-testid="view-mode-toggle" class="flex gap-1 rounded-xl bg-atelier-chip/50 p-1" aria-label="Shopping list view mode">
         <button
@@ -410,17 +418,7 @@ useHead(() => ({
             <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
             {{ warnings[0] || 'AI polish was not applied. Showing baseline merged list.' }}
           </div>
-          <ul class="space-y-2" aria-label="Consolidated shopping list (baseline)">
-            <li
-              v-for="line in displayLines"
-              :key="line.id"
-              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
-            >
-              <span class="flex-1 text-sm text-atelier-heading">
-                {{ formatMergedLine(line) }}
-              </span>
-            </li>
-          </ul>
+          <ShoppingListAisleSection :lines="displayLines" :readonly="true" />
           <div class="flex justify-center">
             <button
               type="button"
@@ -445,17 +443,7 @@ useHead(() => ({
             <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">info</span>
             {{ warnings[0] || 'AI consolidation is currently unavailable. Showing merged baseline.' }}
           </div>
-          <ul class="space-y-2" aria-label="Consolidated shopping list (baseline)">
-            <li
-              v-for="line in displayLines"
-              :key="line.id"
-              class="flex items-center gap-3 rounded-xl bg-atelier-parchment px-4 py-3 ring-1 ring-primary/10"
-            >
-              <span class="flex-1 text-sm text-atelier-heading">
-                {{ formatMergedLine(line) }}
-              </span>
-            </li>
-          </ul>
+          <ShoppingListAisleSection :lines="displayLines" :readonly="true" />
           <div class="flex justify-center">
             <button
               type="button"
@@ -499,6 +487,7 @@ useHead(() => ({
             :hints="hints"
             :sections="sections"
             :saving="saving"
+            :show-aisle-groups="true"
             @update-line="updateReviewLine"
             @confirm="confirmReview"
           />
@@ -588,24 +577,10 @@ useHead(() => ({
             </ul>
           </div>
 
-          <ul class="space-y-2" aria-label="Consolidated shopping list">
-            <li
-              v-for="line in displayLines"
-              :key="line.id"
-              :data-testid="changedLineIds.has(line.id) ? 'diff-changed' : undefined"
-              class="flex items-center gap-3 rounded-xl px-4 py-3 ring-1 ring-primary/10"
-              :class="changedLineIds.has(line.id) ? 'bg-atelier-chip/60 border-l-4 border-l-primary' : 'bg-atelier-parchment'"
-            >
-              <span
-                v-if="changedLineIds.has(line.id)"
-                class="material-symbols-outlined text-[16px] text-primary"
-                aria-hidden="true"
-              >auto_fix_high</span>
-              <span class="flex-1 text-sm text-atelier-heading">
-                {{ formatMergedLine(line) }}
-              </span>
-            </li>
-          </ul>
+          <ShoppingListAisleSection
+            :lines="displayLines"
+            :changed-line-ids="changedLineIds"
+          />
           <div class="flex justify-center gap-3">
             <button
               v-if="savedList && !shoppingListDeprecated"

@@ -29,6 +29,8 @@ export function useShoppingList(planId: Ref<string>, options: UseShoppingListOpt
   const planLoaded = ref(false)
   const planError = ref(false)
   const failedRecipeCount = ref(0)
+  /** True when the plan's shopping list was copied from a matching confirmed list (copy-on-match). */
+  const shoppingListCopiedFromMatch = ref(false)
 
   let loadGeneration = 0
 
@@ -52,6 +54,7 @@ export function useShoppingList(planId: Ref<string>, options: UseShoppingListOpt
       if (generation !== loadGeneration) return
 
       planName.value = plan.name
+      shoppingListCopiedFromMatch.value = (plan as { shoppingListCopiedFromMatch?: boolean }).shoppingListCopiedFromMatch ?? false
       const occurrences = collectRecipeOccurrences(plan.body)
       const recipeIds = [...occurrences.keys()]
 
@@ -89,5 +92,5 @@ export function useShoppingList(planId: Ref<string>, options: UseShoppingListOpt
 
   watch(planId, load, { immediate: true })
 
-  return { loading, planName, sections, planLoaded, planError, failedRecipeCount, load }
+  return { loading, planName, sections, planLoaded, planError, failedRecipeCount, shoppingListCopiedFromMatch, load }
 }

@@ -16,16 +16,44 @@ export interface ConsolidationResponse {
   hints?: PolishHint[]
 }
 
+/** Unconfirmed AI output held in client memory for the browser session. Discarded on tab close. */
+export interface SessionDraft {
+  reviewLines: MergedLine[]
+  hints: PolishHint[]
+  baselineLines: MergedLine[]
+  warnings: string[]
+  polishStatus: PolishStatus
+  changes: PolishResponseChange[]
+  consolidatedLines: MergedLine[]
+}
+
+/**
+ * Module-level draft store keyed by plan ID. Survives component unmount within the same browser
+ * session but is discarded on tab close (no localStorage, no server persistence).
+ * Exported with underscore prefix for test isolation only.
+ */
+export const _sessionDraftStore = new Map<string, SessionDraft>()
+
 export interface UseConsolidatedShoppingListOptions {
   fetchConsolidate?: (planId: string) => Promise<ConsolidationResponse>
   fetchSavedList?: (planId: string) => Promise<SavedConsolidatedShoppingListRecord | null>
   savelist?: (planId: string, lines: SavedShoppingListLine[]) => Promise<SavedConsolidatedShoppingListRecord>
   fetchPlanFlags?: (planId: string) => Promise<ShoppingListFlags>
+  /**
+   * When provided, enables the auto-consolidation trigger. The trigger fires when this ref's
+   * value is `'consolidated'`, hydration has settled, no valid saved list exists, and no session
+   * draft is held for the current plan.
+   */
+  view?: Ref<string>
 }
 
 /**
  * Manages consolidated shopping list state: API call, loading, error, retry, persistence,
  * and session-scoped caching. Confirmed results are persisted via PUT and loaded on revisit.
+ *
+ * When the `view` option is provided, auto-triggers consolidation on the consolidated tab:
+ * if view=consolidated, hydration is settled, no valid saved list exists, and no session draft
+ * is held, it calls `consolidate()` automatically. If a draft exists, it is restored instead.
  */
 export function useConsolidatedShoppingList(
   planId: Ref<string>,
@@ -43,6 +71,7 @@ export function useConsolidatedShoppingList(
         hasSavedShoppingList: r.hasSavedShoppingList,
         shoppingListDeprecated: r.shoppingListDeprecated,
       })),
+    view,
   } = options
 
   const consolidating = ref(false)
@@ -63,12 +92,69 @@ export function useConsolidatedShoppingList(
   const savedListHydrationSettled = ref(false)
 
   let consolidateGeneration = 0
+  /** Prevents the auto-trigger from firing more than once per composable instance per plan. */
+  let autoTriggered = false
 
-  // Reset state whenever the active plan changes, then hydrate any saved consolidated list
-  watch(planId, () => {
-    reset()
+  // On plan change: clear the draft for the departing plan, reset state, then hydrate
+  watch(planId, (_newVal, oldVal) => {
+    if (oldVal) _sessionDraftStore.delete(oldVal)
+    resetState()
     void loadSavedList()
   }, { immediate: true })
+
+  // Auto-trigger: fires when view or hydration status changes
+  if (view) {
+    watch(
+      [view, savedListHydrationSettled] as const,
+      () => maybeAutoConsolidate(),
+    )
+  }
+
+  /** Checks trigger conditions and either restores a draft or calls consolidate(). */
+  function maybeAutoConsolidate(): void {
+    if (!planId.value) return
+    if (autoTriggered) return
+    if (!view || view.value !== 'consolidated') return
+    if (!savedListHydrationSettled.value) return
+    if (consolidating.value) return
+    if (savedList.value && !shoppingListDeprecated.value) return
+
+    autoTriggered = true
+
+    const draft = _sessionDraftStore.get(planId.value)
+    if (draft) {
+      restoreFromDraft(draft)
+      return
+    }
+
+    void consolidate()
+  }
+
+  /** Restores composable state from a session draft (no API call). */
+  function restoreFromDraft(draft: SessionDraft): void {
+    reviewLines.value = draft.reviewLines.map(l => ({ ...l }))
+    hints.value = [...draft.hints]
+    baselineLines.value = draft.baselineLines.map(l => ({ ...l }))
+    warnings.value = [...draft.warnings]
+    polishStatus.value = draft.polishStatus
+    changes.value = [...draft.changes]
+    consolidatedLines.value = draft.consolidatedLines.map(l => ({ ...l }))
+    hasConsolidated.value = true
+  }
+
+  /** Persists current post-consolidation state to the session draft store. */
+  function saveToDraft(): void {
+    if (!planId.value) return
+    _sessionDraftStore.set(planId.value, {
+      reviewLines: reviewLines.value.map(l => ({ ...l })),
+      hints: [...hints.value],
+      baselineLines: baselineLines.value.map(l => ({ ...l })),
+      warnings: [...warnings.value],
+      polishStatus: polishStatus.value!,
+      changes: [...changes.value],
+      consolidatedLines: consolidatedLines.value.map(l => ({ ...l })),
+    })
+  }
 
   /** Loads the saved consolidated shopping list from the server. Checks deprecation status via plan flags. */
   async function loadSavedList(): Promise<void> {
@@ -143,6 +229,7 @@ export function useConsolidatedShoppingList(
         consolidatedLines.value = []
       }
       hasConsolidated.value = true
+      saveToDraft()
     }
     catch (error: unknown) {
       if (generation !== consolidateGeneration) return
@@ -188,6 +275,7 @@ export function useConsolidatedShoppingList(
       reviewLines.value = []
       savedList.value = result
       shoppingListDeprecated.value = false
+      _sessionDraftStore.delete(planId.value)
     }
     catch (error: unknown) {
       saveError.value = error instanceof Error ? error.message : 'Could not save the shopping list.'
@@ -217,6 +305,13 @@ export function useConsolidatedShoppingList(
 
   /** Resets all consolidated state (e.g. on page leave or explicit clear). */
   function reset(): void {
+    _sessionDraftStore.delete(planId.value)
+    resetState()
+  }
+
+  /** Internal state reset used on plan change (draft clearing is handled by the plan watcher). */
+  function resetState(): void {
+    autoTriggered = false
     consolidating.value = false
     consolidatedLines.value = []
     baselineLines.value = []

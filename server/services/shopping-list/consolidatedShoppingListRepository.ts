@@ -142,6 +142,90 @@ export async function getConsolidatedShoppingList(
   })
 }
 
+export interface CopyOnMatchResult {
+  copied: boolean
+  copiedList?: SavedConsolidatedShoppingListRecord
+}
+
+interface WeekTemplateDbRowForCopy {
+  id: string
+  body: WeekPlanV1
+  consolidated_shopping_list: SavedConsolidatedShoppingListRecord | null
+  owner_user_id: string | null
+  anon_session_id: string | null
+}
+
+/**
+ * Called after a new plan is created. Looks up whether another plan owned by the same
+ * principal has a valid confirmed shopping list whose fingerprint matches `fingerprint`
+ * (i.e. the new plan's body fingerprint). If found, copies that list to the new plan
+ * immediately — no review gate, no extra client round-trip.
+ *
+ * Rules:
+ * - Scoped to the same principal (owner_user_id or anon_session_id).
+ * - Source list must be non-null and not deprecated (its sourceFingerprint must match
+ *   the current fingerprint of the source plan's body).
+ * - Tie-break: source with the highest `confirmedAt` is used.
+ * - Returns { copied: true, copiedList } on success, { copied: false } when no match.
+ */
+export async function copyConsolidatedListFromMatchingPlan(
+  client: SupabaseClient,
+  newPlanId: string,
+  principal: PlanningPrincipal,
+  fingerprint: string,
+): Promise<PlanningResult<CopyOnMatchResult>> {
+  let q = client
+    .from('meal_week_templates')
+    .select('id, body, consolidated_shopping_list, owner_user_id, anon_session_id')
+
+  if (principal.kind === 'user') {
+    q = q.eq('owner_user_id', principal.userId).is('anon_session_id', null)
+  }
+  else {
+    q = q.eq('anon_session_id', principal.sessionId).is('owner_user_id', null)
+  }
+
+  q = q.not('consolidated_shopping_list', 'is', null).neq('id', newPlanId)
+
+  const { data, error } = await q
+
+  if (error) {
+    return fail(storageError(error.message, 'Could not look up matching plans for copy-on-match.'))
+  }
+
+  const rows = (data ?? []) as WeekTemplateDbRowForCopy[]
+
+  const validMatches = rows.filter((row) => {
+    const list = row.consolidated_shopping_list
+    if (!list) return false
+    if (list.sourceFingerprint !== fingerprint) return false
+    return computeSourceFingerprint(row.body) === fingerprint
+  })
+
+  if (validMatches.length === 0) {
+    return ok({ copied: false })
+  }
+
+  validMatches.sort((a, b) =>
+    b.consolidated_shopping_list!.confirmedAt.localeCompare(a.consolidated_shopping_list!.confirmedAt),
+  )
+
+  const listToCopy = validMatches[0]!.consolidated_shopping_list!
+
+  const { error: updateError } = await client
+    .from('meal_week_templates')
+    .update({ consolidated_shopping_list: listToCopy })
+    .eq('id', newPlanId)
+    .select('id')
+    .single()
+
+  if (updateError) {
+    return fail(storageError(updateError.message, 'Could not write copied shopping list.'))
+  }
+
+  return ok({ copied: true, copiedList: listToCopy })
+}
+
 /** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. Rejects if existing list is deprecated. */
 export async function saveConsolidatedShoppingList(
   client: SupabaseClient,
