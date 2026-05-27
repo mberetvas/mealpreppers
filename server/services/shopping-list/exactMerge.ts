@@ -53,14 +53,22 @@ export interface PolishBaseline {
   lines: MergedLine[]
 }
 
-export interface PolishContext {
-  lines: Array<{
-    id: string
-    name: string
-    quantity: number | undefined
-    unit: string | undefined
-    provenance: RecipeProvenance[]
-  }>
+export interface ConsolidationContextIngredient {
+  id: string
+  name: string
+  quantity: number | undefined
+  unit: string | undefined
+}
+
+export interface ConsolidationContextSection {
+  recipeId: string
+  recipeTitle: string
+  ingredients: ConsolidationContextIngredient[]
+}
+
+/** Recipe-grouped ingredients sent to AI polish (unmerged, stable per-recipe line ids). */
+export interface ConsolidationContext {
+  sections: ConsolidationContextSection[]
 }
 
 /** Rounds a number to at most 2 decimal places, eliminating floating-point noise. */
@@ -170,15 +178,38 @@ export function exactMerge(sections: ShoppingListSection[]): PolishBaseline {
   return { lines }
 }
 
-/** Builds the compact polish context JSON consumed by the AI polish prompt. */
-export function buildPolishContext(baseline: PolishBaseline): PolishContext {
+/**
+ * Maps shopping list sections to recipe-grouped consolidation context with stable ids
+ * `{recipeId}:{ingredientIndex}` per ingredient row.
+ */
+export function buildConsolidationContext(sections: ShoppingListSection[]): ConsolidationContext {
   return {
-    lines: baseline.lines.map(line => ({
-      id: line.id,
-      name: line.name,
-      quantity: line.quantity,
-      unit: line.unit,
-      provenance: line.provenance,
+    sections: sections.map(section => ({
+      recipeId: section.recipeId,
+      recipeTitle: section.recipeTitle,
+      ingredients: section.ingredients.map((ingredient, index) => ({
+        id: `${section.recipeId}:${index}`,
+        name: ingredient.name,
+        quantity: ingredient.quantity,
+        unit: ingredient.unit,
+      })),
     })),
   }
+}
+
+/** Flat source snapshot for harness validation (one line per recipe ingredient, stable ids). */
+export function buildSourceBaseline(context: ConsolidationContext): PolishBaseline {
+  const lines: MergedLine[] = []
+  for (const section of context.sections) {
+    for (const ingredient of section.ingredients) {
+      lines.push({
+        id: ingredient.id,
+        name: ingredient.name,
+        quantity: ingredient.quantity,
+        unit: normalizeShoppingListUnit(ingredient.unit),
+        provenance: [{ recipeId: section.recipeId, recipeTitle: section.recipeTitle }],
+      })
+    }
+  }
+  return { lines }
 }

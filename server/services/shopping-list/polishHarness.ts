@@ -1,5 +1,5 @@
 import type { MergedLine, PolishBaseline } from './exactMerge'
-import { normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
+import { canonicalDisplayName, normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 import { convertQuantity, unitDimension } from './crossUnitMerge'
 
 export interface PolishResponseLine {
@@ -24,7 +24,6 @@ export type ValidationRule =
   | 'no-invented-ingredients'
   | 'quantity-cap'
   | 'unit-conversion'
-  | 'name-unchanged'
   | 'no-removed-lines'
 
 export interface ValidationFailure {
@@ -41,7 +40,7 @@ export interface ValidationResult {
 /**
  * Validates a Shopping list polish response against the Shopping list polish baseline.
  * Ensures the AI model cannot invent ingredients, inflate quantities, violate unit policy,
- * rename ingredients, drop undocumented baseline lines, or produce duplicate line ids.
+ * drop undocumented baseline lines, or produce duplicate line ids.
  * Returns a structured pass/fail result for orchestration flow control (never throws).
  */
 /**
@@ -99,7 +98,6 @@ export function validatePolishResponse(response: PolishResponse, baseline: Polis
       continue
     }
 
-    validateNameUnchanged(line, baselineLine, failures)
     validateUnitConversion(line, baselineLine, baseline, failures)
     validateQuantityCap(line, baselineLine, quantityCapByNameDimension, failures)
   }
@@ -138,7 +136,7 @@ type NameDimensionKey = string
 
 function nameDimensionKey(name: string, unit: string | undefined): NameDimensionKey {
   const dim = unitDimension(unit)
-  return `${name}::${dim}`
+  return `${canonicalDisplayName(name)}::${dim}`
 }
 
 /** Sum of baseline quantities per exact name and unit dimension, convertible to any unit in that dimension. */
@@ -172,20 +170,6 @@ function buildNameDimensionQuantityCapMap(baseline: PolishBaseline): Map<NameDim
   }
 
   return map
-}
-
-function validateNameUnchanged(
-  line: PolishResponseLine,
-  baselineLine: MergedLine,
-  failures: ValidationFailure[],
-): void {
-  if (line.name.trim() !== baselineLine.name.trim()) {
-    failures.push({
-      rule: 'name-unchanged',
-      lineId: line.id,
-      message: `Name "${line.name}" differs from baseline "${baselineLine.name}" for line "${line.id}"`,
-    })
-  }
 }
 
 function validateUnitConversion(
@@ -223,7 +207,7 @@ function baselineUnitsForNameAndDimension(
   const dim = unitDimension(referenceUnit)
   const units = new Set<string>()
   for (const line of baseline.lines) {
-    if (line.name !== name) continue
+    if (canonicalDisplayName(line.name) !== canonicalDisplayName(name)) continue
     if (unitDimension(line.unit) !== dim) continue
     const normalized = normalizeShoppingListUnit(line.unit)
     if (normalized) units.add(normalized)

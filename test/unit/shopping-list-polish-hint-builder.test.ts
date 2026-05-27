@@ -63,7 +63,7 @@ describe('buildPolishHints', () => {
   })
 
   describe('name-unchanged violations', () => {
-    it('returns an error hint when AI renames an ingredient', () => {
+    it('returns an info hint when AI renames an ingredient', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
       ])
@@ -78,7 +78,7 @@ describe('buildPolishHints', () => {
       expect(hints).toContainEqual(expect.objectContaining({
         lineId: 'L1',
         rule: 'name-unchanged',
-        severity: 'error',
+        severity: 'info',
       }))
     })
   })
@@ -157,7 +157,7 @@ describe('buildPolishHints', () => {
   })
 
   describe('removed lines', () => {
-    it('returns an info hint when baseline lines are missing from response', () => {
+    it('returns an error hint when baseline lines are missing from response', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
         { id: 'L2', name: 'tomaten', quantity: 200, unit: 'g', provenance: [] },
@@ -173,7 +173,7 @@ describe('buildPolishHints', () => {
       expect(hints).toContainEqual(expect.objectContaining({
         lineId: 'L2',
         rule: 'no-removed-lines',
-        severity: 'info',
+        severity: 'error',
       }))
     })
 

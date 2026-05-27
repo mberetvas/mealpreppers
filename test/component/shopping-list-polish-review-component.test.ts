@@ -11,10 +11,6 @@ const defaultProps = {
     { id: 'L1', name: 'tomaten', quantity: 600, unit: 'g', provenance: [] },
     { id: 'L2', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [] },
   ],
-  baselineLines: [
-    { id: 'L1', name: 'tomaten', quantity: 400, unit: 'g', provenance: [] },
-    { id: 'L2', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [] },
-  ],
   hints: [
     { lineId: 'L1', rule: 'quantity-cap', severity: 'error', message: 'Quantity 600 exceeds baseline cap 400 for line "L1"' },
   ],
@@ -23,24 +19,12 @@ const defaultProps = {
   ],
 }
 
-describe('PolishReview component: reference tabs', () => {
-  it('shows recipe sections tab by default', () => {
+describe('PolishReview component: recipe sections reference', () => {
+  it('shows recipe sections reference by default', () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
     expect(wrapper.find('[data-testid="ref-sections"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ref-baseline"]').exists()).toBe(false)
-  })
-
-  it('switches to baseline tab on click', async () => {
-    const wrapper = mount(PolishReview, { props: defaultProps })
-    await wrapper.find('[data-testid="tab-baseline"]').trigger('click')
-    expect(wrapper.find('[data-testid="ref-baseline"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ref-sections"]').exists()).toBe(false)
-  })
-
-  it('shows baseline lines without re-fetching (pure render from props)', () => {
-    const wrapper = mount(PolishReview, { props: defaultProps })
-    // baseline data is provided via props, no fetch involved
-    expect(wrapper.find('[data-testid="tab-baseline"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tab-baseline"]').exists()).toBe(false)
   })
 })
 
@@ -80,25 +64,27 @@ describe('PolishReview component: hint acknowledgment', () => {
     expect(wrapper.find('[data-testid="acknowledge-hint"]').exists()).toBe(true)
   })
 
-  it('confirm button is disabled when unacknowledged error hints exist', () => {
+  it('approve button is disabled when unacknowledged error hints exist', () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
     const confirmBtn = wrapper.find('[data-testid="confirm-review"]')
     expect(confirmBtn.attributes('disabled')).toBeDefined()
+    expect(confirmBtn.text()).toContain('Approve')
   })
 
   it('shows blocked message when error hints remain unacknowledged', () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
     expect(wrapper.find('[data-testid="confirm-blocked-message"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="confirm-blocked-message"]').text()).toContain('approving')
   })
 
-  it('after acknowledging all error hints, confirm button is enabled', async () => {
+  it('after acknowledging all error hints, approve button is enabled', async () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
     await wrapper.find('[data-testid="acknowledge-hint"]').trigger('click')
     const confirmBtn = wrapper.find('[data-testid="confirm-review"]')
     expect(confirmBtn.attributes('disabled')).toBeUndefined()
   })
 
-  it('info hints do not block confirm', () => {
+  it('info hints do not block approve', () => {
     const propsWithInfoOnly = {
       ...defaultProps,
       hints: [
@@ -111,8 +97,8 @@ describe('PolishReview component: hint acknowledgment', () => {
   })
 })
 
-describe('PolishReview component: confirm action', () => {
-  it('emits confirm when button is clicked and no errors remain', async () => {
+describe('PolishReview component: approve action', () => {
+  it('emits confirm when approve is clicked and no errors remain', async () => {
     const propsNoErrors = { ...defaultProps, hints: [] }
     const wrapper = mount(PolishReview, { props: propsNoErrors })
     await wrapper.find('[data-testid="confirm-review"]').trigger('click')

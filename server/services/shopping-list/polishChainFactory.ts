@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import type { StructuredLogger } from '../../utils/structuredLogger'
 import type { ShoppingListPolishPort, PolishPortResult } from './polishPort'
-import type { PolishContext } from './exactMerge'
+import type { ConsolidationContext } from './exactMerge'
+import { AISLE_CATEGORY_ORDER } from './aisleSort'
 
 /** Default polish request budget when OPENROUTER_SHOPPING_LIST_TIMEOUT_MS is unset or invalid. */
 export const DEFAULT_SHOPPING_LIST_POLISH_TIMEOUT_MS = 60_000
@@ -26,35 +27,41 @@ const PolishResponseSchema = z.object({
 
 // --- Prompt templates (TypeScript-owned, no external markdown) ---
 
-const SYSTEM_PROMPT = `You are a shopping list quantity consolidator.
+const AISLE_ORDER_JSON = JSON.stringify([...AISLE_CATEGORY_ORDER])
 
-You receive a JSON object with this shape:
+const SYSTEM_PROMPT = `You are a shopping list consolidator for a Dutch/Belgian supermarket.
+
+You receive recipe-grouped ingredients (unmerged). Each ingredient has a stable id "{{recipeId}}:{{index}}".
+
+Input shape:
 {{
-  "lines": [
+  "sections": [
     {{
-      "id": "L1",
-      "name": "ingredient name",
-      "quantity": 400,
-      "unit": "g",
-      "provenance": [{{ "recipeId": "...", "recipeTitle": "..." }}]
+      "recipeId": "...",
+      "recipeTitle": "...",
+      "ingredients": [
+        {{ "id": "recipe-uuid:0", "name": "...", "quantity": 400, "unit": "g" }}
+      ]
     }}
   ]
 }}
 
-Hard rules:
-1. Copy every "name" field verbatim — no translate, synonym, pluralize, or strip preparation suffix.
-2. Only merge lines with identical "name" strings. When merging, convert units only within allowed families: g↔kg, ml↔dl↔l. Never convert mass↔volume or mass↔count.
-3. Keep one row per baseline id unless merging identical names — then keep the lowest id (e.g. L1) and list absorbed ids in "changes".
-4. Do NOT invent new line ids. Do NOT add ingredients not in the input.
-5. Do NOT increase total quantity for an ingredient name beyond the sum already present in the input (after unit conversion).
-6. Optionally provide "changes" with "id", "reason", and "absorbedIds" when lines are merged.
-7. Do not reorder lines for store aisles — the server sorts the final list after your response.
+Your job:
+1. Merge duplicate ingredients across recipes (same ingredient, compatible units). Convert units only within: g↔kg, ml↔dl↔l. Never convert mass↔volume or mass↔count.
+2. Merge human-style name variants (e.g. "ui, in ringen" + "ui" → "ui"; pick the clearest shopper-facing name).
+3. Sort the final "lines" by supermarket aisle category, then alphabetically by name within each category.
+   Aisle category order (use these exact values): ${AISLE_ORDER_JSON}
+   Classify each ingredient by Dutch name keywords (produce, dairy, spices, etc.).
+4. When merging rows, keep the lowest surviving source id (lexicographic) and list absorbed source ids in "changes".
+5. Do NOT invent line ids not present in the input. Do NOT add ingredients not in the input.
+6. Do NOT increase total quantity for an ingredient beyond the sum in the input (after unit conversion).
+7. Optionally provide "changes" with "id", "reason", and "absorbedIds" when lines are merged.
 
-Return ONLY the structured output with "lines" and optional "changes".`
+Return ONLY structured output with "lines" and optional "changes".`
 
-const USER_TEMPLATE = `Consolidate this shopping list. Preserve every ingredient name exactly.
+const USER_TEMPLATE = `Consolidate this recipe-grouped shopping list. Merge, convert units where allowed, sort by store aisle order, and return the full consolidated list.
 
-{polishContextJson}`
+{consolidationContextJson}`
 
 /**
  * Builds the LangChain prompt for shopping-list polish. Literal `{`/`}` in the system
@@ -89,7 +96,7 @@ export interface PolishChainResult {
   appTitle: string
   plugins: undefined
   tracingEnabled: boolean
-  invoke: (context: PolishContext) => Promise<z.infer<typeof PolishResponseSchema>>
+  invoke: (context: ConsolidationContext) => Promise<z.infer<typeof PolishResponseSchema>>
 }
 
 /**
@@ -123,7 +130,7 @@ export function createShoppingListPolishChain(config: PolishChainConfig): Polish
     process.env.LANGSMITH_TRACING = 'false'
   }
 
-  const invoke = async (context: PolishContext): Promise<z.infer<typeof PolishResponseSchema>> => {
+  const invoke = async (context: ConsolidationContext): Promise<z.infer<typeof PolishResponseSchema>> => {
     const { ChatOpenRouter } = await import('@langchain/openrouter')
 
     const llm = new ChatOpenRouter({
@@ -142,10 +149,10 @@ export function createShoppingListPolishChain(config: PolishChainConfig): Polish
     const prompt = await createShoppingListPolishPromptTemplate()
 
     const chain = prompt.pipe(structuredLlm)
-    const polishContextJson = JSON.stringify(context)
+    const consolidationContextJson = JSON.stringify(context)
 
     const result = await chain.invoke(
-      { polishContextJson },
+      { consolidationContextJson },
       { signal: AbortSignal.timeout(timeoutMs) },
     )
     return result
@@ -167,7 +174,7 @@ export function createShoppingListPolishChain(config: PolishChainConfig): Polish
 // --- Invokable chain interface for the production port ---
 
 export interface InvokableChain {
-  invoke: (context: PolishContext) => Promise<z.infer<typeof PolishResponseSchema>>
+  invoke: (context: ConsolidationContext) => Promise<z.infer<typeof PolishResponseSchema>>
   model: string
   timeoutMs: number
 }
@@ -198,12 +205,12 @@ export class LangChainShoppingListPolishPort implements ShoppingListPolishPort {
   }
 
   /** Invokes the LangChain polish chain and returns the structured response. */
-  async polish(context: PolishContext): Promise<PolishPortResult> {
+  async polish(context: ConsolidationContext): Promise<PolishPortResult> {
     const startTime = Date.now()
 
     this.logger.info('shopping_list.polish_start', {
       model: this.chain.model,
-      lineCount: context.lines.length,
+      lineCount: context.sections.reduce((n, s) => n + s.ingredients.length, 0),
       timeoutMs: this.chain.timeoutMs,
     })
 
@@ -237,7 +244,7 @@ export class LangChainShoppingListPolishPort implements ShoppingListPolishPort {
         latencyMs,
         model: this.chain.model,
         timeoutMs: this.chain.timeoutMs,
-        lineCount: context.lines.length,
+        lineCount: context.sections.reduce((n, s) => n + s.ingredients.length, 0),
         abortedDueToTimeout,
         fallback: 'baseline_fallback',
         error: error instanceof Error ? error.message : String(error),

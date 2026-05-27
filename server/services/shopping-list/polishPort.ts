@@ -1,4 +1,4 @@
-import type { PolishContext } from './exactMerge'
+import type { ConsolidationContext } from './exactMerge'
 import type { PolishResponse } from './polishHarness'
 
 /** Result returned by a shopping list polish port implementation. */
@@ -8,8 +8,8 @@ export interface PolishPortResult {
 
 /**
  * Injectable interface for the Shopping list polish port.
- * Implementations transform raw merged lines via AI or return them unchanged.
+ * Implementations consolidate recipe-grouped ingredients via AI.
  */
 export interface ShoppingListPolishPort {
-  polish(context: PolishContext): Promise<PolishPortResult>
+  polish(context: ConsolidationContext): Promise<PolishPortResult>
 }

@@ -1,15 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../utils/structuredLogger'
 import type { PlanningPrincipal } from '../planning/planningPrincipal'
-import type { MergedLine } from './exactMerge'
+import type { MergedLine, RecipeProvenance } from './exactMerge'
 import type { PolishResponse, PolishResponseChange } from './polishHarness'
 import type { ShoppingListPolishPort } from './polishPort'
 import type { PolishHint } from './polishHintBuilder'
 import { getSavedWeekplanById } from '../planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../utils/planningErrors'
 import { collectRecipeOccurrences, buildShoppingList } from '../../../utils/shoppingList'
-import { exactMerge, buildPolishContext } from './exactMerge'
-import { crossUnitMerge } from './crossUnitMerge'
+import {
+  exactMerge,
+  buildConsolidationContext,
+  buildSourceBaseline,
+} from './exactMerge'
 import { canonicalizePolishResponse, validatePolishResponse } from './polishHarness'
 import { buildPolishHints } from './polishHintBuilder'
 import { computeSourceFingerprint } from './sourceFingerprint'
@@ -42,8 +45,8 @@ export interface ConsolidationDeps {
 
 /**
  * Orchestrates shopping list consolidation: load plan → resolve catalog recipes →
- * build scaled ingredients → exact merge → delegate to polish port → return bundle.
- * When OPENROUTER_API_KEY is unset, skips AI polish and returns baseline as consolidated.
+ * build recipe-grouped context → AI polish → harness hints → pending review.
+ * Fallback: exact merge + aisle sort when AI is unavailable or fails.
  */
 export async function consolidateShoppingList(
   planId: string,
@@ -54,18 +57,14 @@ export async function consolidateShoppingList(
 
   logger.info('shopping_list.consolidate_start', { planId })
 
-  // Load the saved weekplan
   const planResult = await getSavedWeekplanById(supabaseClient, planId, principal)
   if (!planResult.ok) {
     throw createError(toPlanningHttpError(planResult.error))
   }
 
   const plan = planResult.value
-
-  // Collect recipe occurrences from the plan body
   const occurrences = collectRecipeOccurrences(plan.body)
 
-  // Early return: empty plan (no recipe slots filled)
   if (occurrences.size === 0) {
     logger.info('shopping_list.empty_plan', { planId })
     return {
@@ -77,7 +76,6 @@ export async function consolidateShoppingList(
     }
   }
 
-  // Resolve catalog recipes
   const recipesResult = await listRecipes(supabaseClient)
   if (!recipesResult.ok) {
     throw createError({ statusCode: 500, statusMessage: 'Recipes could not be loaded for consolidation.' })
@@ -87,15 +85,11 @@ export async function consolidateShoppingList(
     recipesResult.value.map(r => [r.id, r]),
   )
 
-  // Build scaled ingredient sections (day ascending, breakfast → lunch → dinner order is preserved by collectRecipeOccurrences)
   const sections = buildShoppingList(occurrences, recipeMap)
-
-  // Detect recipe resolution failures
   const resolvedCount = sections.length
   const totalRequested = occurrences.size
   const missingCount = totalRequested - resolvedCount
 
-  // Total recipe resolution failure: all referenced recipes missing from catalog
   if (resolvedCount === 0) {
     logger.warn('shopping_list.total_recipe_resolution_failure', { planId, totalRequested })
     return {
@@ -107,21 +101,19 @@ export async function consolidateShoppingList(
     }
   }
 
-  // Exact merge then deterministic cross-unit merge (baseline for polish + harness)
-  const exactBaseline = exactMerge(sections)
-  const { lines: baselineLines, mergeChanges: crossUnitChanges } = crossUnitMerge(exactBaseline)
-  const baseline = { lines: baselineLines }
+  const consolidationContext = buildConsolidationContext(sections)
+  const sourceBaseline = buildSourceBaseline(consolidationContext)
+  const fallbackBaseline = exactMerge(sections)
 
-  // Polish port delegation
   const warnings: string[] = []
-  let consolidatedLines = baselineLines
+  let consolidatedLines: MergedLine[] = sortShoppingListLines(fallbackBaseline.lines)
+  let baselineLines: MergedLine[] = sortShoppingListLines(fallbackBaseline.lines)
   let changes: PolishResponseChange[] = []
   let polishStatus: PolishStatus = 'ai_skipped'
   let polishResponse: PolishResponse | undefined
   let hints: PolishHint[] | undefined
   const sourceFingerprint = computeSourceFingerprint(plan.body)
 
-  // Partial recipe resolution: some recipes missing from catalog
   if (missingCount > 0) {
     logger.warn('shopping_list.partial_recipe_resolution', { planId, missingCount, totalRequested, resolvedCount })
     warnings.push(`${missingCount} recipe(s) could not be loaded — this list may be incomplete.`)
@@ -139,54 +131,24 @@ export async function consolidateShoppingList(
   }
   else {
     try {
-      const polishContext = buildPolishContext(baseline)
-      const result = await polishPort.polish(polishContext)
+      const result = await polishPort.polish(consolidationContext)
+      const canonicalized = canonicalizePolishResponse(result.response, sourceBaseline)
+      const validation = validatePolishResponse(canonicalized, sourceBaseline)
+      const polishHints = buildPolishHints(result.response, sourceBaseline)
 
-      // Canonicalize and validate
-      const canonicalized = canonicalizePolishResponse(result.response, baseline)
-      const validation = validatePolishResponse(canonicalized, baseline)
-      const polishHints = buildPolishHints(result.response, baseline)
+      consolidatedLines = attachProvenanceToLines(canonicalized, sourceBaseline)
+      changes = canonicalized.changes ?? []
+      polishStatus = 'pending_review'
+      polishResponse = canonicalized
+      hints = polishHints
+      baselineLines = sourceBaseline.lines
 
-      if (validation.valid) {
-        // Clean pass: apply polished lines directly
-        const baselineById = new Map(baselineLines.map(bl => [bl.id, bl]))
-        consolidatedLines = canonicalized.lines.map((line) => {
-          const baselineLine = baselineById.get(line.id)
-          return {
-            id: line.id,
-            name: line.name,
-            quantity: line.quantity,
-            unit: line.unit,
-            provenance: baselineLine?.provenance ?? [],
-          }
-        })
-        changes = canonicalized.changes ?? []
-        polishStatus = 'polished'
-      }
-      else {
-        // Model succeeded but harness found violations → pending_review with hints
-        const baselineById = new Map(baselineLines.map(bl => [bl.id, bl]))
-        consolidatedLines = canonicalized.lines.map((line) => {
-          const baselineLine = baselineById.get(line.id)
-          return {
-            id: line.id,
-            name: line.name,
-            quantity: line.quantity,
-            unit: line.unit,
-            provenance: baselineLine?.provenance ?? [],
-          }
-        })
-        changes = canonicalized.changes ?? []
-        polishStatus = 'pending_review'
-        polishResponse = canonicalized
-        hints = polishHints
-
-        logger.info('shopping_list.polish_pending_review', {
-          planId,
-          hintCount: polishHints.length,
-          failuresByRule: summarizeFailuresByRule(validation.failures),
-        })
-      }
+      logger.info('shopping_list.polish_pending_review', {
+        planId,
+        hintCount: polishHints.length,
+        harnessValid: validation.valid,
+        failuresByRule: summarizeFailuresByRule(validation.failures),
+      })
     }
     catch (err) {
       const abortedDueToTimeout = isPolishAbortTimeout(err)
@@ -206,28 +168,62 @@ export async function consolidateShoppingList(
     }
   }
 
-  consolidatedLines = sortShoppingListLines(consolidatedLines)
-  const sortedBaselineLines = sortShoppingListLines(baselineLines)
-  if (polishResponse) {
-    polishResponse = {
-      ...polishResponse,
-      lines: sortShoppingListLines(polishResponse.lines),
-    }
-  }
-
   const latencyMs = Date.now() - startTime
   logger.info('shopping_list.consolidate_complete', {
     planId,
     latencyMs,
-    exactLineCount: exactBaseline.lines.length,
-    baselineLineCount: baselineLines.length,
+    sourceLineCount: sourceBaseline.lines.length,
+    fallbackLineCount: fallbackBaseline.lines.length,
     consolidatedLineCount: consolidatedLines.length,
-    crossUnitMergeCount: crossUnitChanges.length,
     polishStatus,
     ...(hints ? { hintCount: hints.length } : {}),
   })
 
-  return { consolidatedLines, baselineLines: sortedBaselineLines, changes, polishStatus, warnings, polishResponse, hints, sourceFingerprint }
+  return { consolidatedLines, baselineLines, changes, polishStatus, warnings, polishResponse, hints, sourceFingerprint }
+}
+
+/** Maps AI consolidated lines to merged lines with recipe provenance from the source snapshot. */
+function attachProvenanceToLines(
+  response: PolishResponse,
+  sourceBaseline: { lines: MergedLine[] },
+): MergedLine[] {
+  const sourceById = new Map(sourceBaseline.lines.map(line => [line.id, line]))
+  return response.lines.map((line) => {
+    const provenance = collectProvenanceForLine(line.id, response.changes, sourceById)
+    return {
+      id: line.id,
+      name: line.name,
+      quantity: line.quantity,
+      unit: line.unit,
+      provenance,
+    }
+  })
+}
+
+/** Collects unique recipe provenance from a consolidated line and its absorbed source ids. */
+function collectProvenanceForLine(
+  lineId: string,
+  changes: PolishResponseChange[] | undefined,
+  sourceById: Map<string, MergedLine>,
+): RecipeProvenance[] {
+  const sourceIds = new Set<string>([lineId])
+  const change = changes?.find(c => c.id === lineId)
+  for (const absorbedId of change?.absorbedIds ?? []) {
+    sourceIds.add(absorbedId)
+  }
+
+  const provenance: RecipeProvenance[] = []
+  const seenRecipeIds = new Set<string>()
+  for (const sourceId of sourceIds) {
+    const sourceLine = sourceById.get(sourceId)
+    if (!sourceLine) continue
+    for (const entry of sourceLine.provenance) {
+      if (seenRecipeIds.has(entry.recipeId)) continue
+      seenRecipeIds.add(entry.recipeId)
+      provenance.push(entry)
+    }
+  }
+  return provenance
 }
 
 /** Counts harness validation failures per rule for structured logging. */

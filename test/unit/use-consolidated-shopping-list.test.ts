@@ -2,18 +2,16 @@ import { describe, it, expect, vi } from 'vitest'
 import { ref, nextTick, effectScope } from 'vue'
 import { useConsolidatedShoppingList, type ConsolidationResponse } from '../../app/composables/useConsolidatedShoppingList'
 
-function makeSuccessResponse(): ConsolidationResponse {
+function makePendingReviewResponse(): ConsolidationResponse {
+  const lines = [
+    { id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
+    { id: 'recipe-1:1', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
+  ]
   return {
-    consolidatedLines: [
-      { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
-      { id: 'L2', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
-    ],
-    baselineLines: [
-      { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
-      { id: 'L2', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
-    ],
+    consolidatedLines: lines,
+    baselineLines: lines.map(l => ({ ...l, id: l.id })),
     changes: [],
-    polishStatus: 'polished',
+    polishStatus: 'pending_review',
     warnings: [],
   }
 }
@@ -68,21 +66,22 @@ describe('useConsolidatedShoppingList', () => {
     const promise = consolidate()
     expect(consolidating.value).toBe(true)
 
-    resolvePromise!(makeSuccessResponse())
+    resolvePromise!(makePendingReviewResponse())
     await promise
     expect(consolidating.value).toBe(false)
   })
 
-  it('stores consolidated lines on success', async () => {
+  it('enters review mode on AI success without showing consolidated lines yet', async () => {
     const planId = ref('plan-1')
-    const fetchConsolidate = vi.fn().mockResolvedValue(makeSuccessResponse())
+    const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
 
-    const { consolidatedLines, polishStatus, hasConsolidated, consolidate } =
+    const { consolidatedLines, reviewLines, polishStatus, hasConsolidated, consolidate } =
       useConsolidatedShoppingList(planId, { fetchConsolidate })
 
     await consolidate()
-    expect(consolidatedLines.value).toHaveLength(2)
-    expect(polishStatus.value).toBe('polished')
+    expect(consolidatedLines.value).toEqual([])
+    expect(reviewLines.value).toHaveLength(2)
+    expect(polishStatus.value).toBe('pending_review')
     expect(hasConsolidated.value).toBe(true)
   })
 
@@ -135,7 +134,7 @@ describe('useConsolidatedShoppingList', () => {
 
   it('each consolidate call refreshes from current data', async () => {
     const planId = ref('plan-1')
-    const fetchConsolidate = vi.fn().mockResolvedValue(makeSuccessResponse())
+    const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
 
     const { consolidate } = useConsolidatedShoppingList(planId, { fetchConsolidate })
 
@@ -146,17 +145,18 @@ describe('useConsolidatedShoppingList', () => {
 
   it('reset clears all state', async () => {
     const planId = ref('plan-1')
-    const fetchConsolidate = vi.fn().mockResolvedValue(makeSuccessResponse())
+    const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
 
-    const { consolidatedLines, hasConsolidated, consolidate, reset } =
+    const { reviewLines, consolidatedLines, hasConsolidated, consolidate, reset } =
       useConsolidatedShoppingList(planId, { fetchConsolidate })
 
     await consolidate()
     expect(hasConsolidated.value).toBe(true)
-    expect(consolidatedLines.value).toHaveLength(2)
+    expect(reviewLines.value).toHaveLength(2)
 
     reset()
     expect(hasConsolidated.value).toBe(false)
+    expect(reviewLines.value).toEqual([])
     expect(consolidatedLines.value).toEqual([])
   })
 
@@ -164,7 +164,7 @@ describe('useConsolidatedShoppingList', () => {
     const planId = ref('plan-1')
     const fetchConsolidate = vi.fn()
       .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce(makeSuccessResponse())
+      .mockResolvedValueOnce(makePendingReviewResponse())
 
     const { consolidationError, consolidate } = useConsolidatedShoppingList(planId, { fetchConsolidate })
 
@@ -178,24 +178,25 @@ describe('useConsolidatedShoppingList', () => {
   it('resets state when planId changes', async () => {
     const scope = effectScope()
     const planId = ref('plan-1')
-    const fetchConsolidate = vi.fn().mockResolvedValue(makeSuccessResponse())
+    const fetchConsolidate = vi.fn().mockResolvedValue(makePendingReviewResponse())
 
     let composable!: ReturnType<typeof useConsolidatedShoppingList>
     scope.run(() => {
       composable = useConsolidatedShoppingList(planId, { fetchConsolidate })
     })
 
-    const { consolidatedLines, hasConsolidated, consolidate, polishStatus } = composable
+    const { reviewLines, consolidatedLines, hasConsolidated, consolidate, polishStatus } = composable
 
     await consolidate()
     expect(hasConsolidated.value).toBe(true)
-    expect(consolidatedLines.value).toHaveLength(2)
-    expect(polishStatus.value).toBe('polished')
+    expect(reviewLines.value).toHaveLength(2)
+    expect(polishStatus.value).toBe('pending_review')
 
     planId.value = 'plan-2'
     await nextTick()
 
     expect(hasConsolidated.value).toBe(false)
+    expect(reviewLines.value).toEqual([])
     expect(consolidatedLines.value).toEqual([])
     expect(polishStatus.value).toBeNull()
 
@@ -211,13 +212,13 @@ describe('useConsolidatedShoppingList', () => {
       .mockImplementationOnce(() => new Promise<ConsolidationResponse>((res) => { resolveFirst = res }))
       .mockImplementationOnce(() => new Promise<ConsolidationResponse>((res) => { resolveSecond = res }))
 
-    const { consolidatedLines, consolidate } = useConsolidatedShoppingList(planId, { fetchConsolidate })
+    const { reviewLines, consolidate } = useConsolidatedShoppingList(planId, { fetchConsolidate })
 
     const first = consolidate()
     const second = consolidate()
 
     const staleResponse = makeAiSkippedResponse()
-    const freshResponse = makeSuccessResponse()
+    const freshResponse = makePendingReviewResponse()
 
     // Resolve the newer (second) request first, then the stale (first) request
     resolveSecond!(freshResponse)
@@ -227,6 +228,6 @@ describe('useConsolidatedShoppingList', () => {
     await first
 
     // Only the fresh (second) response should be reflected in state
-    expect(consolidatedLines.value).toEqual(freshResponse.consolidatedLines)
+    expect(reviewLines.value).toEqual(freshResponse.consolidatedLines)
   })
 })

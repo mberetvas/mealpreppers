@@ -397,7 +397,6 @@ useHead(() => ({
           </div>
           <ShoppingListPolishReview
             :review-lines="reviewLines"
-            :baseline-lines="baselineLines"
             :hints="hints"
             :sections="sections"
             :saving="saving"
@@ -443,8 +442,8 @@ useHead(() => ({
           </div>
         </template>
 
-        <!-- Successful consolidation result -->
-        <template v-else-if="hasConsolidated && consolidatedLines.length > 0">
+        <!-- Saved or approved consolidated list -->
+        <template v-else-if="hasConsolidated && polishStatus === 'polished' && consolidatedLines.length > 0">
           <!-- Changes explanations -->
           <div
             v-if="showChanges"

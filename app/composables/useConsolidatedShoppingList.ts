@@ -128,8 +128,11 @@ export function useConsolidatedShoppingList(
       warnings.value = result.warnings
       hints.value = result.hints ?? []
       reviewLines.value = result.polishStatus === 'pending_review'
-        ? sortShoppingListLines(result.consolidatedLines.map(l => ({ ...l })))
+        ? sortShoppingListLines(result.consolidatedLines.map(line => ({ ...line })))
         : []
+      if (result.polishStatus === 'pending_review') {
+        consolidatedLines.value = []
+      }
       hasConsolidated.value = true
     }
     catch (error: unknown) {

@@ -14,24 +14,24 @@ describe('createShoppingListPolishPromptTemplate', () => {
     await expect(createShoppingListPolishPromptTemplate()).resolves.toBeDefined()
   })
 
-  it('formatMessages substitutes polishContextJson and keeps literal JSON braces in system text', async () => {
+  it('formatMessages substitutes consolidationContextJson and keeps literal JSON braces in system text', async () => {
     const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
 
     const prompt = await createShoppingListPolishPromptTemplate()
-    const messages = await prompt.formatMessages({ polishContextJson: '{"lines":[]}' })
+    const messages = await prompt.formatMessages({ consolidationContextJson: '{"sections":[]}' })
 
     expect(messages.length).toBeGreaterThanOrEqual(2)
     const system = messages.find(m => m.getType() === 'system')
     expect(system).toBeDefined()
     const systemText = typeof system!.content === 'string' ? system!.content : String(system!.content)
-    expect(systemText).toContain('{\n  "lines":')
-    expect(systemText).toContain('"provenance": [{ "recipeId"')
+    expect(systemText).toContain('{\n  "sections":')
+    expect(systemText).toContain('"ingredients":')
 
     const user = messages.find(m => m.getType() === 'human')
     expect(user).toBeDefined()
     const userText = typeof user!.content === 'string' ? user!.content : String(user!.content)
-    expect(userText).toContain('{"lines":[]}')
-    expect(userText).not.toContain('{polishContextJson}')
+    expect(userText).toContain('{"sections":[]}')
+    expect(userText).not.toContain('{consolidationContextJson}')
   })
 })
 
@@ -169,29 +169,31 @@ describe('createShoppingListPolishChain config validation', () => {
   })
 })
 
-describe('shopping list polish prompt (v2)', () => {
-  it('system prompt preserves names and forbids Dutch supermarket renames', async () => {
+describe('shopping list polish prompt (AI-first)', () => {
+  it('system prompt describes recipe-grouped input, merge, and aisle sort', async () => {
     const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
 
     const prompt = await createShoppingListPolishPromptTemplate()
-    const messages = await prompt.formatMessages({ polishContextJson: '{}' })
+    const messages = await prompt.formatMessages({ consolidationContextJson: '{}' })
     const system = messages.find(m => m.getType() === 'system')!
     const systemText = typeof system.content === 'string' ? system.content : String(system.content)
 
-    expect(systemText).toMatch(/verbatim|exact/i)
-    expect(systemText).not.toMatch(/Rename ingredients/i)
-    expect(systemText).not.toMatch(/supermarket-style/i)
+    expect(systemText).toMatch(/recipe-grouped/i)
+    expect(systemText).toMatch(/g↔kg|g.*kg/i)
+    expect(systemText).toContain('produce')
+    expect(systemText).toMatch(/human-style name/i)
   })
 
-  it('user template asks to preserve ingredient names', async () => {
+  it('user template asks for full consolidated sorted list', async () => {
     const { createShoppingListPolishPromptTemplate } = await import('../../server/services/shopping-list/polishChainFactory')
 
     const prompt = await createShoppingListPolishPromptTemplate()
-    const messages = await prompt.formatMessages({ polishContextJson: '{}' })
+    const messages = await prompt.formatMessages({ consolidationContextJson: '{}' })
     const user = messages.find(m => m.getType() === 'human')!
     const userText = typeof user.content === 'string' ? user.content : String(user.content)
 
-    expect(userText).toMatch(/Preserve every ingredient name/i)
+    expect(userText).toMatch(/recipe-grouped/i)
+    expect(userText).toMatch(/sort by store aisle/i)
   })
 })
 
@@ -243,7 +245,11 @@ describe('LangChainShoppingListPolishPort', () => {
     }, logger)
 
     await port.polish({
-      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] }],
+      sections: [{
+        recipeId: 'recipe-1',
+        recipeTitle: 'Pasta',
+        ingredients: [{ id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g' }],
+      }],
     })
 
     expect(logger.info).toHaveBeenCalledWith('shopping_list.polish_start', expect.objectContaining({
@@ -268,7 +274,11 @@ describe('LangChainShoppingListPolishPort', () => {
     }, logger)
 
     await port.polish({
-      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] }],
+      sections: [{
+        recipeId: 'recipe-1',
+        recipeTitle: 'Pasta',
+        ingredients: [{ id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g' }],
+      }],
     })
 
     expect(logger.info).toHaveBeenCalledWith('shopping_list.polish_complete', expect.objectContaining({
@@ -291,7 +301,11 @@ describe('LangChainShoppingListPolishPort', () => {
     }, logger)
 
     await expect(port.polish({
-      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] }],
+      sections: [{
+        recipeId: 'recipe-1',
+        recipeTitle: 'Pasta',
+        ingredients: [{ id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g' }],
+      }],
     })).rejects.toThrow('API timeout')
 
     expect(logger.error).toHaveBeenCalledWith('shopping_list.polish_fail', expect.objectContaining({
@@ -318,7 +332,11 @@ describe('LangChainShoppingListPolishPort', () => {
     }, logger)
 
     await expect(port.polish({
-      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] }],
+      sections: [{
+        recipeId: 'recipe-1',
+        recipeTitle: 'Pasta',
+        ingredients: [{ id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g' }],
+      }],
     })).rejects.toThrow('rate limit')
 
     expect(logger.error).toHaveBeenCalledWith('shopping_list.polish_fail', expect.objectContaining({

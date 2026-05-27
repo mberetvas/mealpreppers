@@ -27,7 +27,7 @@ describe('validatePolishResponse', () => {
       expect(result.failures).toEqual([])
     })
 
-    it('rejects polish that renames ingredients', () => {
+    it('accepts polish that renames ingredients (name policy enforced via hints only)', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
       ])
@@ -39,10 +39,8 @@ describe('validatePolishResponse', () => {
 
       const result = validatePolishResponse(response, baseline)
 
-      expect(result.valid).toBe(false)
-      expect(result.failures).toContainEqual(
-        expect.objectContaining({ rule: 'name-unchanged', lineId: 'L1' }),
-      )
+      expect(result.valid).toBe(true)
+      expect(result.failures).toEqual([])
     })
 
     it('accepts polish with reduced quantities (model may combine/reduce)', () => {
@@ -433,7 +431,7 @@ describe('validatePolishResponse', () => {
       )
     })
 
-    it('rejects rename on baseline with single line', () => {
+    it('accepts rename on baseline with single line', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'zout', quantity: 1, unit: 'tl', provenance: [] },
       ])
@@ -445,13 +443,10 @@ describe('validatePolishResponse', () => {
 
       const result = validatePolishResponse(response, baseline)
 
-      expect(result.valid).toBe(false)
-      expect(result.failures).toContainEqual(
-        expect.objectContaining({ rule: 'name-unchanged', lineId: 'L1' }),
-      )
+      expect(result.valid).toBe(true)
     })
 
-    it('rejects case-only name changes', () => {
+    it('accepts case-only name changes', () => {
       const baseline = makeBaseline([
         { id: 'L1', name: 'Pasta', quantity: 400, unit: 'g', provenance: [] },
       ])
@@ -463,10 +458,7 @@ describe('validatePolishResponse', () => {
 
       const result = validatePolishResponse(response, baseline)
 
-      expect(result.valid).toBe(false)
-      expect(result.failures).toContainEqual(
-        expect.objectContaining({ rule: 'name-unchanged', lineId: 'L1' }),
-      )
+      expect(result.valid).toBe(true)
     })
   })
 

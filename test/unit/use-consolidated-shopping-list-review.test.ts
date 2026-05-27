@@ -142,7 +142,7 @@ describe('useConsolidatedShoppingList — pending_review flow', () => {
     expect(saveError.value).toBe('Network error')
     expect(polishStatus.value).toBe('pending_review')
     expect(reviewLines.value).toEqual(linesBeforeConfirm)
-    expect(consolidatedLines.value[0]?.name).toBe('tomaten')
+    expect(consolidatedLines.value).toHaveLength(0)
   })
 
   it('baseline_fallback still shows existing warning UX without review', async () => {

@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import type { ShoppingListSection } from '../../utils/shoppingList'
-import { exactMerge, buildPolishContext, canonicalDisplayName } from '../../server/services/shopping-list/exactMerge'
+import {
+  exactMerge,
+  buildConsolidationContext,
+  buildSourceBaseline,
+  canonicalDisplayName,
+} from '../../server/services/shopping-list/exactMerge'
 
 const RID_A = '11111111-1111-1111-1111-111111111111'
 const RID_B = '22222222-2222-2222-2222-222222222222'
@@ -260,57 +265,82 @@ describe('exactMerge', () => {
   })
 })
 
-describe('buildPolishContext', () => {
-  it('builds context JSON from baseline with stable ids, quantities, units, provenance', () => {
+describe('buildConsolidationContext', () => {
+  it('maps sections to recipe-grouped ingredients with stable ids', () => {
     const sections: ShoppingListSection[] = [
+      makeSection(RID_A, 'Pasta', [
+        { rawText: '400 g pasta', name: 'pasta', quantity: 400, unit: 'g' },
+        { rawText: '2 el olie', name: 'olie', quantity: 2, unit: 'el' },
+      ]),
+      makeSection(RID_B, 'Salad', [
+        { rawText: '100 g tomaten', name: 'tomaten', quantity: 100, unit: 'g' },
+      ]),
+    ]
+    const context = buildConsolidationContext(sections)
+
+    expect(context.sections).toHaveLength(2)
+    expect(context.sections[0]).toEqual({
+      recipeId: RID_A,
+      recipeTitle: 'Pasta',
+      ingredients: [
+        { id: `${RID_A}:0`, name: 'pasta', quantity: 400, unit: 'g' },
+        { id: `${RID_A}:1`, name: 'olie', quantity: 2, unit: 'el' },
+      ],
+    })
+    expect(context.sections[1].ingredients[0].id).toBe(`${RID_B}:0`)
+  })
+
+  it('returns empty sections for empty input', () => {
+    expect(buildConsolidationContext([])).toEqual({ sections: [] })
+  })
+
+  it('preserves quantity-less ingredients', () => {
+    const sections: ShoppingListSection[] = [
+      makeSection(RID_A, 'Soup', [
+        { rawText: 'zout', name: 'zout', quantity: undefined, unit: undefined },
+      ]),
+    ]
+    const context = buildConsolidationContext(sections)
+    expect(context.sections[0].ingredients[0]).toMatchObject({
+      id: `${RID_A}:0`,
+      name: 'zout',
+      quantity: undefined,
+      unit: undefined,
+    })
+  })
+})
+
+describe('buildSourceBaseline', () => {
+  it('flattens consolidation context to one line per ingredient with provenance', () => {
+    const context = buildConsolidationContext([
       makeSection(RID_A, 'Pasta', [
         { rawText: '400 g pasta', name: 'pasta', quantity: 400, unit: 'g' },
       ]),
       makeSection(RID_B, 'Salad', [
         { rawText: '100 g tomaten', name: 'tomaten', quantity: 100, unit: 'g' },
       ]),
-    ]
-    const baseline = exactMerge(sections)
-    const context = buildPolishContext(baseline)
+    ])
+    const baseline = buildSourceBaseline(context)
 
-    expect(context.lines).toHaveLength(2)
-    expect(context.lines[0]).toEqual({
-      id: 'L1',
+    expect(baseline.lines).toHaveLength(2)
+    expect(baseline.lines[0]).toMatchObject({
+      id: `${RID_A}:0`,
       name: 'pasta',
       quantity: 400,
       unit: 'g',
       provenance: [{ recipeId: RID_A, recipeTitle: 'Pasta' }],
     })
-    expect(context.lines[1]).toEqual({
-      id: 'L2',
-      name: 'tomaten',
-      quantity: 100,
-      unit: 'g',
-      provenance: [{ recipeId: RID_B, recipeTitle: 'Salad' }],
-    })
+    expect(baseline.lines[1].id).toBe(`${RID_B}:0`)
   })
 
-  it('returns empty lines array for empty baseline', () => {
-    const context = buildPolishContext({ lines: [] })
-    expect(context.lines).toEqual([])
-  })
-
-  it('preserves multi-recipe provenance in context', () => {
-    const sections: ShoppingListSection[] = [
+  it('normalizes units on source baseline lines', () => {
+    const context = buildConsolidationContext([
       makeSection(RID_A, 'A', [
-        { rawText: '200 g kaas', name: 'kaas', quantity: 200, unit: 'g' },
+        { rawText: '400 gr bloem', name: 'bloem', quantity: 400, unit: 'gr' },
       ]),
-      makeSection(RID_B, 'B', [
-        { rawText: '300 g kaas', name: 'kaas', quantity: 300, unit: 'g' },
-      ]),
-      makeSection(RID_C, 'C', [
-        { rawText: '100 g kaas', name: 'kaas', quantity: 100, unit: 'g' },
-      ]),
-    ]
-    const baseline = exactMerge(sections)
-    const context = buildPolishContext(baseline)
-
-    expect(context.lines[0].provenance).toHaveLength(3)
-    expect(context.lines[0].quantity).toBe(600)
+    ])
+    const baseline = buildSourceBaseline(context)
+    expect(baseline.lines[0].unit).toBe('g')
   })
 })
+

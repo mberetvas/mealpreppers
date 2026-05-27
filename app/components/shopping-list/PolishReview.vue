@@ -3,11 +3,10 @@ import { ref, computed } from 'vue'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
 import type { ShoppingListSection } from '~~/utils/shoppingList'
-import { formatMergedLine, formatShoppingListIngredient } from '~~/utils/shoppingList'
+import { formatShoppingListIngredient } from '~~/utils/shoppingList'
 
 const props = withDefaults(defineProps<{
   reviewLines: MergedLine[]
-  baselineLines: MergedLine[]
   hints: PolishHint[]
   sections: ShoppingListSection[]
   saving?: boolean
@@ -20,7 +19,6 @@ const emit = defineEmits<{
   'confirm': []
 }>()
 
-const activeTab = ref<'sections' | 'baseline'>('sections')
 const acknowledgedHintIds = ref<Set<string>>(new Set())
 
 /** Error-level hints that have not been acknowledged. */
@@ -30,7 +28,7 @@ const unacknowledgedErrors = computed(() =>
     .filter(h => !acknowledgedHintIds.value.has(hintKey(h))),
 )
 
-/** Whether confirm is blocked by unacknowledged error hints. */
+/** Whether approve is blocked by unacknowledged error hints. */
 const confirmBlocked = computed(() => unacknowledgedErrors.value.length > 0)
 
 /** Hints grouped by line ID for inline display. */
@@ -62,34 +60,16 @@ function handleConfirm(): void {
     data-testid="polish-review"
     class="grid gap-6 lg:grid-cols-2"
   >
-    <!-- Reference panel -->
+    <!-- Reference panel: recipe sections only -->
     <section
       data-testid="review-reference"
       class="space-y-4 rounded-2xl bg-atelier-parchment p-4 ring-1 ring-primary/10"
     >
-      <nav class="flex gap-1 rounded-xl bg-atelier-chip/50 p-1" aria-label="Reference tabs">
-        <button
-          type="button"
-          data-testid="tab-sections"
-          class="rounded-lg px-3 py-1.5 text-sm font-semibold transition"
-          :class="activeTab === 'sections' ? 'bg-white text-atelier-heading shadow-sm' : 'text-atelier-description hover:text-atelier-heading'"
-          @click="activeTab = 'sections'"
-        >
-          Recipe sections
-        </button>
-        <button
-          type="button"
-          data-testid="tab-baseline"
-          class="rounded-lg px-3 py-1.5 text-sm font-semibold transition"
-          :class="activeTab === 'baseline' ? 'bg-white text-atelier-heading shadow-sm' : 'text-atelier-description hover:text-atelier-heading'"
-          @click="activeTab = 'baseline'"
-        >
-          Baseline
-        </button>
-      </nav>
+      <h3 class="text-sm font-semibold text-atelier-heading">
+        Recipe sections
+      </h3>
 
-      <!-- Recipe sections tab -->
-      <ul v-if="activeTab === 'sections'" data-testid="ref-sections" class="space-y-3" aria-label="Reference: recipe sections">
+      <ul data-testid="ref-sections" class="space-y-3" aria-label="Reference: recipe sections">
         <li v-for="section in sections" :key="section.recipeId" class="space-y-1">
           <p class="text-sm font-semibold text-atelier-heading">{{ section.recipeTitle }}</p>
           <ul class="space-y-0.5 pl-3">
@@ -97,13 +77,6 @@ function handleConfirm(): void {
               {{ formatShoppingListIngredient(ing) }}
             </li>
           </ul>
-        </li>
-      </ul>
-
-      <!-- Baseline tab -->
-      <ul v-else data-testid="ref-baseline" class="space-y-1" aria-label="Reference: baseline">
-        <li v-for="line in baselineLines" :key="line.id" class="text-sm text-atelier-description">
-          {{ formatMergedLine(line) }}
         </li>
       </ul>
     </section>
@@ -147,7 +120,6 @@ function handleConfirm(): void {
             >
           </div>
 
-          <!-- Inline hints -->
           <div v-if="hintsByLine.get(line.id)" class="space-y-1 pt-1">
             <div
               v-for="hint in hintsByLine.get(line.id)"
@@ -174,7 +146,6 @@ function handleConfirm(): void {
         </li>
       </ul>
 
-      <!-- Confirm button -->
       <div class="flex items-center gap-3 pt-2">
         <button
           type="button"
@@ -185,14 +156,14 @@ function handleConfirm(): void {
           @click="handleConfirm"
         >
           <span class="material-symbols-outlined text-[20px]" aria-hidden="true">check</span>
-          {{ saving ? 'Saving…' : 'Confirm' }}
+          {{ saving ? 'Saving…' : 'Approve' }}
         </button>
         <span
           v-if="confirmBlocked"
           data-testid="confirm-blocked-message"
           class="text-xs text-error"
         >
-          Acknowledge all error hints before confirming
+          Acknowledge all error hints before approving
         </span>
       </div>
     </section>

@@ -1,6 +1,6 @@
 /**
- * Unit tests for consolidation service with harness validation (issue #022, updated for #027).
- * Tests: polished path (harness passes), pending_review path (harness finds violations, model succeeded).
+ * Unit tests for consolidation service with harness validation (AI-first flow).
+ * AI success always returns pending_review; fallback uses exact merge only.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -8,8 +8,6 @@ import type { StructuredLogger } from '../../server/utils/structuredLogger'
 import type { ShoppingListPolishPort } from '../../server/services/shopping-list/polishPort'
 import type { PlanningPrincipal } from '../../server/services/planning/planningPrincipal'
 import { consolidateShoppingList } from '../../server/services/shopping-list/consolidationService'
-
-// --- Mocks ---
 
 const mocks = vi.hoisted(() => ({
   getSavedWeekplanById: vi.fn(),
@@ -23,8 +21,6 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', () => ({
 vi.mock('../../server/services/recipe-catalog/recipeRepository', () => ({
   listRecipes: mocks.listRecipes,
 }))
-
-// --- Test helpers ---
 
 const PLAN_ID = 'plan-harness-test'
 
@@ -89,9 +85,7 @@ function makeRecipe(id: string, title: string, ingredients: Array<{ name: string
   }
 }
 
-// --- Tests ---
-
-describe('consolidation service with harness validation (issue #022)', () => {
+describe('consolidation service with harness validation (AI-first)', () => {
   let logger: StructuredLogger
 
   beforeEach(() => {
@@ -107,14 +101,14 @@ describe('consolidation service with harness validation (issue #022)', () => {
     })
   })
 
-  describe('polished path (harness passes)', () => {
-    it('returns polishStatus "polished" when AI output passes harness validation', async () => {
+  describe('AI success → pending_review', () => {
+    it('returns pending_review when AI output passes harness validation', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+              { id: 'recipe-1:0', name: 'pasta', quantity: 400, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
         }),
@@ -128,17 +122,18 @@ describe('consolidation service with harness validation (issue #022)', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('polished')
+      expect(result.polishStatus).toBe('pending_review')
       expect(result.consolidatedLines[0].name).toBe('pasta')
+      expect(result.hints).toEqual([])
     })
 
-    it('uses polished lines as consolidatedLines when harness passes', async () => {
+    it('uses AI lines as consolidatedLines with provenance from source', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'pasta', quantity: 0.4, unit: 'kg' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+              { id: 'recipe-1:0', name: 'pasta', quantity: 0.4, unit: 'kg' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
         }),
@@ -152,11 +147,13 @@ describe('consolidation service with harness validation (issue #022)', () => {
         openrouterApiKey: 'sk-test-key',
       })
 
-      expect(result.polishStatus).toBe('polished')
+      expect(result.polishStatus).toBe('pending_review')
       expect(result.consolidatedLines).toHaveLength(2)
-      expect(result.consolidatedLines[0].name).toBe('pasta')
       expect(result.consolidatedLines[0].unit).toBe('kg')
-      expect(result.baselineLines[0].name).toBe('pasta')
+      expect(result.consolidatedLines[0].provenance).toEqual([
+        { recipeId: 'recipe-1', recipeTitle: 'Pasta' },
+      ])
+      expect(result.baselineLines[0].id).toBe('recipe-1:0')
     })
 
     it('does not trigger a second attempt (no repair loop)', async () => {
@@ -164,8 +161,8 @@ describe('consolidation service with harness validation (issue #022)', () => {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+              { id: 'recipe-1:0', name: 'pasta', quantity: 400, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
         }),
@@ -181,16 +178,50 @@ describe('consolidation service with harness validation (issue #022)', () => {
 
       expect(mockPort.polish).toHaveBeenCalledOnce()
     })
-  })
 
-  describe('pending_review path (harness finds violations but model succeeded)', () => {
-    it('returns polishStatus "pending_review" when AI output invents ingredients', async () => {
+    it('passes recipe-grouped consolidation context to polish port', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'pasta', quantity: 400, unit: 'g' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+              { id: 'recipe-1:0', name: 'pasta', quantity: 400, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
+            ],
+          },
+        }),
+      }
+
+      await consolidateShoppingList(PLAN_ID, {
+        supabaseClient: {} as unknown as SupabaseClient,
+        principal: makePrincipal(),
+        logger,
+        polishPort: mockPort,
+        openrouterApiKey: 'sk-test-key',
+      })
+
+      expect(mockPort.polish).toHaveBeenCalledWith({
+        sections: [
+          {
+            recipeId: 'recipe-1',
+            recipeTitle: 'Pasta',
+            ingredients: [
+              { id: 'recipe-1:0', name: 'pasta', quantity: 400, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
+            ],
+          },
+        ],
+      })
+    })
+  })
+
+  describe('pending_review with harness hints', () => {
+    it('returns pending_review when AI output invents line ids', async () => {
+      const mockPort: ShoppingListPolishPort = {
+        polish: vi.fn().mockResolvedValue({
+          response: {
+            lines: [
+              { id: 'recipe-1:0', name: 'pasta', quantity: 400, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
               { id: 'L99', name: 'invented-item', quantity: 1, unit: 'stuks' },
             ],
           },
@@ -206,18 +237,17 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('pending_review')
-      expect(result.hints).toBeDefined()
       expect(result.hints!.length).toBeGreaterThan(0)
       expect(result.polishResponse).toBeDefined()
     })
 
-    it('returns polishStatus "pending_review" when AI inflates quantity', async () => {
+    it('returns pending_review when AI inflates quantity', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'pasta', quantity: 9999, unit: 'g' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+              { id: 'recipe-1:0', name: 'pasta', quantity: 9999, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
         }),
@@ -240,8 +270,8 @@ describe('consolidation service with harness validation (issue #022)', () => {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'L1', name: 'fusilli', quantity: 400, unit: 'g' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+              { id: 'recipe-1:0', name: 'fusilli', quantity: 400, unit: 'g' },
+              { id: 'recipe-1:1', name: 'olijfolie', quantity: 2, unit: 'el' },
             ],
           },
         }),
@@ -256,61 +286,11 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('pending_review')
-      expect(result.consolidatedLines.find(l => l.id === 'L1')?.name).toBe('fusilli')
-      expect(result.hints).toContainEqual(expect.objectContaining({ rule: 'name-unchanged' }))
+      expect(result.consolidatedLines.find(l => l.id === 'recipe-1:0')?.name).toBe('fusilli')
+      expect(result.hints).toContainEqual(expect.objectContaining({ rule: 'name-unchanged', severity: 'info' }))
     })
 
-    it('includes polishResponse and hints in pending_review result', async () => {
-      const mockPort: ShoppingListPolishPort = {
-        polish: vi.fn().mockResolvedValue({
-          response: {
-            lines: [
-              { id: 'L1', name: 'pasta', quantity: 400, unit: 'kg' },
-              { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
-            ],
-            changes: [{ id: 'L1', reason: 'unit changed' }],
-          },
-        }),
-      }
-
-      const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
-        principal: makePrincipal(),
-        logger,
-        polishPort: mockPort,
-        openrouterApiKey: 'sk-test-key',
-      })
-
-      expect(result.polishStatus).toBe('pending_review')
-      expect(result.polishResponse).toBeDefined()
-      expect(result.polishResponse!.lines).toHaveLength(2)
-      expect(result.hints).toBeDefined()
-      expect(result.baselineLines).toHaveLength(2)
-    })
-
-    it('does not retry when harness fails (single attempt per retry policy v1)', async () => {
-      const mockPort: ShoppingListPolishPort = {
-        polish: vi.fn().mockResolvedValue({
-          response: {
-            lines: [
-              { id: 'L99', name: 'invented', quantity: 1, unit: 'stuks' },
-            ],
-          },
-        }),
-      }
-
-      await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
-        principal: makePrincipal(),
-        logger,
-        polishPort: mockPort,
-        openrouterApiKey: 'sk-test-key',
-      })
-
-      expect(mockPort.polish).toHaveBeenCalledOnce()
-    })
-
-    it('logs pending_review with hint counts and failuresByRule', async () => {
+    it('logs pending_review with hint counts', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
@@ -334,14 +314,13 @@ describe('consolidation service with harness validation (issue #022)', () => {
         expect.objectContaining({
           planId: PLAN_ID,
           hintCount: expect.any(Number),
-          failuresByRule: expect.any(Object),
         }),
       )
     })
   })
 
-  describe('cross-unit baseline (deterministic pre-polish)', () => {
-    it('merges g and kg into fewer baselineLines when AI is skipped', async () => {
+  describe('fallback exact merge (no cross-unit pre-merge)', () => {
+    it('keeps g and kg as separate lines when AI is skipped', async () => {
       const crossUnitPlan = {
         ...makeSavedWeekplan(),
         body: {
@@ -375,20 +354,11 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
-      expect(result.baselineLines).toHaveLength(1)
-      expect(result.baselineLines[0]).toMatchObject({ name: 'tomaten', quantity: 900, unit: 'g' })
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
+      expect(result.baselineLines).toHaveLength(2)
+      expect(result.baselineLines.map(l => l.unit).sort()).toEqual(['g', 'kg'])
     })
 
     it('sorts consolidatedLines and baselineLines by supermarket aisle when AI is skipped', async () => {
-      mocks.listRecipes.mockResolvedValue({
-        ok: true,
-        value: [makeRecipe('recipe-1', 'Mix', [
-          { name: 'melk', quantity: 1, unit: 'l' },
-          { name: 'tomaten', quantity: 500, unit: 'g' },
-        ])],
-      })
-
       const result = await consolidateShoppingList(PLAN_ID, {
         supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
@@ -398,9 +368,7 @@ describe('consolidation service with harness validation (issue #022)', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
-      // tomaten (produce) sorts before melk (dairy) in both consolidatedLines and baselineLines
-      expect(result.consolidatedLines.map(l => l.name)).toEqual(['tomaten', 'melk'])
-      expect(result.baselineLines.map(l => l.name)).toEqual(['tomaten', 'melk'])
+      expect(result.consolidatedLines.map(l => l.name)).toEqual(['pasta', 'olijfolie'])
     })
   })
 

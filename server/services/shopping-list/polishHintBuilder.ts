@@ -1,6 +1,9 @@
 import type { MergedLine, PolishBaseline } from './exactMerge'
 import type { PolishResponse, PolishResponseLine, ValidationRule } from './polishHarness'
-import { normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
+
+/** Extends harness ValidationRule with hint-only rules that are never harness failures. */
+export type HintRule = ValidationRule | 'name-unchanged'
+import { canonicalDisplayName, normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 import { canonicalizePolishResponse } from './polishHarness'
 import { convertQuantity, unitDimension } from './crossUnitMerge'
 
@@ -8,18 +11,18 @@ export type HintSeverity = 'info' | 'error'
 
 export interface PolishHint {
   lineId: string
-  rule: ValidationRule
+  rule: HintRule
   severity: HintSeverity
   message: string
 }
 
-/** Maps harness validation rules to hint severity. */
-const SEVERITY_BY_RULE: Record<ValidationRule, HintSeverity> = {
+/** Maps hint rules to severity; name-unchanged is info-only, no-removed-lines blocks Approve. */
+const SEVERITY_BY_RULE: Record<HintRule, HintSeverity> = {
   'no-invented-ingredients': 'error',
   'quantity-cap': 'error',
   'unit-conversion': 'error',
-  'name-unchanged': 'error',
-  'no-removed-lines': 'info',
+  'name-unchanged': 'info',
+  'no-removed-lines': 'error',
 }
 
 /**
@@ -94,7 +97,7 @@ type NameDimensionKey = string
 
 function nameDimensionKey(name: string, unit: string | undefined): NameDimensionKey {
   const dim = unitDimension(unit)
-  return `${name}::${dim}`
+  return `${canonicalDisplayName(name)}::${dim}`
 }
 
 function buildNameDimensionQuantityCapMap(baseline: PolishBaseline): Map<NameDimensionKey, number> {
@@ -170,7 +173,7 @@ function baselineUnitsForNameAndDimension(
   const dim = unitDimension(referenceUnit)
   const units = new Set<string>()
   for (const line of baseline.lines) {
-    if (line.name !== name) continue
+    if (canonicalDisplayName(line.name) !== canonicalDisplayName(name)) continue
     if (unitDimension(line.unit) !== dim) continue
     const normalized = normalizeShoppingListUnit(line.unit)
     if (normalized) units.add(normalized)
