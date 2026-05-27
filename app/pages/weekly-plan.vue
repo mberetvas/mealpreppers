@@ -387,6 +387,9 @@ function onOpenWeek(_index: number, snapshot: WeekPlanV1): void {
 
 const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
 
+/** Controls visibility of the shopping list preview modal. */
+const previewOpen = ref(false)
+
 const canPersistDraftSavedWeekplan = computed(
   () => Boolean(weekPlanTitle.value.trim()) && weekValid.value && !firstSaveBusy.value,
 )
@@ -525,6 +528,17 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           :has-saved-shopping-list="hasSavedShoppingList"
           :shopping-list-deprecated="shoppingListDeprecated"
         />
+        <button
+          v-if="activeTab === 'week' && weekPersistenceKind === 'saved-weekplan'"
+          type="button"
+          data-testid="view-shopping-list-btn"
+          class="inline-flex items-center gap-1.5 rounded-2xl bg-atelier-chip px-3 py-1.5 font-body text-xs font-semibold text-atelier-neutral-action transition hover:bg-atelier-chip-hover hover:text-atelier-heading"
+          aria-label="View shopping list preview"
+          @click="previewOpen = true"
+        >
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">preview</span>
+          View shopping list
+        </button>
       </div>
     </header>
 
@@ -569,6 +583,17 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
           :has-saved-shopping-list="hasSavedShoppingList"
           :shopping-list-deprecated="shoppingListDeprecated"
         />
+        <button
+          v-if="weekPersistenceKind === 'saved-weekplan'"
+          type="button"
+          data-testid="view-shopping-list-btn"
+          class="inline-flex items-center gap-1 rounded-2xl bg-atelier-chip px-2.5 py-1 font-body text-xs font-semibold text-atelier-neutral-action transition hover:bg-atelier-chip-hover hover:text-atelier-heading"
+          aria-label="View shopping list preview"
+          @click="previewOpen = true"
+        >
+          <span class="material-symbols-outlined text-[14px]" aria-hidden="true">preview</span>
+          View shopping list
+        </button>
       </div>
     </div>
 
@@ -709,5 +734,13 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         </div>
       </div>
     </Teleport>
+
+    <ShoppingListConsolidatedShoppingListPreview
+      v-if="weekPersistenceKind === 'saved-weekplan' && activeTemplateId"
+      :plan-id="activeTemplateId"
+      :has-saved-shopping-list="hasSavedShoppingList"
+      :shopping-list-deprecated="shoppingListDeprecated"
+      v-model:open="previewOpen"
+    />
   </div>
 </template>

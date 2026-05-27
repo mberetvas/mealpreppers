@@ -126,6 +126,15 @@ function formatUpdatedAt(iso: string): string {
 }
 
 const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
+
+const previewPlan = ref<{ id: string, hasSavedShoppingList: boolean, shoppingListDeprecated: boolean } | null>(null)
+const previewOpen = ref(false)
+
+/** Opens the shopping list preview modal for the given plan card. */
+function openPreview(item: SavedWeekplanListItem): void {
+  previewPlan.value = { id: item.id, hasSavedShoppingList: item.hasSavedShoppingList, shoppingListDeprecated: item.shoppingListDeprecated }
+  previewOpen.value = true
+}
 </script>
 
 <template>
@@ -274,6 +283,15 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
           </NuxtLink>
           <button
             type="button"
+            data-testid="view-shopping-list-btn"
+            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-atelier-neutral-action transition hover:bg-atelier-chip hover:text-atelier-heading"
+            :aria-label="`View shopping list preview for ${item.name}`"
+            @click="openPreview(item)"
+          >
+            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">preview</span>
+          </button>
+          <button
+            type="button"
             class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-atelier-neutral-action transition hover:bg-error-container hover:text-atelier-error-foreground"
             aria-label="Delete Saved Weekplan"
             @click="requestDelete(item, $event.currentTarget as HTMLElement)"
@@ -335,5 +353,13 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
         </div>
       </div>
     </Teleport>
+
+    <ShoppingListConsolidatedShoppingListPreview
+      v-if="previewPlan"
+      :plan-id="previewPlan.id"
+      :has-saved-shopping-list="previewPlan.hasSavedShoppingList"
+      :shopping-list-deprecated="previewPlan.shoppingListDeprecated"
+      v-model:open="previewOpen"
+    />
   </div>
 </template>
