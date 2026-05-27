@@ -158,3 +158,139 @@ describe('Logging V2 integration', () => {
     expect((logEntry?.data as Record<string, unknown>).traceId).toBe('req-fallback-id')
   })
 })
+
+describe('Logging V2 integration — request_completed (INFO)', () => {
+  let stdoutOutput: string
+  let stdoutSpy: ReturnType<typeof vi.spyOn>
+  let originalLogLevel: string | undefined
+  let originalLogJson: string | undefined
+  let originalNodeEnv: string | undefined
+
+  beforeEach(() => {
+    stdoutOutput = ''
+    originalLogLevel = process.env.LOG_LEVEL
+    originalLogJson = process.env.LOG_JSON
+    originalNodeEnv = process.env.NODE_ENV
+    process.env.LOG_JSON = 'true'
+    process.env.NODE_ENV = 'test'
+    vi.resetModules()
+    stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdoutOutput += String(chunk)
+      return true
+    })
+  })
+
+  afterEach(() => {
+    stdoutSpy.mockRestore()
+    if (originalLogLevel === undefined) delete process.env.LOG_LEVEL
+    else process.env.LOG_LEVEL = originalLogLevel
+    if (originalLogJson === undefined) delete process.env.LOG_JSON
+    else process.env.LOG_JSON = originalLogJson
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = originalNodeEnv
+    vi.resetModules()
+  })
+
+  it('emits exactly one INFO request_completed with required fields for a non-health route', async () => {
+    process.env.LOG_LEVEL = 'info'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+
+    const event = makeEvent({ 'x-trace-id': 'trace-info-test' }, '/api/recipes', 'GET')
+    await traceContext(event)
+    await requestCompleted(event)
+
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const entries = parseLogEntries(stdoutOutput)
+    const completedEntries = entries.filter((e) => e.message === 'http.request_completed')
+    expect(completedEntries).toHaveLength(1)
+
+    const data = completedEntries[0]?.data as Record<string, unknown>
+    expect(data.method).toBe('GET')
+    expect(data.path).toBe('/api/recipes')
+    expect(data.status_code).toBe(200)
+    expect(typeof data.latency_ms).toBe('number')
+    expect(data.traceId).toBe('trace-info-test')
+  })
+
+  it('merges trace_id from upstream trace-context middleware into the completion event', async () => {
+    process.env.LOG_LEVEL = 'info'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+
+    const event = makeEvent({ 'x-trace-id': 'trace-merged' }, '/api/plans', 'POST')
+    await traceContext(event)
+    await requestCompleted(event)
+
+    event.node.res.statusCode = 201
+    event.node.res.emit('finish')
+
+    const [logEntry] = parseLogEntries(stdoutOutput)
+    expect(logEntry?.message).toBe('http.request_completed')
+    expect((logEntry?.data as Record<string, unknown>).traceId).toBe('trace-merged')
+  })
+
+  it('produces no INFO request_completed for GET /health', async () => {
+    process.env.LOG_LEVEL = 'info'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+
+    const event = makeEvent({}, '/health', 'GET')
+    await traceContext(event)
+    await requestCompleted(event)
+
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const entries = parseLogEntries(stdoutOutput)
+    expect(entries.some((e) => e.message === 'http.request_completed')).toBe(false)
+  })
+
+  it('produces no INFO request_completed when log level is debug', async () => {
+    process.env.LOG_LEVEL = 'debug'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+
+    const event = makeEvent({ 'x-trace-id': 'trace-debug' }, '/api/recipes', 'GET')
+    await traceContext(event)
+    await requestCompleted(event)
+
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const entries = parseLogEntries(stdoutOutput)
+    expect(entries.some((e) => e.message === 'http.request_completed')).toBe(false)
+  })
+
+  it('includes user_agent from request header in the completion event', async () => {
+    process.env.LOG_LEVEL = 'info'
+    vi.resetModules()
+
+    const { default: traceContext } = await import('../../server/middleware/01.trace-context')
+    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+
+    const event = makeEvent(
+      { 'x-trace-id': 'trace-ua', 'user-agent': 'IntegrationBot/2.0' },
+      '/api/recipes',
+      'GET',
+    )
+    await traceContext(event)
+    await requestCompleted(event)
+
+    event.node.res.statusCode = 200
+    event.node.res.emit('finish')
+
+    const [logEntry] = parseLogEntries(stdoutOutput)
+    expect((logEntry?.data as Record<string, unknown>).user_agent).toBe('IntegrationBot/2.0')
+  })
+})
