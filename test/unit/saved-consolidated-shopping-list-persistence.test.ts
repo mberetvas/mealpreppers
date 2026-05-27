@@ -98,6 +98,30 @@ describe('consolidatedShoppingListRepository', () => {
       }
     })
 
+    it('returns lines sorted by store walk order when DB record is unsorted', async () => {
+      const body = makeWeekPlanBody()
+      const fingerprint = computeSourceFingerprint(body)
+      const record: SavedConsolidatedShoppingListRecord = {
+        lines: [
+          { id: 'L1', name: 'melk', quantity: 1, unit: 'l' },
+          { id: 'L2', name: 'pasta', quantity: 800, unit: 'g' },
+          { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g' },
+        ],
+        sourceFingerprint: fingerprint,
+        confirmedAt: '2026-05-26T10:00:00.000Z',
+      }
+      const client = mockSupabaseClient({
+        selectResult: { id: 'plan-1', consolidated_shopping_list: record, body, owner_user_id: 'user-1', anon_session_id: null },
+      })
+
+      const result = await getConsolidatedShoppingList(client, 'plan-1', { kind: 'user', userId: 'user-1' })
+
+      expect(result.ok).toBe(true)
+      if (result.ok && result.value) {
+        expect(result.value.lines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
+      }
+    })
+
     it('returns not_found for non-existent plan', async () => {
       const client = mockSupabaseClient({ selectResult: null })
 
@@ -144,6 +168,29 @@ describe('consolidatedShoppingListRepository', () => {
         expect(result.value.confirmedAt).toBeDefined()
       }
       expect(updateFn).toHaveBeenCalled()
+    })
+
+    it('persists lines sorted by store walk order when input is unsorted', async () => {
+      const body = makeWeekPlanBody()
+      const unsorted = [
+        { id: 'L1', name: 'melk', quantity: 1, unit: 'l' },
+        { id: 'L2', name: 'pasta', quantity: 800, unit: 'g' },
+        { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g' },
+      ]
+      const updateFn = vi.fn()
+      const client = mockSupabaseClientForSave({
+        selectResult: { id: 'plan-1', body, owner_user_id: null, anon_session_id: 'sess-1', consolidated_shopping_list: null },
+        updateFn,
+      })
+
+      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, unsorted)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.value.lines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
+      }
+      const written = updateFn.mock.calls[0]?.[0] as { consolidated_shopping_list: SavedConsolidatedShoppingListRecord }
+      expect(written.consolidated_shopping_list.lines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
     })
 
     it('rejects save for wrong owner', async () => {

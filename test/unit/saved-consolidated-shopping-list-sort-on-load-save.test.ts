@@ -198,6 +198,48 @@ describe('useConsolidatedShoppingList — confirmReview sorts display lines (iss
     expect(names).toEqual(['tomaten', 'melk', 'pasta'])
   })
 
+  it('confirmReview PUT payload is aisle-sorted even when reviewLines are out of order', async () => {
+    const planId = ref('plan-1')
+
+    const fetchConsolidate = vi.fn().mockResolvedValue({
+      consolidatedLines: [
+        { id: 'L1', name: 'melk', quantity: 1, unit: 'l', provenance: [] },
+        { id: 'L2', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
+        { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g', provenance: [] },
+      ],
+      baselineLines: [],
+      changes: [],
+      polishStatus: 'pending_review',
+      warnings: [],
+    })
+
+    const savedRecord: SavedConsolidatedShoppingListRecord = {
+      lines: [
+        { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g' },
+        { id: 'L1', name: 'melk', quantity: 1, unit: 'l' },
+        { id: 'L2', name: 'pasta', quantity: 800, unit: 'g' },
+      ],
+      sourceFingerprint: 'fp',
+      confirmedAt: '2026-05-26T12:00:00.000Z',
+    }
+    const savelist = vi.fn().mockResolvedValue(savedRecord)
+
+    const { consolidate, confirmReview, reviewLines } =
+      useConsolidatedShoppingList(planId, { fetchConsolidate, savelist })
+
+    await consolidate()
+    reviewLines.value = [
+      { id: 'L2', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
+      { id: 'L1', name: 'melk', quantity: 1, unit: 'l', provenance: [] },
+      { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g', provenance: [] },
+    ]
+    await confirmReview()
+
+    expect(savelist).toHaveBeenCalled()
+    const putLines = savelist.mock.calls[0][1] as { name: string }[]
+    expect(putLines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
+  })
+
   it('confirmReview preserves line content (id, quantity, unit) while sorting', async () => {
     const planId = ref('plan-1')
 

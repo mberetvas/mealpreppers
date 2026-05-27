@@ -45,6 +45,7 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     baselineLines: ref<unknown[]>([]),
     changes: ref<unknown[]>([]),
     hasConsolidated: ref(false),
+    savedListHydrationSettled: ref(true),
     consolidate: vi.fn(),
     reset: vi.fn(),
   }

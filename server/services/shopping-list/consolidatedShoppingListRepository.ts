@@ -6,6 +6,7 @@ import type { PlanningResult } from '../planning/planningResult'
 import { fail, ok } from '../planning/planningResult'
 import { interpretSavedWeekplanAccess } from '../planning/savedWeekplanAccess'
 import { computeSourceFingerprint } from './sourceFingerprint'
+import { sortShoppingListLines } from './aisleSort'
 
 /** Persisted shape stored in the `consolidated_shopping_list` JSONB column. */
 export interface SavedConsolidatedShoppingListRecord {
@@ -131,7 +132,14 @@ export async function getConsolidatedShoppingList(
     return fail(forbidden())
   }
 
-  return ok(row.consolidated_shopping_list)
+  const record = row.consolidated_shopping_list
+  if (!record) {
+    return ok(null)
+  }
+  return ok({
+    ...record,
+    lines: sortShoppingListLines(record.lines),
+  })
 }
 
 /** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. Rejects if existing list is deprecated. */
@@ -177,8 +185,9 @@ export async function saveConsolidatedShoppingList(
   const sourceFingerprint = computeSourceFingerprint(row.body)
   const confirmedAt = new Date().toISOString()
 
+  const sortedLines = sortShoppingListLines(lines)
   const record: SavedConsolidatedShoppingListRecord = {
-    lines,
+    lines: sortedLines,
     sourceFingerprint,
     confirmedAt,
   }

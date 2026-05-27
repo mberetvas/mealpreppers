@@ -63,6 +63,7 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     updateReviewLine: vi.fn(),
     confirmReview: vi.fn(),
     shoppingListDeprecated: ref(false),
+    savedListHydrationSettled: ref(true),
     savedList: ref<unknown>(null),
     loadSavedList: vi.fn(),
     editSaved: vi.fn(),

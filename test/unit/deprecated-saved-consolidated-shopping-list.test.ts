@@ -224,6 +224,41 @@ describe('useConsolidatedShoppingList — deprecated state', () => {
 
     expect(composable.shoppingListDeprecated.value).toBe(true)
     expect(composable.consolidatedLines.value).toHaveLength(1)
+    expect(composable.savedListHydrationSettled.value).toBe(true)
+  })
+
+  it('does not expose polished state before plan flags resolve', async () => {
+    const { ref } = await import('vue')
+    const { useConsolidatedShoppingList } = await import('../../app/composables/useConsolidatedShoppingList')
+
+    const planId = ref('plan-1')
+    const savedRecord: SavedConsolidatedShoppingListRecord = {
+      lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g' }],
+      sourceFingerprint: 'fp-old',
+      confirmedAt: '2026-05-26T10:00:00.000Z',
+    }
+
+    let resolveFlags!: (value: { hasSavedShoppingList: boolean, shoppingListDeprecated: boolean }) => void
+    const fetchPlanFlags = vi.fn(
+      () => new Promise<{ hasSavedShoppingList: boolean, shoppingListDeprecated: boolean }>((resolve) => {
+        resolveFlags = resolve
+      }),
+    )
+    const fetchSavedList = vi.fn().mockResolvedValue(savedRecord)
+
+    const composable = useConsolidatedShoppingList(planId, { fetchSavedList, fetchPlanFlags })
+    const loadPromise = composable.loadSavedList()
+    await Promise.resolve()
+
+    expect(composable.polishStatus.value).toBeNull()
+    expect(composable.savedListHydrationSettled.value).toBe(false)
+
+    resolveFlags!({ hasSavedShoppingList: true, shoppingListDeprecated: true })
+    await loadPromise
+
+    expect(composable.shoppingListDeprecated.value).toBe(true)
+    expect(composable.polishStatus.value).toBe('polished')
+    expect(composable.savedListHydrationSettled.value).toBe(true)
   })
 
   it('does not set deprecated when fingerprint matches', async () => {

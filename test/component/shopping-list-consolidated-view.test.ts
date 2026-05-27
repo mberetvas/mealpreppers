@@ -12,6 +12,7 @@ const mountOptions = {
         props: ['to'],
         template: '<a :href="JSON.stringify(to)"><slot /></a>',
       },
+      ShoppingListPolishReview: true,
     },
   },
 }
@@ -45,13 +46,16 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     baselineLines: ref<unknown[]>([]),
     changes: ref<unknown[]>([]),
     hasConsolidated: ref(false),
+    shoppingListDeprecated: ref(false),
+    savedListHydrationSettled: ref(true),
+    savedList: ref<unknown>(null),
     consolidate: vi.fn(),
     reset: vi.fn(),
   }
 
   const routerReplaceMock = vi.fn()
 
-  vi.stubGlobal('useRoute', () => ({ query }))
+  vi.stubGlobal('useRoute', () => ({ path: '/shopping-list', query }))
   vi.stubGlobal('useRouter', () => ({ replace: routerReplaceMock }))
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('computed', computed)
@@ -102,7 +106,7 @@ describe('shopping-list page: view mode toggle', () => {
     const wrapper = mount(ShoppingListPage, mountOptions)
     await wrapper.find('[data-testid="view-mode-sections"]').trigger('click')
     expect(routerReplaceMock).toHaveBeenCalledWith(
-      expect.objectContaining({ query: expect.not.objectContaining({ view: 'consolidated' }) }),
+      expect.objectContaining({ query: expect.objectContaining({ view: 'sections', plan: 'plan-1' }) }),
     )
   })
 

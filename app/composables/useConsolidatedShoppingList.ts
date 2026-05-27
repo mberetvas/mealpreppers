@@ -59,6 +59,8 @@ export function useConsolidatedShoppingList(
   const saving = ref(false)
   const saveError = ref<string | null>(null)
   const shoppingListDeprecated = ref(false)
+  /** True after loadSavedList finishes for the current plan (flags known before polished state is set). */
+  const savedListHydrationSettled = ref(false)
 
   let consolidateGeneration = 0
 
@@ -73,11 +75,24 @@ export function useConsolidatedShoppingList(
     if (!planId.value) return
 
     const planAtStart = planId.value
+    savedListHydrationSettled.value = false
 
     try {
       const result = await fetchSavedList(planAtStart)
       if (planId.value !== planAtStart) return
       if (result) {
+        let deprecated = false
+        try {
+          const flags = await fetchPlanFlags(planAtStart)
+          if (planId.value !== planAtStart) return
+          deprecated = flags.shoppingListDeprecated
+        }
+        catch {
+          if (planId.value !== planAtStart) return
+          deprecated = false
+        }
+
+        shoppingListDeprecated.value = deprecated
         savedList.value = result
         const lines = sortShoppingListLines(result.lines.map(l => ({
           ...l,
@@ -90,22 +105,16 @@ export function useConsolidatedShoppingList(
         changes.value = []
         polishStatus.value = 'polished'
         hasConsolidated.value = true
-
-        // Check deprecation status
-        try {
-          const flags = await fetchPlanFlags(planAtStart)
-          if (planId.value !== planAtStart) return
-          shoppingListDeprecated.value = flags.shoppingListDeprecated
-        }
-        catch {
-          if (planId.value !== planAtStart) return
-          shoppingListDeprecated.value = false
-        }
       }
     }
     catch {
       if (planId.value !== planAtStart) return
       // No saved list — user must consolidate
+    }
+    finally {
+      if (planId.value === planAtStart) {
+        savedListHydrationSettled.value = true
+      }
     }
   }
 
@@ -160,13 +169,13 @@ export function useConsolidatedShoppingList(
     if (polishStatus.value !== 'pending_review') return
     if (shoppingListDeprecated.value) return
 
-    const linesToSave: SavedShoppingListLine[] = reviewLines.value.map(l => ({
+    const confirmedLines = sortShoppingListLines(reviewLines.value.map(l => ({ ...l })))
+    const linesToSave: SavedShoppingListLine[] = confirmedLines.map(l => ({
       id: l.id,
       name: l.name,
       quantity: l.quantity,
       unit: l.unit,
     }))
-    const confirmedLines = sortShoppingListLines(reviewLines.value.map(l => ({ ...l })))
 
     saving.value = true
     saveError.value = null
@@ -221,6 +230,7 @@ export function useConsolidatedShoppingList(
     saving.value = false
     saveError.value = null
     shoppingListDeprecated.value = false
+    savedListHydrationSettled.value = false
   }
 
   return {
@@ -238,6 +248,7 @@ export function useConsolidatedShoppingList(
     saving,
     saveError,
     shoppingListDeprecated,
+    savedListHydrationSettled,
     consolidate,
     loadSavedList,
     editSaved,

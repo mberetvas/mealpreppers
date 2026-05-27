@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
 
 const route = useRoute()
@@ -18,6 +19,7 @@ const {
   hints,
   reviewLines,
   shoppingListDeprecated,
+  savedListHydrationSettled,
   savedList,
   saving,
   saveError,
@@ -27,18 +29,47 @@ const {
   confirmReview,
 } = useConsolidatedShoppingList(planId)
 
-const viewMode = computed(() => route.query.view === 'consolidated' ? 'consolidated' : 'sections')
+const viewMode = computed(() =>
+  route.query.view === 'consolidated' ? 'consolidated' : 'sections',
+)
+
+/** Whether a valid saved consolidated list should be the default tab when view is omitted. */
+const hasValidSavedConsolidatedList = computed(() =>
+  polishStatus.value === 'polished'
+  && consolidatedLines.value.length > 0
+  && !shoppingListDeprecated.value,
+)
 
 function setViewMode(mode: 'sections' | 'consolidated') {
   const query = { ...route.query }
-  if (mode === 'consolidated') {
-    query.view = 'consolidated'
-  }
-  else {
-    delete query.view
-  }
+  query.view = mode === 'consolidated' ? 'consolidated' : 'sections'
   router.replace({ path: route.path, query })
 }
+
+/** Opens consolidated view when a saved list hydrated and the URL has no explicit view. */
+watch(
+  [
+    planId,
+    planLoaded,
+    savedListHydrationSettled,
+    polishStatus,
+    () => consolidatedLines.value.length,
+    shoppingListDeprecated,
+    () => route.query.view,
+  ],
+  () => {
+    if (!planId.value || !planLoaded.value || !savedListHydrationSettled.value) return
+    if (route.query.view) return
+    if (hasValidSavedConsolidatedList.value) {
+      setViewMode('consolidated')
+    }
+  },
+)
+
+/** Hint on Consolidated tab when a saved list exists but recipe sections is active. */
+const showSavedListOnConsolidatedTab = computed(() =>
+  Boolean(savedList.value) && !shoppingListDeprecated.value && viewMode.value === 'sections',
+)
 
 /** Lines to render in consolidated view depending on polish status. */
 const displayLines = computed(() => {
@@ -254,6 +285,12 @@ useHead(() => ({
           @click="setViewMode('consolidated')"
         >
           Consolidated
+          <span
+            v-if="showSavedListOnConsolidatedTab"
+            data-testid="saved-list-indicator"
+            class="ml-1.5 inline-block size-2 rounded-full bg-primary"
+            aria-hidden="true"
+          />
         </button>
       </nav>
 
