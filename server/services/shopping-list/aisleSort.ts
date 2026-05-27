@@ -23,3 +23,15 @@ export function coerceAisleCategory(value: unknown): AisleCategory {
   }
   return 'other'
 }
+
+/** Sorts lines by supermarket walk order, then Dutch locale name within each aisle. */
+export function sortLinesByStoreWalkOrder<T extends { name: string, aisleCategory?: AisleCategory }>(
+  lines: T[],
+): T[] {
+  return [...lines].sort((a, b) => {
+    const aIdx = AISLE_CATEGORY_ORDER.indexOf(a.aisleCategory ?? 'other')
+    const bIdx = AISLE_CATEGORY_ORDER.indexOf(b.aisleCategory ?? 'other')
+    if (aIdx !== bIdx) return aIdx - bIdx
+    return a.name.localeCompare(b.name, 'nl')
+  })
+}

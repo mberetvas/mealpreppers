@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AISLE_CATEGORY_ORDER,
   coerceAisleCategory,
+  sortLinesByStoreWalkOrder,
 } from '../../server/services/shopping-list/aisleSort'
 
 describe('AISLE_CATEGORY_ORDER', () => {
@@ -29,5 +30,16 @@ describe('coerceAisleCategory', () => {
     expect(coerceAisleCategory(undefined)).toBe('other')
     expect(coerceAisleCategory(null)).toBe('other')
     expect(coerceAisleCategory(42)).toBe('other')
+  })
+})
+
+describe('sortLinesByStoreWalkOrder', () => {
+  it('orders by aisle walk order then Dutch name', () => {
+    const sorted = sortLinesByStoreWalkOrder([
+      { id: 'L1', name: 'melk', aisleCategory: 'dairy' },
+      { id: 'L2', name: 'paprika', aisleCategory: 'produce' },
+      { id: 'L3', name: 'pasta', aisleCategory: 'dry_goods' },
+    ])
+    expect(sorted.map(l => l.id)).toEqual(['L2', 'L1', 'L3'])
   })
 })

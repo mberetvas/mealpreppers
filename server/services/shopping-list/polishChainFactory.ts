@@ -55,7 +55,16 @@ Your job:
 1. Merge duplicate ingredients across recipes (same ingredient, compatible units). Convert units only within: g↔kg, ml↔dl↔l. Never convert mass↔volume or mass↔count.
 2. Merge human-style name variants (e.g. "ui, in ringen" + "ui" → "ui"; pick the clearest shopper-facing name).
 3. For every line, set "aisleCategory" to exactly one of these enum values: ${AISLE_ORDER_JSON}
-   Classify each ingredient for a Dutch/Belgian supermarket (produce, dairy, spices, etc.).
+   Classify for a Dutch/Belgian supermarket (Colruyt/Albert Heijn style):
+   - produce: fresh vegetables, fruit, garlic, onions (ui), fresh peppers, fresh herbs
+   - meat: chicken, pork, bacon, chorizo, sausage
+   - dairy: milk, cheese, butter, cream
+   - dry_goods: rice, pasta, flour (bloem), sugar, cornstarch (maïzena) — not canned legumes
+   - spices: salt (zout), pepper powder, paprikapoeder, dried spice blends
+   - canned_sauces: canned tomatoes, chickpeas (kikkererwten), stock/bouillon, ketchup, tomato paste, jarred sauces, baby corn packs
+   - oils: cooking oil, vinegar
+   - beverages: water, juice, soft drinks
+   - other: ONLY when truly unclassifiable — do not use "other" for rice, meat, produce, spices, or canned goods
 4. Sort the final "lines" array by supermarket walk order (the enum order above), then alphabetically by name within each category (Dutch locale).
    Preserve that order in the JSON output.
 5. When merging rows, keep the lowest surviving source id (lexicographic) and list absorbed source ids in "changes".

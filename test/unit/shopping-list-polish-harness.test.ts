@@ -534,7 +534,7 @@ describe('validatePolishResponse', () => {
 })
 
 describe('canonicalizePolishResponse', () => {
-  it('coerces invalid aisleCategory to other and preserves line order', () => {
+  it('infers aisle from name when model category is invalid, then sorts by walk order', () => {
     const baseline = makeBaseline([
       { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
       { id: 'L2', name: 'melk', quantity: 1, unit: 'l', provenance: [] },
@@ -549,11 +549,11 @@ describe('canonicalizePolishResponse', () => {
     const canonical = canonicalizePolishResponse(response, baseline)
 
     expect(canonical.lines.map(l => l.id)).toEqual(['L2', 'L1'])
-    expect(canonical.lines[0].aisleCategory).toBe('other')
+    expect(canonical.lines[0].aisleCategory).toBe('dairy')
     expect(canonical.lines[1].aisleCategory).toBe('dry_goods')
   })
 
-  it('defaults missing aisleCategory to other without reordering', () => {
+  it('infers dry_goods for pasta when aisleCategory is missing', () => {
     const baseline = makeBaseline([
       { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
     ])
@@ -563,6 +563,6 @@ describe('canonicalizePolishResponse', () => {
 
     const canonical = canonicalizePolishResponse(response, baseline)
 
-    expect(canonical.lines[0].aisleCategory).toBe('other')
+    expect(canonical.lines[0].aisleCategory).toBe('dry_goods')
   })
 })

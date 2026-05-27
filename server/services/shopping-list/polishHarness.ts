@@ -1,7 +1,8 @@
 import type { MergedLine, PolishBaseline } from './exactMerge'
 import { canonicalDisplayName, normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 import { convertQuantity, unitDimension } from './crossUnitMerge'
-import { coerceAisleCategory, type AisleCategory } from './aisleSort'
+import { coerceAisleCategory, sortLinesByStoreWalkOrder, type AisleCategory } from './aisleSort'
+import { inferAisleCategoryFromName } from './aisleInference'
 
 export interface PolishResponseLine {
   id: string
@@ -52,20 +53,23 @@ export function canonicalizePolishResponse(response: PolishResponse, baseline: P
   const baselineLineById = buildBaselineLineByIdMap(baseline)
   const baselineIdByLower = new Map(baseline.lines.map(line => [line.id.toLowerCase(), line.id]))
 
-  return {
-    lines: response.lines.map((line) => {
-      const canonicalId = baselineLineById.has(line.id)
-        ? line.id
-        : baselineIdByLower.get(line.id.toLowerCase()) ?? line.id
+  const lines = response.lines.map((line) => {
+    const canonicalId = baselineLineById.has(line.id)
+      ? line.id
+      : baselineIdByLower.get(line.id.toLowerCase()) ?? line.id
 
-      return {
-        id: canonicalId,
-        name: line.name,
-        quantity: line.quantity === undefined ? undefined : roundPolishQuantity(line.quantity),
-        unit: normalizeShoppingListUnit(line.unit),
-        aisleCategory: coerceAisleCategory(line.aisleCategory),
-      }
-    }),
+    return {
+      id: canonicalId,
+      name: line.name,
+      quantity: line.quantity === undefined ? undefined : roundPolishQuantity(line.quantity),
+      unit: normalizeShoppingListUnit(line.unit),
+      aisleCategory: inferAisleCategoryFromName(line.name)
+        ?? coerceAisleCategory(line.aisleCategory),
+    }
+  })
+
+  return {
+    lines: sortLinesByStoreWalkOrder(lines),
     changes: response.changes,
   }
 }

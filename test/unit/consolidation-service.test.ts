@@ -664,7 +664,7 @@ describe('consolidateShoppingList service', () => {
       expect(result.consolidatedLines).toEqual([])
     })
 
-    it('pending_review: preserves AI line order and aisleCategory', async () => {
+    it('pending_review: sorts lines by store walk order after canonicalization', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
@@ -687,8 +687,8 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('pending_review')
-      expect(result.consolidatedLines.map(l => l.id)).toEqual(['recipe-1:0', 'recipe-2:1', 'recipe-2:0'])
-      expect(result.consolidatedLines.map(l => l.aisleCategory)).toEqual(['spices', 'dairy', 'produce'])
+      expect(result.consolidatedLines.map(l => l.id)).toEqual(['recipe-2:0', 'recipe-2:1', 'recipe-1:0'])
+      expect(result.consolidatedLines.map(l => l.aisleCategory)).toEqual(['produce', 'dairy', 'spices'])
     })
   })
 })
