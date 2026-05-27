@@ -58,12 +58,12 @@ function ownerInsertPayload(principal: PlanningPrincipal): { owner_user_id: stri
   return { owner_user_id: null, anon_session_id: principal.sessionId }
 }
 
-/** Lists saved weekplans visible to the current principal (excludes legacy unowned rows). */
+/** Lists saved weekplans visible to the current principal (excludes legacy unowned rows). Each row includes shopping list status flags. */
 export async function listSavedWeekplans(
   client: SupabaseClient,
   principal: PlanningPrincipal,
-): Promise<PlanningResult<WeekTemplateListItem[]>> {
-  let q = client.from('meal_week_templates').select('id, name, updated_at')
+): Promise<PlanningResult<WeekTemplateListItemWithShoppingListFlags[]>> {
+  let q = client.from('meal_week_templates').select('id, name, updated_at, body, consolidated_shopping_list')
 
   if (principal.kind === 'user') {
     q = q.eq('owner_user_id', principal.userId).is('anon_session_id', null)
@@ -78,10 +78,11 @@ export async function listSavedWeekplans(
     return fail(storageError(error?.message, 'Saved weekplans could not be loaded.'))
   }
 
-  return ok((data as Pick<WeekTemplateDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
+  return ok((data as Pick<WeekTemplateDbRow, 'id' | 'name' | 'updated_at' | 'body' | 'consolidated_shopping_list'>[]).map(row => ({
     id: row.id,
     name: row.name,
     updatedAt: row.updated_at,
+    ...computeShoppingListFlags(row.consolidated_shopping_list ?? null, row.body),
   })))
 }
 
@@ -115,6 +116,12 @@ export async function getSavedWeekplanById(
   }
 
   return ok(mapWeekTemplateRow(row))
+}
+
+/** List-row shape returned by `listSavedWeekplans`, includes shopping list status flags. */
+export interface WeekTemplateListItemWithShoppingListFlags extends WeekTemplateListItem {
+  hasSavedShoppingList: boolean
+  shoppingListDeprecated: boolean
 }
 
 export interface WeekTemplateRowWithShoppingListFlags extends WeekTemplateRow {
