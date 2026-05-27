@@ -41,8 +41,11 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     polishStatus: ref(null),
     warnings: ref([]),
     baselineLines: ref([]),
+    changes: ref([]),
     hasConsolidated: ref(false),
+    shoppingListDeprecated: ref(false),
     savedListHydrationSettled: ref(true),
+    savedList: ref<unknown>(null),
     consolidate: vi.fn(),
     reset: vi.fn(),
   }
