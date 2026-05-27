@@ -96,6 +96,15 @@ describe('inferAisleCategory — spices and sauces', () => {
     expect(inferAisleCategory('basilicum')).toBe('produce')
   })
 
+  it('classifies kippenbouillon as canned_sauces, not meat', () => {
+    expect(inferAisleCategory('kippenbouillon')).toBe('canned_sauces')
+  })
+
+  it('classifies maïzena as dry_goods', () => {
+    expect(inferAisleCategory('maïzena')).toBe('dry_goods')
+    expect(inferAisleCategory('maizena')).toBe('dry_goods')
+  })
+
   it('classifies tomatenpuree as canned_sauces', () => {
     expect(inferAisleCategory('tomatenpuree')).toBe('canned_sauces')
   })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
+import { sortShoppingListLines } from '~~/server/services/shopping-list/aisleSort'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,13 +72,13 @@ const showSavedListOnConsolidatedTab = computed(() =>
   Boolean(savedList.value) && !shoppingListDeprecated.value && viewMode.value === 'sections',
 )
 
-/** Lines to render in consolidated view depending on polish status. */
+/** Lines to render in consolidated view depending on polish status (always store-walk sorted). */
 const displayLines = computed(() => {
   if (consolidationError.value) return []
   if (polishStatus.value === 'baseline_fallback' || polishStatus.value === 'ai_skipped') {
-    return baselineLines.value
+    return sortShoppingListLines(baselineLines.value)
   }
-  return consolidatedLines.value
+  return sortShoppingListLines(consolidatedLines.value)
 })
 
 /** Set of line IDs that differ between consolidated and baseline (name, quantity, or unit). */

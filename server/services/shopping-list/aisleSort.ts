@@ -104,7 +104,7 @@ const AISLE_RULES: AisleRule[] = [
     category: 'dry_goods',
     keywords: [
       'pasta', 'spaghetti', 'penne', 'tagliatelle', 'fusilli', 'rigatoni', 'farfalle', 'rijst',
-      'bloem', 'suiker', 'rozijn',
+      'bloem', 'suiker', 'maïzena', 'maizena', 'rozijn',
       'rozijnen', 'noot', 'noten', 'amandel', 'amandelen', 'walnoot', 'linzen', 'kikkererwt',
       'kikkererwten', 'couscous', 'quinoa', 'havermout', 'muesli', 'cornflakes', 'paneermeel',
       'gist', 'chocolade',
@@ -139,6 +139,9 @@ function matchesAisleKeyword(normalizedName: string, keyword: string): boolean {
 /** Infers supermarket aisle category from an ingredient name (does not rename). */
 export function inferAisleCategory(name: string): AisleCategory {
   const normalized = normalizeNameForAisle(name)
+  if (normalized.includes('bouillon')) {
+    return 'canned_sauces'
+  }
   for (const rule of AISLE_RULES) {
     for (const keyword of rule.keywords) {
       if (matchesAisleKeyword(normalized, keyword)) {

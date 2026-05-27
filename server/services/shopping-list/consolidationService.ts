@@ -136,7 +136,9 @@ export async function consolidateShoppingList(
       const validation = validatePolishResponse(canonicalized, sourceBaseline)
       const polishHints = buildPolishHints(result.response, sourceBaseline)
 
-      consolidatedLines = attachProvenanceToLines(canonicalized, sourceBaseline)
+      consolidatedLines = sortShoppingListLines(
+        attachProvenanceToLines(canonicalized, sourceBaseline),
+      )
       changes = canonicalized.changes ?? []
       polishStatus = 'pending_review'
       polishResponse = canonicalized

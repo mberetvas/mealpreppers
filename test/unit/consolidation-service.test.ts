@@ -630,7 +630,8 @@ describe('consolidateShoppingList service', () => {
      * Expected sorted order by store walk: L2 (produce) → L3 (dairy) → L1 (spices)
      */
     const FALLBACK_SORTED_IDS = ['L2', 'L3', 'L1']
-    const AI_SORTED_IDS = ['recipe-2:0', 'recipe-2:1', 'recipe-1:0']
+    /** Store walk order: sla (produce) → melk (dairy) → paprikapoeder (spices). */
+    const STORE_WALK_SORTED_IDS = ['recipe-2:0', 'recipe-2:1', 'recipe-1:0']
 
     beforeEach(() => {
       mocks.getSavedWeekplanById.mockResolvedValue({ ok: true, value: makeSavedWeekplan() })
@@ -708,14 +709,14 @@ describe('consolidateShoppingList service', () => {
       expect(result.baselineLines.map(l => l.id)).toEqual(FALLBACK_SORTED_IDS)
     })
 
-    it('pending_review: preserves AI line order (model sorts, server does not re-sort)', async () => {
+    it('pending_review: applies store walk sort to AI consolidated lines', async () => {
       const mockPort: ShoppingListPolishPort = {
         polish: vi.fn().mockResolvedValue({
           response: {
             lines: [
-              { id: 'recipe-2:0', name: 'sla', quantity: 1, unit: 'krop' },
-              { id: 'recipe-2:1', name: 'melk', quantity: 200, unit: 'ml' },
               { id: 'recipe-1:0', name: 'paprikapoeder', quantity: 2, unit: 'tl' },
+              { id: 'recipe-2:1', name: 'melk', quantity: 200, unit: 'ml' },
+              { id: 'recipe-2:0', name: 'sla', quantity: 1, unit: 'krop' },
             ],
             changes: [],
           },
@@ -731,7 +732,7 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('pending_review')
-      expect(result.consolidatedLines.map(l => l.id)).toEqual(AI_SORTED_IDS)
+      expect(result.consolidatedLines.map(l => l.id)).toEqual(STORE_WALK_SORTED_IDS)
     })
 
     it('sorting preserves ingredient names, quantities, units, IDs, and provenance', async () => {

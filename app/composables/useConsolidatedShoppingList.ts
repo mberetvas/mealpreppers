@@ -183,6 +183,7 @@ export function useConsolidatedShoppingList(
       const result = await savelist(planId.value, linesToSave)
       consolidatedLines.value = confirmedLines
       polishStatus.value = 'polished'
+      changes.value = []
       hints.value = []
       reviewLines.value = []
       savedList.value = result

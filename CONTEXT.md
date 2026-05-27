@@ -96,6 +96,7 @@ Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is buil
 Architecture decisions:
 - [ADR 0002 — Shopping list AI consolidation](Docs/adr/0002-shopping-list-ai-consolidation.md).
 - [ADR 0003 — Shopping list human review and persistence](docs/adr/0003-shopping-list-human-review-and-persistence.md).
+- [ADR 0004 — Auto-consolidated shopping list redesign](docs/adr/0004-auto-consolidated-shopping-list-redesign.md).
 
 **Shopping list**:
 Ingredients for all meals in a **Saved Weekplan**, grouped into **recipe sections** (one block per distinct recipe in slot order), with quantities scaled by how often that recipe appears in the week grid.
@@ -134,8 +135,12 @@ A single store-oriented ingredient list for the same **Saved Weekplan**, with du
 _Avoid_: normalized list (overlaps recipe-ingestion wording), grocery list
 
 **Shopping list store walk order**:
-The default line order for a **Consolidated shopping list** only (not **Recipe sections view**): supermarket-area sequence (produce → bakery → meat → fish → dairy → frozen → dry goods → spices → canned/sauces → oils → beverages → other), then alphabetical by ingredient name within each area (Dutch locale). Applied server-side whenever consolidated lines are returned or displayed (consolidate, saved-list load, baseline fallback); does not rename lines or add UI section headers. Older saved lists are re-sorted on load without re-consolidating.
-_Avoid_: recipe section order, aisle (when meaning **Recipe section**), category headers
+The default line order for a **Consolidated shopping list** only (not **Recipe sections view**): supermarket-area sequence (produce → bakery → meat → fish → dairy → frozen → dry goods → spices → canned/sauces → oils → beverages → other), then alphabetical by ingredient name within each area (Dutch locale). Applied server-side whenever consolidated lines are returned or displayed (consolidate, saved-list load, baseline fallback); older saved lists are re-sorted on load without re-consolidating.
+_Avoid_: recipe section order, aisle (when meaning **Recipe section**)
+
+**Shopping list aisle section**:
+A labeled supermarket-area group in the **Consolidated shopping list** UI (Dutch shopper labels mapped from **Shopping list store walk order** categories). Lines are grouped under their inferred aisle; sections are **collapsible** so users can fold areas they are done with while shopping. All sections start **expanded** on each open; collapse state is not remembered across visits or navigation.
+_Avoid_: recipe section, flat list without labels, persisted collapse state, all collapsed by default
 
 **Shopping list spice area**:
 Dried spices and seasonings (e.g. paprikapoeder, kerriepoeder) in the **Shopping list store walk order**; distinct from fresh herbs in produce and from bulk **dry goods**.
@@ -173,9 +178,13 @@ _Avoid_: polish baseline, exact-merge lines only
 UI indication of lines that differ between the **Shopping list polish baseline** and the **Consolidated shopping list** after AI polish.
 _Avoid_: changelog, merge report
 
+**Shopping list auto-consolidation trigger**:
+**Shopping list consolidation** runs automatically when the user opens **Consolidated shopping list** view on **Consolidated shopping list page** and there is no valid **Saved consolidated shopping list** (none yet, or **Deprecated saved consolidated shopping list**). Shows an explicit loading message (and “recipes changed” when deprecated). A valid saved list loads without an AI call. Recipe changes deprecate the saved list; deprecated opens follow **Deprecated saved consolidated shopping list** flow. Not triggered from **Consolidated shopping list preview** alone.
+_Avoid_: consolidate on every page load, background consolidate on plan save, silent overwrite without review, AI from manage preview
+
 **Consolidate action**:
-The explicit control in **Consolidated shopping list** view that starts **Shopping list consolidation**; switching **Shopping list view mode** alone does not run consolidation.
-_Avoid_: auto-consolidate, merge on open
+Optional explicit control to re-run **Shopping list consolidation** on demand (e.g. retry after error, regenerate after reviewing deprecated list). Not required for the first consolidation when auto-trigger applies.
+_Avoid_: only manual path, merge on recipe-sections view
 
 **Shopping list consolidation service**:
 Server-side orchestration that loads the **Saved Weekplan**, resolves catalog recipes, builds **Shopping list consolidation context**, invokes **Shopping list AI polish**, and returns `pending_review` for human approval; on failure uses **Shopping list exact merge** fallback.
@@ -186,8 +195,8 @@ Structured model output for consolidation: consolidated `lines` plus optional `c
 _Avoid_: markdown list, free text
 
 **Shopping list polish fallback**:
-When **Shopping list AI polish** cannot run (missing API key, timeout, parse error), the UI falls back to the **Shopping list exact merge** result (aisle-sorted) with a warning. Harness rule violations no longer trigger fallback; they produce **Shopping list polish hint**s during **Shopping list polish review** instead.
-_Avoid_: harness reject hides AI output, hard fail empty view
+When **Shopping list AI polish** cannot run (missing API key, timeout, parse error), the UI falls back to the **Shopping list exact merge** result (aisle-sorted) with a warning. On **Shopping list auto-consolidation trigger**, fallback opens **Shopping list polish review** so the user can edit and **Confirm**—same approve-before-save path as a successful AI run. Harness rule violations no longer trigger fallback; they produce **Shopping list polish hint**s during **Shopping list polish review** instead.
+_Avoid_: harness reject hides AI output, hard fail empty view, read-only fallback without review, skip review on auto-trigger failure
 
 **Shopping list unit policy (v2)**:
 **Shopping list cross-unit merge** converts g↔kg and ml↔dl↔l deterministically. **Shopping list AI polish** may use the same conversions within a dimension but must not convert mass↔volume or mass↔count; `el`↔`ml` is not supported.
@@ -198,12 +207,24 @@ _Avoid_: smart units across dimensions, AI-only conversion
 _Avoid_: verbatim-only names in AI output
 
 **Consolidated shopping list persistence**:
-User-confirmed **Consolidated shopping list** is stored on the **Saved Weekplan** and reused on later visits until the plan’s shopping source changes; otherwise the user runs **Consolidate action** again.
+User-confirmed **Consolidated shopping list** is stored on the **Saved Weekplan** and reused on later visits until the plan’s shopping source changes; then **Shopping list auto-consolidation trigger** runs on next consolidated view visit.
 _Avoid_: session-only cache, ephemeral merge row
 
 **Saved consolidated shopping list**:
-The **Consolidated shopping list** the user confirmed after **Shopping list polish review**, stored on the **Saved Weekplan** so repeat visits do not require re-running **Consolidate action** when the underlying plan is unchanged.
+The **Consolidated shopping list** the user confirmed after **Shopping list polish review**, stored on the **Saved Weekplan** so repeat visits do not require an AI call when the underlying plan is unchanged.
 _Avoid_: session cache, ephemeral merge
+
+**Consolidated shopping list reuse (same plan)**:
+Revisiting the same **Saved Weekplan** with an unchanged recipe grid loads the **Saved consolidated shopping list** with no AI call (**Shopping list auto-consolidation trigger** does not run).
+_Avoid_: re-consolidate on every visit, session-only reuse
+
+**Consolidated shopping list copy-on-match**:
+When a **new** **Saved Weekplan** is created (`POST` only—not on recipe edits to an existing plan) and its **Shopping list source fingerprint** matches another plan owned by the same **Planning Principal** that already has a valid **Saved consolidated shopping list**, the server copies that list to the new plan as a **Saved consolidated shopping list** (same lines and fingerprint, new `confirmedAt`). No AI call and no **Shopping list polish review** gate. When multiple matches exist, copy from the plan with the latest `confirmedAt`. If no matching source exists, the new plan has no saved list until **Shopping list auto-consolidation trigger** runs.
+_Avoid_: copy on PATCH, copy across principals, copy when fingerprints differ, manual pick-from-list (v1), require re-confirm after copy, copy into session draft only
+
+**Consolidated shopping list copy notice**:
+One-time dismissible banner when the user first opens **Consolidated shopping list preview** or **Consolidated shopping list page** after **Consolidated shopping list copy-on-match** (e.g. “Shopping list copied from a matching week — review if needed”). **Edit list** remains available; no second **Confirm** required for the copy itself.
+_Avoid_: permanent badge, silent copy, mandatory review after copy
 
 **Shopping list source fingerprint**:
 A server-computed digest of canonical **Saved Weekplan** `body` (stable JSON: sorted keys, days `1`–`7`, normalized slots). Stored on save and recomputed on load; the client never supplies or trusts its own hash. Mismatch → **Deprecated saved consolidated shopping list**.
@@ -218,8 +239,8 @@ On entering **Shopping list polish review**, editable lines are sorted once usin
 _Avoid_: live re-sort on every field change, model submission order as final store order
 
 **Deprecated saved consolidated shopping list**:
-A **Saved consolidated shopping list** whose **Shopping list source fingerprint** no longer matches the current **Saved Weekplan** `body`; the UI warns the user, shows the old lines read-only for comparison, and requires **Consolidate action** before a new list can be confirmed.
-_Avoid_: stale badge only, silent overwrite, hidden history
+A **Saved consolidated shopping list** whose **Shopping list source fingerprint** no longer matches the current **Saved Weekplan** `body`. Opening **Consolidated shopping list** view shows an explicit “recipes changed” notice, then **Shopping list auto-consolidation trigger** runs immediately (loading state) into **Shopping list polish review**; the deprecated lines remain available read-only for comparison (e.g. collapsed **Previous list**). **Consolidated shopping list preview** shows the warning only and does not run AI; **Open full list** continues the flow on the full page.
+_Avoid_: stale badge only, silent overwrite, hidden history, require Regenerate button before AI (v1)
 
 **Saved consolidated shopping list record**:
 JSON stored on the **Saved Weekplan** row: confirmed `lines`, `sourceFingerprint` (hash of `body`), and `confirmedAt`.
@@ -230,12 +251,32 @@ _Avoid_: separate shopping-list table, session storage
 _Avoid_: nested plan PATCH, confirm-on-consolidate
 
 **Consolidated shopping list default view**:
-When a valid **Saved consolidated shopping list** exists, **Consolidated shopping list** view shows it as the active list; **Shopping list polish review** appears only after **Consolidate action** (or an explicit edit flow).
-_Avoid_: always-on review, auto-consolidate on open
+When a valid **Saved consolidated shopping list** exists, **Consolidated shopping list** view shows it as the active list. When none exists or the saved list is deprecated, the page **auto-switches to consolidated view** and **Shopping list auto-consolidation trigger** runs into **Shopping list polish review**. **Edit saved consolidated shopping list** opens review without a new AI call. **Recipe sections view** stays available via **Shopping list view mode** toggle.
+_Avoid_: default to recipe sections when consolidation is needed, always-on review for valid saved lists, manual consolidate required for first run
+
+**Weekplan consolidated list status**:
+On **Manage plans** and in the weekly planner, each **Saved Weekplan** surfaces whether a **Saved consolidated shopping list** exists and is current: **List ready** (valid saved list), **List outdated** (**Deprecated saved consolidated shopping list**), or **No list yet** (no saved list). Shown as a compact badge or label, not the full ingredient list.
+_Avoid_: silent missing list, full list inline on manage cards
+
+**Weekplan consolidated list access**:
+From **Manage plans** and the weekly planner (when a **Saved Weekplan** is open), a **View shopping list** control opens a **Consolidated shopping list preview** (read-only, aisle-sorted lines). **Open full list** navigates to **Consolidated shopping list page** for edit, confirm, and in-store use. Same preview pattern from both entry points.
+_Avoid_: manage-only cart icon with no status, planner with no list entry, navigate-only with no peek
+
+**Consolidated shopping list preview**:
+Lightweight modal or sheet for **Weekplan consolidated list access**. When a valid **Saved consolidated shopping list** exists: read-only lines in **Shopping list aisle section**s (collapsible, expanded by default). When **No list yet** or **List outdated**: short empty-state message (no AI in preview) and **Open full list** to **Consolidated shopping list page** where **Shopping list auto-consolidation trigger** runs. No edit, review, or check-off in the preview itself.
+_Avoid_: full shopping list page embedded in manage/planner, preview without aisle grouping, AI from preview, disabled View shopping list when no saved list
+
+**Consolidated shopping list page**:
+The full **Shopping list** experience at `/shopping-list?plan=…` — recipe sections, consolidated view, review, edit, confirm, and store use. Reached via **Open full list** from **Consolidated shopping list preview** or direct navigation.
+_Avoid_: duplicating full list UI inside planner and manage
 
 **Shopping list polish review status**:
 `POST consolidate` returns `pending_review` when the model succeeds and the client should show **Shopping list polish review** (with `polishResponse` and hints), distinct from `polished` after **PUT** save or legacy auto-apply.
 _Avoid_: baseline_fallback for harness, ambiguous polishStatus
+
+**Shopping list consolidation session draft**:
+Unconfirmed AI output from **Shopping list auto-consolidation trigger** or **Consolidate action**, held in client memory for the current browser session. Returning to the same **Saved Weekplan** consolidated view resumes **Shopping list polish review** without a new AI call. Closing the tab or session discards the draft; nothing is persisted until **Confirm**. A new AI run happens on next visit if no valid **Saved consolidated shopping list** exists.
+_Avoid_: server-side draft row, auto-save on consolidate, persist unapproved AI output
 
 **Edit saved consolidated shopping list**:
 **Edit list** reopens **Shopping list polish review** with the **Saved consolidated shopping list** lines editable; **Confirm** persists via **PUT** without a new OpenRouter call.
