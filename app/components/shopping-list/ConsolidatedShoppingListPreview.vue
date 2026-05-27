@@ -165,6 +165,7 @@ function close(): void {
               v-else
               :lines="lines"
               :readonly="true"
+              show-legacy-banner
             />
           </template>
 

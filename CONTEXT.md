@@ -135,11 +135,11 @@ A single store-oriented ingredient list for the same **Saved Weekplan**, with du
 _Avoid_: normalized list (overlaps recipe-ingestion wording), grocery list
 
 **Shopping list store walk order**:
-The default line order for a **Consolidated shopping list** only (not **Recipe sections view**): supermarket-area sequence (produce → bakery → meat → fish → dairy → frozen → dry goods → spices → canned/sauces → oils → beverages → other), then alphabetical by ingredient name within each area (Dutch locale). Applied server-side whenever consolidated lines are returned or displayed (consolidate, saved-list load, baseline fallback); older saved lists are re-sorted on load without re-consolidating.
-_Avoid_: recipe section order, aisle (when meaning **Recipe section**)
+The default line order for a **Consolidated shopping list** only (not **Recipe sections view**): supermarket-area sequence (produce → bakery → meat → fish → dairy → frozen → dry goods → spices → canned/sauces → oils → beverages → other), then alphabetical by ingredient name within each area (Dutch locale). Assigned and ordered by **Shopping list AI polish** (`aisleCategory` per line); persisted on confirm and preserved on load (no server keyword re-sort). Legacy saved lists without `aisleCategory` display flat until re-consolidation.
+_Avoid_: recipe section order, aisle (when meaning **Recipe section**), server keyword inference on serve
 
 **Shopping list aisle section**:
-A labeled supermarket-area group in the **Consolidated shopping list** UI (Dutch shopper labels mapped from **Shopping list store walk order** categories). Lines are grouped under their inferred aisle; sections are **collapsible** so users can fold areas they are done with while shopping. All sections start **expanded** on each open; collapse state is not remembered across visits or navigation.
+A labeled supermarket-area group in the **Consolidated shopping list** UI (Dutch shopper labels mapped from **Shopping list store walk order** categories). Lines are grouped under their AI-assigned `aisleCategory` in model output order (run-length groups); sections are **collapsible** so users can fold areas they are done with while shopping. All sections start **expanded** on each open; collapse state is not remembered across visits or navigation.
 _Avoid_: recipe section, flat list without labels, persisted collapse state, all collapsed by default
 
 **Shopping list spice area**:
@@ -195,8 +195,8 @@ Structured model output for consolidation: consolidated `lines` plus optional `c
 _Avoid_: markdown list, free text
 
 **Shopping list polish fallback**:
-When **Shopping list AI polish** cannot run (missing API key, timeout, parse error), the UI falls back to the **Shopping list exact merge** result (aisle-sorted) with a warning. On **Shopping list auto-consolidation trigger**, fallback opens **Shopping list polish review** so the user can edit and **Confirm**—same approve-before-save path as a successful AI run. Harness rule violations no longer trigger fallback; they produce **Shopping list polish hint**s during **Shopping list polish review** instead.
-_Avoid_: harness reject hides AI output, hard fail empty view, read-only fallback without review, skip review on auto-trigger failure
+When **Shopping list AI polish** cannot run (missing API key, timeout, parse error), the consolidated view shows an empty list with a warning that aisle grouping requires successful AI consolidation (baseline merge is not shown). On **Shopping list auto-consolidation trigger**, the user must retry when AI is available. Harness rule violations no longer trigger fallback; they produce **Shopping list polish hint**s during **Shopping list polish review** instead.
+_Avoid_: harness reject hides AI output, server-sorted baseline display, read-only exact-merge fallback list
 
 **Shopping list unit policy (v2)**:
 **Shopping list cross-unit merge** converts g↔kg and ml↔dl↔l deterministically. **Shopping list AI polish** may use the same conversions within a dimension but must not convert mass↔volume or mass↔count; `el`↔`ml` is not supported.
@@ -235,8 +235,8 @@ Desktop: **Recipe sections view** reference left, editable AI column right. Mobi
 _Avoid_: side-by-side on small screens, single column only
 
 **Shopping list polish review order**:
-On entering **Shopping list polish review**, editable lines are sorted once using **Shopping list store walk order**; order stays fixed while the user edits until confirm. After confirm, consolidated display continues to use **Shopping list store walk order** on every serve (re-sort allowed).
-_Avoid_: live re-sort on every field change, model submission order as final store order
+On entering **Shopping list polish review**, editable lines keep the AI response order and `aisleCategory` values; order stays fixed while the user edits until confirm. After confirm, consolidated display serves the saved order unchanged.
+_Avoid_: live re-sort on every field change, server keyword re-sort on load or save
 
 **Deprecated saved consolidated shopping list**:
 A **Saved consolidated shopping list** whose **Shopping list source fingerprint** no longer matches the current **Saved Weekplan** `body`. Opening **Consolidated shopping list** view shows an explicit “recipes changed” notice, then **Shopping list auto-consolidation trigger** runs immediately (loading state) into **Shopping list polish review**; the deprecated lines remain available read-only for comparison (e.g. collapsed **Previous list**). **Consolidated shopping list preview** shows the warning only and does not run AI; **Open full list** continues the flow on the full page.

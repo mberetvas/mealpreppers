@@ -17,8 +17,9 @@ import { canonicalizePolishResponse, validatePolishResponse } from './polishHarn
 import { buildPolishHints } from './polishHintBuilder'
 import { computeSourceFingerprint } from './sourceFingerprint'
 import { isPolishAbortTimeout } from './polishChainFactory'
-import { sortShoppingListLines } from './aisleSort'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
+
+const AI_REQUIRED_WARNING = 'A supermarket aisle-grouped list requires successful AI consolidation. Configure OpenRouter or retry.'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
 
@@ -46,7 +47,7 @@ export interface ConsolidationDeps {
 /**
  * Orchestrates shopping list consolidation: load plan → resolve catalog recipes →
  * build recipe-grouped context → AI polish → harness hints → pending review.
- * Fallback: exact merge + aisle sort when AI is unavailable or fails.
+ * Fallback: exact merge baseline only (no consolidated lines) when AI is unavailable or fails.
  */
 export async function consolidateShoppingList(
   planId: string,
@@ -106,8 +107,8 @@ export async function consolidateShoppingList(
   const fallbackBaseline = exactMerge(sections)
 
   const warnings: string[] = []
-  let consolidatedLines: MergedLine[] = sortShoppingListLines(fallbackBaseline.lines)
-  let baselineLines: MergedLine[] = sortShoppingListLines(fallbackBaseline.lines)
+  let consolidatedLines: MergedLine[] = []
+  let baselineLines: MergedLine[] = fallbackBaseline.lines
   let changes: PolishResponseChange[] = []
   let polishStatus: PolishStatus = 'ai_skipped'
   let polishResponse: PolishResponse | undefined
@@ -121,13 +122,15 @@ export async function consolidateShoppingList(
 
   if (!openrouterApiKey) {
     logger.info('shopping_list.polish_skipped', { reason: 'missing_api_key' })
-    warnings.push('AI polish was skipped because the API key is not configured.')
+    warnings.push(AI_REQUIRED_WARNING)
     polishStatus = 'ai_skipped'
+    consolidatedLines = []
   }
   else if (!polishPort) {
     logger.info('shopping_list.polish_skipped', { reason: 'no_polish_port' })
-    warnings.push('AI polish was skipped because no polish implementation is available.')
+    warnings.push(AI_REQUIRED_WARNING)
     polishStatus = 'ai_skipped'
+    consolidatedLines = []
   }
   else {
     try {
@@ -136,9 +139,7 @@ export async function consolidateShoppingList(
       const validation = validatePolishResponse(canonicalized, sourceBaseline)
       const polishHints = buildPolishHints(result.response, sourceBaseline)
 
-      consolidatedLines = sortShoppingListLines(
-        attachProvenanceToLines(canonicalized, sourceBaseline),
-      )
+      consolidatedLines = attachProvenanceToLines(canonicalized, sourceBaseline)
       changes = canonicalized.changes ?? []
       polishStatus = 'pending_review'
       polishResponse = canonicalized
@@ -162,11 +163,11 @@ export async function consolidateShoppingList(
       })
       warnings.push(
         abortedDueToTimeout
-          ? 'AI polish timed out; returning baseline. Try increasing OPENROUTER_SHOPPING_LIST_TIMEOUT_MS.'
-          : 'AI polish failed; returning baseline.',
+          ? `AI polish timed out. ${AI_REQUIRED_WARNING} Try increasing OPENROUTER_SHOPPING_LIST_TIMEOUT_MS.`
+          : `AI polish failed. ${AI_REQUIRED_WARNING}`,
       )
       polishStatus = 'baseline_fallback'
-      consolidatedLines = baselineLines
+      consolidatedLines = []
     }
   }
 
@@ -198,6 +199,7 @@ function attachProvenanceToLines(
       quantity: line.quantity,
       unit: line.unit,
       provenance,
+      aisleCategory: line.aisleCategory,
     }
   })
 }

@@ -4,8 +4,8 @@ import { useConsolidatedShoppingList, type ConsolidationResponse } from '../../a
 
 function makePendingReviewResponse(): ConsolidationResponse {
   const lines = [
-    { id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
-    { id: 'recipe-1:1', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
+    { id: 'recipe-1:0', name: 'pasta', quantity: 800, unit: 'g', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }], aisleCategory: 'dry_goods' as const },
+    { id: 'recipe-1:1', name: 'olijfolie', quantity: 4, unit: 'el', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }], aisleCategory: 'oils' as const },
   ]
   return {
     consolidatedLines: lines,
@@ -18,23 +18,19 @@ function makePendingReviewResponse(): ConsolidationResponse {
 
 function makeFallbackResponse(): ConsolidationResponse {
   return {
-    consolidatedLines: [
-      { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
-    ],
+    consolidatedLines: [],
     baselineLines: [
       { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
     ],
     changes: [],
     polishStatus: 'baseline_fallback',
-    warnings: ['AI polish output rejected by harness validation; returning baseline.'],
+    warnings: ['AI polish failed. A supermarket aisle-grouped list requires successful AI consolidation.'],
   }
 }
 
 function makeAiSkippedResponse(): ConsolidationResponse {
   return {
-    consolidatedLines: [
-      { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
-    ],
+    consolidatedLines: [],
     baselineLines: [
       { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
     ],
@@ -95,7 +91,7 @@ describe('useConsolidatedShoppingList', () => {
     await consolidate()
     expect(polishStatus.value).toBe('baseline_fallback')
     expect(baselineLines.value).toHaveLength(1)
-    expect(warnings.value[0]).toContain('harness validation')
+    expect(warnings.value[0]).toContain('AI consolidation')
   })
 
   it('stores ai_skipped status and baseline lines', async () => {

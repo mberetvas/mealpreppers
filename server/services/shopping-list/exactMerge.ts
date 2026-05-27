@@ -1,4 +1,5 @@
 import type { ShoppingListSection } from '../../../utils/shoppingList'
+import type { AisleCategory } from './aisleSort'
 
 /** Canonical unit aliases shared with recipe ingestion normalizers. */
 const UNIT_ALIASES = new Map<string, string>([
@@ -42,6 +43,8 @@ export interface MergedLine {
   quantity: number | undefined
   unit: string | undefined
   provenance: RecipeProvenance[]
+  /** Set by AI polish; omitted on exact-merge fallback and legacy saved lists. */
+  aisleCategory?: AisleCategory
 }
 
 export interface RecipeProvenance {

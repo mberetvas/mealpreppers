@@ -98,14 +98,14 @@ describe('consolidatedShoppingListRepository', () => {
       }
     })
 
-    it('returns lines sorted by store walk order when DB record is unsorted', async () => {
+    it('returns lines in stored order without re-sorting', async () => {
       const body = makeWeekPlanBody()
       const fingerprint = computeSourceFingerprint(body)
       const record: SavedConsolidatedShoppingListRecord = {
         lines: [
-          { id: 'L1', name: 'melk', quantity: 1, unit: 'l' },
-          { id: 'L2', name: 'pasta', quantity: 800, unit: 'g' },
-          { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g' },
+          { id: 'L1', name: 'melk', quantity: 1, unit: 'l', aisleCategory: 'dairy' },
+          { id: 'L2', name: 'pasta', quantity: 800, unit: 'g', aisleCategory: 'dry_goods' },
+          { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g', aisleCategory: 'produce' },
         ],
         sourceFingerprint: fingerprint,
         confirmedAt: '2026-05-26T10:00:00.000Z',
@@ -118,7 +118,8 @@ describe('consolidatedShoppingListRepository', () => {
 
       expect(result.ok).toBe(true)
       if (result.ok && result.value) {
-        expect(result.value.lines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
+        expect(result.value.lines.map(l => l.name)).toEqual(['melk', 'pasta', 'tomaten'])
+        expect(result.value.lines[0].aisleCategory).toBe('dairy')
       }
     })
 
@@ -170,12 +171,12 @@ describe('consolidatedShoppingListRepository', () => {
       expect(updateFn).toHaveBeenCalled()
     })
 
-    it('persists lines sorted by store walk order when input is unsorted', async () => {
+    it('persists lines in input order with aisleCategory', async () => {
       const body = makeWeekPlanBody()
-      const unsorted = [
-        { id: 'L1', name: 'melk', quantity: 1, unit: 'l' },
-        { id: 'L2', name: 'pasta', quantity: 800, unit: 'g' },
-        { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g' },
+      const lines = [
+        { id: 'L1', name: 'melk', quantity: 1, unit: 'l', aisleCategory: 'dairy' as const },
+        { id: 'L2', name: 'pasta', quantity: 800, unit: 'g', aisleCategory: 'dry_goods' as const },
+        { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g', aisleCategory: 'produce' as const },
       ]
       const updateFn = vi.fn()
       const client = mockSupabaseClientForSave({
@@ -183,14 +184,14 @@ describe('consolidatedShoppingListRepository', () => {
         updateFn,
       })
 
-      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, unsorted)
+      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
-        expect(result.value.lines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
+        expect(result.value.lines).toEqual(lines)
       }
       const written = updateFn.mock.calls[0]?.[0] as { consolidated_shopping_list: SavedConsolidatedShoppingListRecord }
-      expect(written.consolidated_shopping_list.lines.map(l => l.name)).toEqual(['tomaten', 'melk', 'pasta'])
+      expect(written.consolidated_shopping_list.lines).toEqual(lines)
     })
 
     it('rejects save for wrong owner', async () => {

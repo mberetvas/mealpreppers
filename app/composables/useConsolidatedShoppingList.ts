@@ -1,6 +1,5 @@
 import { ref, watch, type Ref } from 'vue'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
-import { sortShoppingListLines } from '~~/server/services/shopping-list/aisleSort'
 import type { PolishResponseChange } from '~~/server/services/shopping-list/polishHarness'
 import type { PolishStatus } from '~~/server/services/shopping-list/consolidationService'
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
@@ -180,12 +179,12 @@ export function useConsolidatedShoppingList(
 
         shoppingListDeprecated.value = deprecated
         savedList.value = result
-        const lines = sortShoppingListLines(result.lines.map(l => ({
+        const lines = result.lines.map(l => ({
           ...l,
           quantity: l.quantity,
           unit: l.unit,
           provenance: [] as { recipeId: string, recipeTitle: string }[],
-        })))
+        }))
         consolidatedLines.value = lines
         baselineLines.value = lines.map(l => ({ ...l }))
         changes.value = []
@@ -223,7 +222,7 @@ export function useConsolidatedShoppingList(
       warnings.value = result.warnings
       hints.value = result.hints ?? []
       reviewLines.value = result.polishStatus === 'pending_review'
-        ? sortShoppingListLines(result.consolidatedLines.map(line => ({ ...line })))
+        ? result.consolidatedLines.map(line => ({ ...line }))
         : []
       if (result.polishStatus === 'pending_review') {
         consolidatedLines.value = []
@@ -256,12 +255,13 @@ export function useConsolidatedShoppingList(
     if (polishStatus.value !== 'pending_review') return
     if (shoppingListDeprecated.value) return
 
-    const confirmedLines = sortShoppingListLines(reviewLines.value.map(l => ({ ...l })))
+    const confirmedLines = reviewLines.value.map(l => ({ ...l }))
     const linesToSave: SavedShoppingListLine[] = confirmedLines.map(l => ({
       id: l.id,
       name: l.name,
       quantity: l.quantity,
       unit: l.unit,
+      aisleCategory: l.aisleCategory,
     }))
 
     saving.value = true
@@ -290,12 +290,12 @@ export function useConsolidatedShoppingList(
     if (!savedList.value) return
     if (shoppingListDeprecated.value) return
 
-    const lines = sortShoppingListLines(savedList.value.lines.map(l => ({
+    const lines = savedList.value.lines.map(l => ({
       ...l,
       quantity: l.quantity,
       unit: l.unit,
       provenance: [] as { recipeId: string, recipeTitle: string }[],
-    })))
+    }))
 
     reviewLines.value = lines.map(l => ({ ...l }))
     baselineLines.value = lines.map(l => ({ ...l }))

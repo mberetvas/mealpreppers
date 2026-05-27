@@ -36,8 +36,8 @@ accepted
 
 ### Aisle presentation
 
-- Consolidated lines stay sorted by **Shopping list store walk order** server-side.
-- UI groups lines under labeled, collapsible aisle sections (Dutch shopper labels). All sections start expanded on each open; collapse state is not persisted.
+- **Shopping list AI polish** assigns `aisleCategory` per line and returns lines in store walk order; the server does not keyword-sort or re-infer aisles on serve or save.
+- UI groups lines under labeled, collapsible aisle sections (Dutch shopper labels) using persisted AI categories. Legacy saves without categories display flat until re-consolidation. Non-AI paths show an empty consolidated list with a warning. All sections start expanded on each open; collapse state is not persisted.
 
 ## Considered options (rejected)
 

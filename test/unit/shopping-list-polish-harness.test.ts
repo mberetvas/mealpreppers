@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validatePolishResponse } from '../../server/services/shopping-list/polishHarness'
+import { validatePolishResponse, canonicalizePolishResponse } from '../../server/services/shopping-list/polishHarness'
 import type { PolishBaseline } from '../../server/services/shopping-list/exactMerge'
 import type { PolishResponse } from '../../server/services/shopping-list/polishHarness'
 
@@ -530,5 +530,39 @@ describe('validatePolishResponse', () => {
         expect.objectContaining({ rule: 'no-invented-ingredients', lineId: 'L1' }),
       )
     })
+  })
+})
+
+describe('canonicalizePolishResponse', () => {
+  it('coerces invalid aisleCategory to other and preserves line order', () => {
+    const baseline = makeBaseline([
+      { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+      { id: 'L2', name: 'melk', quantity: 1, unit: 'l', provenance: [] },
+    ])
+    const response: PolishResponse = {
+      lines: [
+        { id: 'L2', name: 'melk', quantity: 1, unit: 'l', aisleCategory: 'not-a-category' as 'dairy' },
+        { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', aisleCategory: 'dry_goods' },
+      ],
+    }
+
+    const canonical = canonicalizePolishResponse(response, baseline)
+
+    expect(canonical.lines.map(l => l.id)).toEqual(['L2', 'L1'])
+    expect(canonical.lines[0].aisleCategory).toBe('other')
+    expect(canonical.lines[1].aisleCategory).toBe('dry_goods')
+  })
+
+  it('defaults missing aisleCategory to other without reordering', () => {
+    const baseline = makeBaseline([
+      { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+    ])
+    const response: PolishResponse = {
+      lines: [{ id: 'L1', name: 'pasta', quantity: 400, unit: 'g' }],
+    }
+
+    const canonical = canonicalizePolishResponse(response, baseline)
+
+    expect(canonical.lines[0].aisleCategory).toBe('other')
   })
 })

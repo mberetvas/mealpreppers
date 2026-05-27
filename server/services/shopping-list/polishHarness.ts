@@ -1,12 +1,14 @@
 import type { MergedLine, PolishBaseline } from './exactMerge'
 import { canonicalDisplayName, normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 import { convertQuantity, unitDimension } from './crossUnitMerge'
+import { coerceAisleCategory, type AisleCategory } from './aisleSort'
 
 export interface PolishResponseLine {
   id: string
   name: string
   quantity: number | undefined
   unit: string | undefined
+  aisleCategory?: AisleCategory
 }
 
 export interface PolishResponseChange {
@@ -61,6 +63,7 @@ export function canonicalizePolishResponse(response: PolishResponse, baseline: P
         name: line.name,
         quantity: line.quantity === undefined ? undefined : roundPolishQuantity(line.quantity),
         unit: normalizeShoppingListUnit(line.unit),
+        aisleCategory: coerceAisleCategory(line.aisleCategory),
       }
     }),
     changes: response.changes,

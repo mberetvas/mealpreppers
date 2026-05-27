@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { watch, ref } from 'vue'
 import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
-import { sortShoppingListLines } from '~~/server/services/shopping-list/aisleSort'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import ShoppingListAisleSection from '~/components/shopping-list/AisleSection.vue'
 
@@ -88,13 +87,13 @@ const showSavedListOnConsolidatedTab = computed(() =>
   Boolean(savedList.value) && !shoppingListDeprecated.value && viewMode.value === 'sections',
 )
 
-/** Lines to render in consolidated view depending on polish status (always store-walk sorted). */
+/** Lines to render in consolidated view; order and aisle come from AI or persisted save. */
 const displayLines = computed(() => {
   if (consolidationError.value) return []
   if (polishStatus.value === 'baseline_fallback' || polishStatus.value === 'ai_skipped') {
-    return sortShoppingListLines(baselineLines.value)
+    return []
   }
-  return sortShoppingListLines(consolidatedLines.value)
+  return consolidatedLines.value
 })
 
 /** Set of line IDs that differ between consolidated and baseline (name, quantity, or unit). */
@@ -416,9 +415,14 @@ useHead(() => ({
             aria-live="polite"
           >
             <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
-            {{ warnings[0] || 'AI polish was not applied. Showing baseline merged list.' }}
+            {{ warnings[0] || 'A supermarket aisle-grouped list requires successful AI consolidation.' }}
           </div>
-          <ShoppingListAisleSection :lines="displayLines" :readonly="true" />
+          <p
+            data-testid="fallback-empty-state"
+            class="rounded-2xl bg-atelier-parchment px-5 py-6 text-center text-sm text-atelier-description ring-1 ring-primary/10"
+          >
+            No consolidated list to show. Retry when AI consolidation is available.
+          </p>
           <div class="flex justify-center">
             <button
               type="button"
@@ -441,9 +445,14 @@ useHead(() => ({
             aria-live="polite"
           >
             <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">info</span>
-            {{ warnings[0] || 'AI consolidation is currently unavailable. Showing merged baseline.' }}
+            {{ warnings[0] || 'A supermarket aisle-grouped list requires successful AI consolidation.' }}
           </div>
-          <ShoppingListAisleSection :lines="displayLines" :readonly="true" />
+          <p
+            data-testid="fallback-empty-state"
+            class="rounded-2xl bg-atelier-parchment px-5 py-6 text-center text-sm text-atelier-description ring-1 ring-primary/10"
+          >
+            No consolidated list to show. Retry when AI consolidation is available.
+          </p>
           <div class="flex justify-center">
             <button
               type="button"
@@ -580,6 +589,7 @@ useHead(() => ({
           <ShoppingListAisleSection
             :lines="displayLines"
             :changed-line-ids="changedLineIds"
+            show-legacy-banner
           />
           <div class="flex justify-center gap-3">
             <button

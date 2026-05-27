@@ -2,7 +2,11 @@ import { z } from 'zod'
 import type { StructuredLogger } from '../../utils/structuredLogger'
 import type { ShoppingListPolishPort, PolishPortResult } from './polishPort'
 import type { ConsolidationContext } from './exactMerge'
-import { AISLE_CATEGORY_ORDER } from './aisleSort'
+import { AISLE_CATEGORY_ORDER, type AisleCategory } from './aisleSort'
+
+const aisleCategorySchema = z.enum(
+  AISLE_CATEGORY_ORDER as unknown as [AisleCategory, ...AisleCategory[]],
+)
 
 /** Default polish request budget when OPENROUTER_SHOPPING_LIST_TIMEOUT_MS is unset or invalid. */
 export const DEFAULT_SHOPPING_LIST_POLISH_TIMEOUT_MS = 60_000
@@ -14,6 +18,7 @@ const PolishResponseLineSchema = z.object({
   name: z.string(),
   quantity: z.number().optional(),
   unit: z.string().optional(),
+  aisleCategory: aisleCategorySchema,
 })
 
 const PolishResponseSchema = z.object({
@@ -40,7 +45,7 @@ Input shape:
       "recipeId": "...",
       "recipeTitle": "...",
       "ingredients": [
-        {{ "id": "recipe-uuid:0", "name": "...", "quantity": 400, "unit": "g" }}
+        {{ "id": "recipe-uuid:0", "name": "...", "quantity": 400, "unit": "g", "aisleCategory": "produce" }}
       ]
     }}
   ]
@@ -49,17 +54,18 @@ Input shape:
 Your job:
 1. Merge duplicate ingredients across recipes (same ingredient, compatible units). Convert units only within: g↔kg, ml↔dl↔l. Never convert mass↔volume or mass↔count.
 2. Merge human-style name variants (e.g. "ui, in ringen" + "ui" → "ui"; pick the clearest shopper-facing name).
-3. Sort the final "lines" by supermarket aisle category, then alphabetically by name within each category.
-   Aisle category order (use these exact values): ${AISLE_ORDER_JSON}
-   Classify each ingredient by Dutch name keywords (produce, dairy, spices, etc.).
-4. When merging rows, keep the lowest surviving source id (lexicographic) and list absorbed source ids in "changes".
-5. Do NOT invent line ids not present in the input. Do NOT add ingredients not in the input.
-6. Do NOT increase total quantity for an ingredient beyond the sum in the input (after unit conversion).
-7. Optionally provide "changes" with "id", "reason", and "absorbedIds" when lines are merged.
+3. For every line, set "aisleCategory" to exactly one of these enum values: ${AISLE_ORDER_JSON}
+   Classify each ingredient for a Dutch/Belgian supermarket (produce, dairy, spices, etc.).
+4. Sort the final "lines" array by supermarket walk order (the enum order above), then alphabetically by name within each category (Dutch locale).
+   Preserve that order in the JSON output.
+5. When merging rows, keep the lowest surviving source id (lexicographic) and list absorbed source ids in "changes".
+6. Do NOT invent line ids not present in the input. Do NOT add ingredients not in the input.
+7. Do NOT increase total quantity for an ingredient beyond the sum in the input (after unit conversion).
+8. Optionally provide "changes" with "id", "reason", and "absorbedIds" when lines are merged.
 
 Return ONLY structured output with "lines" and optional "changes".`
 
-const USER_TEMPLATE = `Consolidate this recipe-grouped shopping list. Merge, convert units where allowed, sort by store aisle order, and return the full consolidated list.
+const USER_TEMPLATE = `Consolidate this recipe-grouped shopping list. Merge, convert units where allowed, assign aisleCategory per line, sort by store walk order, and return the full consolidated list.
 
 {consolidationContextJson}`
 
@@ -231,6 +237,7 @@ export class LangChainShoppingListPolishPort implements ShoppingListPolishPort {
             name: l.name,
             quantity: l.quantity,
             unit: l.unit,
+            aisleCategory: l.aisleCategory,
           })),
           changes: response.changes,
         },

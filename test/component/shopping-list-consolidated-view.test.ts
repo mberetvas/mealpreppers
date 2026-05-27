@@ -178,30 +178,33 @@ describe('shopping-list page: consolidate action', () => {
 })
 
 describe('shopping-list page: consolidated view — error and fallback states', () => {
-  it('shows fallback banner with baseline lines on baseline_fallback', () => {
+  it('shows fallback banner and empty state on baseline_fallback', () => {
     const { consolidatedState } = setupGlobals({ plan: 'plan-1', view: 'consolidated' })
     consolidatedState.hasConsolidated.value = true
     consolidatedState.polishStatus.value = 'baseline_fallback'
+    consolidatedState.consolidatedLines.value = []
     consolidatedState.baselineLines.value = [
       { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
     ]
-    consolidatedState.warnings.value = ['AI polish output rejected by harness validation; returning baseline.']
+    consolidatedState.warnings.value = ['AI polish failed. A supermarket aisle-grouped list requires successful AI consolidation.']
     const wrapper = mount(ShoppingListPage, mountOptions)
     expect(wrapper.find('[data-testid="fallback-banner"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('pasta')
+    expect(wrapper.find('[data-testid="fallback-empty-state"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="aisle-section"]').exists()).toBe(false)
   })
 
-  it('shows warning on ai_skipped with baseline lines', () => {
+  it('shows warning and empty state on ai_skipped', () => {
     const { consolidatedState } = setupGlobals({ plan: 'plan-1', view: 'consolidated' })
     consolidatedState.hasConsolidated.value = true
     consolidatedState.polishStatus.value = 'ai_skipped'
+    consolidatedState.consolidatedLines.value = []
     consolidatedState.baselineLines.value = [
       { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [] },
     ]
-    consolidatedState.warnings.value = ['AI polish was skipped because the API key is not configured.']
+    consolidatedState.warnings.value = ['A supermarket aisle-grouped list requires successful AI consolidation.']
     const wrapper = mount(ShoppingListPage, mountOptions)
     expect(wrapper.find('[data-testid="ai-skipped-banner"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('pasta')
+    expect(wrapper.find('[data-testid="fallback-empty-state"]').exists()).toBe(true)
   })
 
   it('shows error message with retry option on API error', () => {

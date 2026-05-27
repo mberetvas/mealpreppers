@@ -1,5 +1,4 @@
 import {
-  inferAisleCategory,
   AISLE_CATEGORY_ORDER,
   type AisleCategory,
 } from '../server/services/shopping-list/aisleSort'
@@ -20,36 +19,51 @@ export const AISLE_LABELS: Record<AisleCategory, string> = {
   other: 'Overig',
 }
 
-export interface AisleGroup<T extends { name: string }> {
+export interface AisleGroup<T extends { name: string, aisleCategory?: AisleCategory }> {
   category: AisleCategory
   /** Dutch display label for the aisle. */
   label: string
   lines: T[]
 }
 
+/** True when at least one line carries an AI-assigned aisle category. */
+export function hasAisleCategories(
+  lines: Array<{ aisleCategory?: AisleCategory }>,
+): boolean {
+  return lines.some(line => line.aisleCategory !== undefined)
+}
+
 /**
- * Partitions lines into labeled aisle groups using inferAisleCategory, ordered
- * by AISLE_CATEGORY_ORDER (supermarket walk order). Empty groups are omitted.
+ * Partitions lines into labeled aisle groups using each line's AI-assigned
+ * `aisleCategory`, preserving array order (run-length grouping). Returns [] when
+ * no lines have categories (legacy saved lists).
  */
-export function groupLinesByAisle<T extends { name: string }>(lines: T[]): AisleGroup<T>[] {
-  const buckets = new Map<AisleCategory, T[]>()
+export function groupLinesByAisle<T extends { name: string, aisleCategory?: AisleCategory }>(
+  lines: T[],
+): AisleGroup<T>[] {
+  if (!hasAisleCategories(lines)) {
+    return []
+  }
+
+  const groups: AisleGroup<T>[] = []
 
   for (const line of lines) {
-    const category = inferAisleCategory(line.name)
-    const bucket = buckets.get(category)
-    if (bucket) {
-      bucket.push(line)
+    const category = line.aisleCategory ?? 'other'
+    const last = groups[groups.length - 1]
+    if (last && last.category === category) {
+      last.lines.push(line)
     }
     else {
-      buckets.set(category, [line])
+      groups.push({
+        category,
+        label: AISLE_LABELS[category],
+        lines: [line],
+      })
     }
   }
 
-  return AISLE_CATEGORY_ORDER
-    .filter(cat => buckets.has(cat))
-    .map(cat => ({
-      category: cat,
-      label: AISLE_LABELS[cat],
-      lines: buckets.get(cat)!,
-    }))
+  return groups
 }
+
+/** Exposed for tests and docs referencing the canonical walk-order enum. */
+export { AISLE_CATEGORY_ORDER }

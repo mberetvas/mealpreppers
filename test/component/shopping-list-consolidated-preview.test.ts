@@ -16,13 +16,19 @@ import ConsolidatedShoppingListPreview from '../../app/components/shopping-list/
 const PLAN_ID = 'plan-abc-123'
 
 /** Minimal MergedLine fixture for list assertions. */
-function line(id: string, name: string, quantity?: number, unit?: string) {
-  return { id, name, quantity, unit, provenance: [] }
+function line(
+  id: string,
+  name: string,
+  quantity?: number,
+  unit?: string,
+  aisleCategory?: 'dry_goods' | 'produce',
+) {
+  return { id, name, quantity, unit, provenance: [], aisleCategory }
 }
 
 const readyLines = [
-  line('L1', 'pasta', 400, 'g'),
-  line('L2', 'tomaten', 300, 'g'),
+  line('L1', 'pasta', 400, 'g', 'dry_goods'),
+  line('L2', 'tomaten', 300, 'g', 'produce'),
 ]
 
 function mountPreview(props: {

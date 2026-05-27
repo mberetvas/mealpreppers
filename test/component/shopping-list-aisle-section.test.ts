@@ -3,17 +3,22 @@ import { mount } from '@vue/test-utils'
 import AisleSection from '../../app/components/shopping-list/AisleSection.vue'
 
 /** Minimal MergedLine-compatible shape for test fixtures. */
-function line(id: string, name: string, quantity?: number, unit?: string) {
-  return { id, name, quantity, unit, provenance: [] }
+function line(
+  id: string,
+  name: string,
+  aisleCategory?: 'produce' | 'dry_goods' | 'dairy',
+) {
+  return { id, name, quantity: undefined, unit: undefined, provenance: [], aisleCategory }
 }
 
-describe('AisleSection: grouping and walk order', () => {
-  it('renders one details element per non-empty aisle group', () => {
+describe('AisleSection: AI-assigned grouping', () => {
+  it('renders one details element per run-length aisle group', () => {
     const wrapper = mount(AisleSection, {
       props: {
         lines: [
-          line('L1', 'pasta'),    // dry_goods
-          line('L2', 'tomaten'),  // produce
+          line('L1', 'tomaten', 'produce'),
+          line('L2', 'sla', 'produce'),
+          line('L3', 'pasta', 'dry_goods'),
         ],
       },
     })
@@ -21,167 +26,101 @@ describe('AisleSection: grouping and walk order', () => {
     expect(groups).toHaveLength(2)
   })
 
-  it('renders aisle groups in supermarket walk order (produce before dry_goods)', () => {
+  it('preserves line order within groups (not global walk order)', () => {
     const wrapper = mount(AisleSection, {
       props: {
         lines: [
-          line('L1', 'pasta'),    // dry_goods
-          line('L2', 'tomaten'),  // produce
+          line('L1', 'pasta', 'dry_goods'),
+          line('L2', 'tomaten', 'produce'),
+          line('L3', 'rijst', 'dry_goods'),
         ],
       },
     })
     const groups = wrapper.findAll('[data-testid^="aisle-group-"]')
-    expect(groups[0].attributes('data-testid')).toBe('aisle-group-produce')
-    expect(groups[1].attributes('data-testid')).toBe('aisle-group-dry_goods')
-  })
-
-  it('omits groups that have no lines', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [line('L1', 'pasta')],
-      },
-    })
-    expect(wrapper.find('[data-testid="aisle-group-produce"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="aisle-group-dry_goods"]').exists()).toBe(true)
+    expect(groups[0].attributes('data-testid')).toBe('aisle-group-dry_goods')
+    expect(groups[1].attributes('data-testid')).toBe('aisle-group-produce')
+    expect(groups[2].attributes('data-testid')).toBe('aisle-group-dry_goods')
+    expect(groups[0].text()).toContain('pasta')
+    expect(groups[2].text()).toContain('rijst')
   })
 
   it('renders the Dutch aisle label in the summary', () => {
     const wrapper = mount(AisleSection, {
       props: {
-        lines: [line('L1', 'pasta')],
+        lines: [line('L1', 'pasta', 'dry_goods')],
       },
     })
     const label = wrapper.find('[data-testid="aisle-label-dry_goods"]')
     expect(label.text()).toContain('Droogwaren')
   })
 
-  it('renders all lines in their respective group', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [
-          line('L1', 'pasta'),
-          line('L2', 'rijst'),
-          line('L3', 'tomaten'),
-        ],
-      },
-    })
-    expect(wrapper.find('[data-testid="aisle-group-dry_goods"]').text()).toContain('pasta')
-    expect(wrapper.find('[data-testid="aisle-group-dry_goods"]').text()).toContain('rijst')
-    expect(wrapper.find('[data-testid="aisle-group-produce"]').text()).toContain('tomaten')
-  })
-
   it('renders an empty state gracefully when no lines are provided', () => {
     const wrapper = mount(AisleSection, {
       props: { lines: [] },
     })
-    expect(wrapper.findAll('[data-testid^="aisle-group-"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid^="aisle-group-"]').length).toBe(0)
+    expect(wrapper.find('[data-testid="aisle-flat-list"]').exists()).toBe(false)
   })
 })
 
-describe('AisleSection: expanded on mount', () => {
-  it('all details sections start with the open attribute', () => {
+describe('AisleSection: legacy flat mode', () => {
+  it('renders a flat list without aisle headers when no aisleCategory', () => {
     const wrapper = mount(AisleSection, {
       props: {
         lines: [
-          line('L1', 'pasta'),
-          line('L2', 'tomaten'),
-          line('L3', 'melk'),
+          { id: 'L1', name: 'pasta', quantity: 400, unit: 'g', provenance: [] },
+          { id: 'L2', name: 'tomaten', quantity: 300, unit: 'g', provenance: [] },
         ],
       },
     })
-    const details = wrapper.findAll('details')
-    expect(details.length).toBeGreaterThan(0)
-    for (const detail of details) {
-      expect(detail.attributes('open')).toBeDefined()
-    }
+    expect(wrapper.find('[data-testid="aisle-flat-list"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid^="aisle-group-"]').length).toBe(0)
+    expect(wrapper.find('[data-testid="legacy-flat-banner"]').text()).toContain('Re-consolidate')
+  })
+
+  it('shows all legacy lines in flat list order', () => {
+    const wrapper = mount(AisleSection, {
+      props: {
+        lines: [
+          { id: 'L1', name: 'pasta', quantity: undefined, unit: undefined, provenance: [] },
+          { id: 'L2', name: 'melk', quantity: undefined, unit: undefined, provenance: [] },
+        ],
+      },
+    })
+    const flat = wrapper.find('[data-testid="aisle-flat-list"]')
+    expect(flat.text()).toContain('pasta')
+    expect(flat.text()).toContain('melk')
   })
 })
 
-describe('AisleSection: readonly prop', () => {
-  it('does NOT render checkboxes when readonly is true', () => {
+describe('AisleSection: readonly and diff highlighting', () => {
+  it('hides checkboxes when readonly is true', () => {
     const wrapper = mount(AisleSection, {
       props: {
-        lines: [line('L1', 'pasta', 400, 'g')],
+        lines: [line('L1', 'pasta', 'dry_goods')],
         readonly: true,
       },
     })
-    expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(0)
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
   })
 
-  it('renders checkboxes when readonly is false (default)', () => {
+  it('shows checkboxes when readonly is false', () => {
     const wrapper = mount(AisleSection, {
       props: {
-        lines: [line('L1', 'pasta', 400, 'g')],
+        lines: [line('L1', 'pasta', 'dry_goods')],
+        readonly: false,
       },
     })
-    expect(wrapper.findAll('input[type="checkbox"]').length).toBeGreaterThan(0)
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
   })
 
-  it('renders a checkbox per line when readonly is false', () => {
+  it('highlights changed line IDs', () => {
     const wrapper = mount(AisleSection, {
       props: {
-        lines: [
-          line('L1', 'pasta', 400, 'g'),
-          line('L2', 'rijst', 200, 'g'),
-        ],
-      },
-    })
-    expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(2)
-  })
-})
-
-describe('AisleSection: diff highlighting via changedLineIds', () => {
-  it('marks changed lines with data-testid="diff-changed"', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [
-          line('L1', 'pasta', 400, 'g'),
-          line('L2', 'tomaten', 200, 'g'),
-        ],
+        lines: [line('L1', 'pasta', 'dry_goods')],
         changedLineIds: new Set(['L1']),
       },
     })
-    const diffLines = wrapper.findAll('[data-testid="diff-changed"]')
-    expect(diffLines).toHaveLength(1)
-    expect(diffLines[0].text()).toContain('pasta')
-  })
-
-  it('does NOT mark unchanged lines as diff-changed', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [line('L1', 'pasta', 400, 'g')],
-        changedLineIds: new Set<string>(),
-      },
-    })
-    expect(wrapper.findAll('[data-testid="diff-changed"]')).toHaveLength(0)
-  })
-
-  it('no diff indicators when changedLineIds is not passed', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [line('L1', 'pasta', 400, 'g')],
-      },
-    })
-    expect(wrapper.findAll('[data-testid="diff-changed"]')).toHaveLength(0)
-  })
-})
-
-describe('AisleSection: line formatting', () => {
-  it('formats lines with quantity, unit, and name', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [line('L1', 'pasta', 400, 'g')],
-      },
-    })
-    expect(wrapper.text()).toContain('400 g pasta')
-  })
-
-  it('renders line name only when no quantity', () => {
-    const wrapper = mount(AisleSection, {
-      props: {
-        lines: [{ id: 'L1', name: 'peterselie', quantity: undefined, unit: undefined, provenance: [] }],
-      },
-    })
-    expect(wrapper.text()).toContain('peterselie')
+    expect(wrapper.find('[data-testid="diff-changed"]').exists()).toBe(true)
   })
 })

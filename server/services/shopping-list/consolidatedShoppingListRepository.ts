@@ -6,7 +6,8 @@ import type { PlanningResult } from '../planning/planningResult'
 import { fail, ok } from '../planning/planningResult'
 import { interpretSavedWeekplanAccess } from '../planning/savedWeekplanAccess'
 import { computeSourceFingerprint } from './sourceFingerprint'
-import { sortShoppingListLines } from './aisleSort'
+import { AISLE_CATEGORY_ORDER } from './aisleSort'
+import type { AisleCategory } from './aisleSort'
 
 /** Persisted shape stored in the `consolidated_shopping_list` JSONB column. */
 export interface SavedConsolidatedShoppingListRecord {
@@ -20,6 +21,7 @@ export interface SavedShoppingListLine {
   name: string
   quantity: number | undefined
   unit: string | undefined
+  aisleCategory?: AisleCategory
 }
 
 export interface ShoppingListFlags {
@@ -34,6 +36,7 @@ const savedLineSchema = z.object({
   name: z.string().min(1),
   quantity: z.number().optional(),
   unit: z.string().optional(),
+  aisleCategory: z.enum(AISLE_CATEGORY_ORDER).optional(),
 })
 
 const consolidatedShoppingListInputSchema = z.object({
@@ -138,7 +141,7 @@ export async function getConsolidatedShoppingList(
   }
   return ok({
     ...record,
-    lines: sortShoppingListLines(record.lines),
+    lines: record.lines,
   })
 }
 
@@ -269,9 +272,8 @@ export async function saveConsolidatedShoppingList(
   const sourceFingerprint = computeSourceFingerprint(row.body)
   const confirmedAt = new Date().toISOString()
 
-  const sortedLines = sortShoppingListLines(lines)
   const record: SavedConsolidatedShoppingListRecord = {
-    lines: sortedLines,
+    lines,
     sourceFingerprint,
     confirmedAt,
   }
