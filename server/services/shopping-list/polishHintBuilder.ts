@@ -1,11 +1,11 @@
 import type { MergedLine, PolishBaseline } from './exactMerge'
 import type { PolishResponse, PolishResponseLine, ValidationRule } from './polishHarness'
-
-/** Extends harness ValidationRule with hint-only rules that are never harness failures. */
-export type HintRule = ValidationRule | 'name-unchanged'
 import { canonicalDisplayName, normalizeShoppingListUnit, roundPolishQuantity } from './exactMerge'
 import { canonicalizePolishResponse } from './polishHarness'
 import { convertQuantity, unitDimension } from './crossUnitMerge'
+
+/** Extends harness ValidationRule with hint-only rules that are never harness failures. */
+export type HintRule = ValidationRule | 'name-unchanged'
 
 export type HintSeverity = 'info' | 'error'
 

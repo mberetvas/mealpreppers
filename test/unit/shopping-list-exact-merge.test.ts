@@ -9,7 +9,6 @@ import {
 
 const RID_A = '11111111-1111-1111-1111-111111111111'
 const RID_B = '22222222-2222-2222-2222-222222222222'
-const RID_C = '33333333-3333-3333-3333-333333333333'
 
 function makeSection(
   recipeId: string,
