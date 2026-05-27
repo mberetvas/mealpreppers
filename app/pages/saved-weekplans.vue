@@ -250,6 +250,11 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
           <p class="mt-2 text-sm text-atelier-description">
             Updated {{ formatUpdatedAt(item.updatedAt) }}
           </p>
+          <ShoppingListWeekplanConsolidatedListStatus
+            :has-saved-shopping-list="item.hasSavedShoppingList"
+            :shopping-list-deprecated="item.shoppingListDeprecated"
+            class="mt-2"
+          />
         </div>
         <div class="flex flex-wrap items-center justify-end gap-2 sm:shrink-0">
           <button

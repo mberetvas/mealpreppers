@@ -28,6 +28,8 @@ describe('fetchSavedWeekplanForPlanner', () => {
       id: 'sw-1',
       body,
       name: 'Lunch week',
+      hasSavedShoppingList: false,
+      shoppingListDeprecated: false,
     })
   })
 
