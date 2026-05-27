@@ -28,16 +28,6 @@ const emit = defineEmits<{
 
 const acknowledgedHintIds = ref<Set<string>>(new Set())
 
-/** Error-level hints that have not been acknowledged. */
-const unacknowledgedErrors = computed(() =>
-  props.hints
-    .filter(h => h.severity === 'error')
-    .filter(h => !acknowledgedHintIds.value.has(hintKey(h))),
-)
-
-/** Whether approve is blocked by unacknowledged error hints. */
-const confirmBlocked = computed(() => unacknowledgedErrors.value.length > 0)
-
 /** Hints grouped by line ID for inline display. */
 const hintsByLine = computed(() => {
   const map = new Map<string, PolishHint[]>()
@@ -57,7 +47,7 @@ function acknowledgeHint(hint: PolishHint): void {
 }
 
 function handleConfirm(): void {
-  if (confirmBlocked.value || props.saving) return
+  if (props.saving) return
   emit('confirm')
 }
 </script>
@@ -165,20 +155,13 @@ function handleConfirm(): void {
           type="button"
           data-testid="confirm-review"
           class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-on-primary shadow-atelier-primary-btn transition hover:bg-atelier-primary-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
-          :disabled="confirmBlocked || saving"
+          :disabled="saving"
           :aria-busy="saving"
           @click="handleConfirm"
         >
           <span class="material-symbols-outlined text-[20px]" aria-hidden="true">check</span>
           {{ saving ? 'Saving…' : 'Approve' }}
         </button>
-        <span
-          v-if="confirmBlocked"
-          data-testid="confirm-blocked-message"
-          class="text-xs text-error"
-        >
-          Acknowledge all error hints before approving
-        </span>
       </div>
     </section>
   </div>

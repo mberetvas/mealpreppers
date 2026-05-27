@@ -64,24 +64,16 @@ describe('PolishReview component: hint acknowledgment', () => {
     expect(wrapper.find('[data-testid="acknowledge-hint"]').exists()).toBe(true)
   })
 
-  it('approve button is disabled when unacknowledged error hints exist', () => {
+  it('approve button stays enabled when unacknowledged error hints exist', () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
     const confirmBtn = wrapper.find('[data-testid="confirm-review"]')
-    expect(confirmBtn.attributes('disabled')).toBeDefined()
+    expect(confirmBtn.attributes('disabled')).toBeUndefined()
     expect(confirmBtn.text()).toContain('Approve')
   })
 
-  it('shows blocked message when error hints remain unacknowledged', () => {
+  it('does not show a blocked message for unacknowledged error hints', () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
-    expect(wrapper.find('[data-testid="confirm-blocked-message"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="confirm-blocked-message"]').text()).toContain('approving')
-  })
-
-  it('after acknowledging all error hints, approve button is enabled', async () => {
-    const wrapper = mount(PolishReview, { props: defaultProps })
-    await wrapper.find('[data-testid="acknowledge-hint"]').trigger('click')
-    const confirmBtn = wrapper.find('[data-testid="confirm-review"]')
-    expect(confirmBtn.attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('[data-testid="confirm-blocked-message"]').exists()).toBe(false)
   })
 
   it('info hints do not block approve', () => {
@@ -105,10 +97,10 @@ describe('PolishReview component: approve action', () => {
     expect(wrapper.emitted('confirm')).toBeTruthy()
   })
 
-  it('does not emit confirm when error hints are unacknowledged', async () => {
+  it('emits confirm when approve is clicked even with unacknowledged error hints', async () => {
     const wrapper = mount(PolishReview, { props: defaultProps })
     await wrapper.find('[data-testid="confirm-review"]').trigger('click')
-    expect(wrapper.emitted('confirm')).toBeFalsy()
+    expect(wrapper.emitted('confirm')).toBeTruthy()
   })
 })
 

@@ -16,7 +16,7 @@ export interface PolishHint {
   message: string
 }
 
-/** Maps hint rules to severity; name-unchanged is info-only, no-removed-lines blocks Approve. */
+/** Maps hint rules to severity; name-unchanged is info-only; hints never block Approve in the UI. */
 const SEVERITY_BY_RULE: Record<HintRule, HintSeverity> = {
   'no-invented-ingredients': 'error',
   'quantity-cap': 'error',
