@@ -5,6 +5,8 @@ import type { PolishStatus } from '~~/server/services/shopping-list/consolidatio
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
 import type { SavedConsolidatedShoppingListRecord, SavedShoppingListLine, ShoppingListFlags } from '~~/server/services/shopping-list/consolidatedShoppingListRepository'
 import type { WeekTemplateRowWithShoppingListFlags } from '~~/server/services/planning/savedWeekplansRepository'
+import { sortLinesByStoreWalkOrder } from '~~/server/services/shopping-list/aisleSort'
+import { inferAisleCategoryFromName } from '~~/server/services/shopping-list/aisleInference'
 
 export interface ConsolidationResponse {
   consolidatedLines: MergedLine[]
@@ -32,6 +34,15 @@ export interface SessionDraft {
  * Exported with underscore prefix for test isolation only.
  */
 export const _sessionDraftStore = new Map<string, SessionDraft>()
+
+/** Infers missing aisleCategory and sorts lines by store walk order. */
+function sortLinesForDisplay<T extends MergedLine>(lines: T[]): T[] {
+  const withAisle = lines.map(l => ({
+    ...l,
+    aisleCategory: l.aisleCategory ?? inferAisleCategoryFromName(l.name) ?? undefined,
+  }))
+  return sortLinesByStoreWalkOrder(withAisle) as T[]
+}
 
 export interface UseConsolidatedShoppingListOptions {
   fetchConsolidate?: (planId: string) => Promise<ConsolidationResponse>
@@ -185,8 +196,9 @@ export function useConsolidatedShoppingList(
           unit: l.unit,
           provenance: [] as { recipeId: string, recipeTitle: string }[],
         }))
-        consolidatedLines.value = lines
-        baselineLines.value = lines.map(l => ({ ...l }))
+        const sorted = sortLinesForDisplay(lines)
+        consolidatedLines.value = sorted
+        baselineLines.value = sorted.map(l => ({ ...l }))
         changes.value = []
         polishStatus.value = 'polished'
         hasConsolidated.value = true
@@ -222,7 +234,7 @@ export function useConsolidatedShoppingList(
       warnings.value = result.warnings
       hints.value = result.hints ?? []
       reviewLines.value = result.polishStatus === 'pending_review'
-        ? result.consolidatedLines.map(line => ({ ...line }))
+        ? sortLinesForDisplay(result.consolidatedLines.map(line => ({ ...line })))
         : []
       if (result.polishStatus === 'pending_review') {
         consolidatedLines.value = []
@@ -255,20 +267,20 @@ export function useConsolidatedShoppingList(
     if (polishStatus.value !== 'pending_review') return
     if (shoppingListDeprecated.value) return
 
-    const confirmedLines = reviewLines.value.map(l => ({ ...l }))
-    const linesToSave: SavedShoppingListLine[] = confirmedLines.map(l => ({
+    const sortedLines = sortLinesForDisplay(reviewLines.value.map(l => ({ ...l })))
+    const linesToSave: SavedShoppingListLine[] = sortedLines.map(l => ({
       id: l.id,
       name: l.name,
       quantity: l.quantity,
       unit: l.unit,
-      aisleCategory: l.aisleCategory,
+      ...(l.aisleCategory ? { aisleCategory: l.aisleCategory } : {}),
     }))
 
     saving.value = true
     saveError.value = null
     try {
       const result = await savelist(planId.value, linesToSave)
-      consolidatedLines.value = confirmedLines
+      consolidatedLines.value = sortedLines
       polishStatus.value = 'polished'
       changes.value = []
       hints.value = []
@@ -297,8 +309,9 @@ export function useConsolidatedShoppingList(
       provenance: [] as { recipeId: string, recipeTitle: string }[],
     }))
 
-    reviewLines.value = lines.map(l => ({ ...l }))
-    baselineLines.value = lines.map(l => ({ ...l }))
+    const sorted = sortLinesForDisplay(lines)
+    reviewLines.value = sorted.map(l => ({ ...l }))
+    baselineLines.value = sorted.map(l => ({ ...l }))
     hints.value = []
     polishStatus.value = 'pending_review'
   }

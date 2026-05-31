@@ -98,6 +98,8 @@ export function inferAisleCategoryFromName(rawName: string): AisleCategory | nul
     || nameIncludes(name, 'peterselie')
     || nameIncludes(name, 'sugar snap')
     || nameIncludes(name, 'sojascheut')
+    || nameIncludes(name, 'tomaat')
+    || nameIncludes(name, 'tomaten')
     || name === 'peper'
     || nameIncludes(name, 'peper ')
   ) {

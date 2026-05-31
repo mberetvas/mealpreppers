@@ -74,7 +74,7 @@ Your job:
 
 Return ONLY structured output with "lines" and optional "changes".`
 
-const USER_TEMPLATE = `Consolidate this recipe-grouped shopping list. Merge, convert units where allowed, assign aisleCategory per line, sort by store walk order, and return the full consolidated list.
+const USER_TEMPLATE = `Consolidate this recipe-grouped shopping list. Merge, convert units where allowed, assign aisleCategory per line, sort by store aisle, and return the full consolidated list.
 
 {consolidationContextJson}`
 

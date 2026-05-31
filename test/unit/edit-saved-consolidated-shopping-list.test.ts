@@ -143,8 +143,8 @@ describe('useConsolidatedShoppingList — editSaved flow', () => {
     expect(consolidatedLines.value[0].name).toBe('fusilli')
     expect(consolidatedLines.value[0].quantity).toBe(500)
     expect(savelist).toHaveBeenCalledWith('plan-1', [
-      { id: 'L1', name: 'fusilli', quantity: 500, unit: 'g' },
-      { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el' },
+      { id: 'L1', name: 'fusilli', quantity: 500, unit: 'g', aisleCategory: 'dry_goods' },
+      { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el', aisleCategory: 'oils' },
     ])
 
     // Wait for save to resolve

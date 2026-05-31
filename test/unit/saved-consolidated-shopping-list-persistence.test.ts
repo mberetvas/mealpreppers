@@ -439,7 +439,7 @@ describe('useConsolidatedShoppingList — load + save flow', () => {
 
     await confirmReview()
     expect(polishStatus.value).toBe('polished')
-    expect(savelist).toHaveBeenCalledWith('plan-1', [{ id: 'L1', name: 'tomaten', quantity: 600, unit: 'g' }])
+    expect(savelist).toHaveBeenCalledWith('plan-1', [{ id: 'L1', name: 'tomaten', quantity: 600, unit: 'g', aisleCategory: 'produce' }])
 
     // Wait for the save promise
     await vi.waitFor(() => expect(savedList.value).not.toBeNull())
