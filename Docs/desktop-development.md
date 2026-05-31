@@ -85,10 +85,28 @@ The packaged app:
 
 ## Environment
 
-- **Loop A:** standard `.env` (Supabase, OpenRouter, …).
-- **Sidecar / packaged app:** pass secrets via process environment available to the Nitro
-  child (e.g. set in the shell before `desktop:dev:sidecar`, or OS-level config). Optional
-  `DESKTOP_TOKEN` in `.env` when running Nitro standalone for debugging.
+- **Loop A:** `.env` with optional `OPENROUTER_API_KEY` for AI polish (server-only `runtimeConfig`).
+  Settings keychain IPC is available in loop A when running inside Tauri.
+- **Sidecar / packaged app:** OpenRouter key from OS keychain (Settings) injected at Nitro spawn.
+  Optional `DESKTOP_TOKEN` in `.env` when running Nitro standalone for debugging.
+
+## Offline / online feature matrix
+
+| Feature | Offline | Notes |
+|---------|---------|-------|
+| Recipes CRUD, planner, Saved Weekplans | Yes | SQLite + local images |
+| Shopping list (non-AI baseline) | Yes | AI polish shows banner when skipped |
+| AI shopping-list polish | No | Requires OpenRouter key + network |
+| Recipe URL import | No | UI disabled offline with explicit message |
+| Google Fonts / Material Symbols | First paint needs network | CDN in `nuxt.config.ts`; see [desktop-release.md](./desktop-release.md) |
+
+Manual smoke checklist: [desktop-release.md](./desktop-release.md).
+
+## CI
+
+GitHub Actions workflow `.github/workflows/desktop-windows.yml` builds the Windows installer on
+`windows-latest` (Bun + Rust). Unsigned artifacts upload by default; Authenticode signing is
+optional — see [desktop-signing.md](./desktop-signing.md).
 
 ## Troubleshooting
 
@@ -100,8 +118,3 @@ The packaged app:
 | Port 3000 in use (loop A) | Stop other Nuxt instances or align `devUrl` in `tauri.conf.json` |
 | 401 on API in sidecar mode | Token missing — confirm `__MEALPREPPER_DESKTOP__` bootstrap and `01.desktop-api.client.ts` |
 | MSVC / `link.exe` errors | Install C++ build tools |
-
-## CI note
-
-No automated Tauri job yet. Validate locally: loop A (`desktop:dev`), loop B
-(`build:desktop` + `desktop:dev:sidecar`), and `desktop:build` on Windows.

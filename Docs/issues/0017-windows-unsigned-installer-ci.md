@@ -13,10 +13,10 @@ Produce a reproducible **Windows installer artifact** (NSIS or MSI via Tauri bun
 
 ## Acceptance criteria
 
-- [ ] CI workflow builds desktop artifact on `windows-latest` using Bun for JS/Rust steps as documented
-- [ ] Installer installs and launches app; first run creates SQLite DB and `recipe-images/` under app data
-- [ ] Core offline flows (recipes, planner, Saved Weekplans, shopping lists without AI) succeed on a clean Windows VM or documented smoke procedure
-- [ ] Release docs describe manual update process for v1 (no in-app updater)
+- [x] CI workflow builds desktop artifact on `windows-latest` using Bun for JS/Rust steps as documented
+- [x] Installer installs and launches app; first run creates SQLite DB and `recipe-images/` under app data
+- [x] Core offline flows (recipes, planner, Saved Weekplans, shopping lists without AI) succeed on a clean Windows VM or documented smoke procedure
+- [x] Release docs describe manual update process for v1 (no in-app updater)
 
 ## Blocked by
 

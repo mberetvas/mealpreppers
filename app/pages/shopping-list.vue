@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { watch, ref } from 'vue'
+import { watch, ref, computed } from 'vue'
 import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import ShoppingListAisleSection from '~/components/shopping-list/AisleSection.vue'
+import { buildAiPolishUnavailableMessage, useNetworkFeatureState } from '~/composables/useNetworkFeatureState'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,6 +13,8 @@ const planId = computed(() => (route.query.plan as string | undefined) ?? '')
 const viewMode = computed(() =>
   route.query.view === 'consolidated' ? 'consolidated' : 'sections',
 )
+
+const { offline, missingApiKey } = useNetworkFeatureState()
 
 const { loading, planName, sections, planLoaded, planError, failedRecipeCount, shoppingListCopiedFromMatch, load } = useShoppingList(planId)
 const {
@@ -35,6 +38,10 @@ const {
   updateReviewLine,
   confirmReview,
 } = useConsolidatedShoppingList(planId, { view: viewMode })
+
+const aiPolishBannerMessage = computed(() =>
+  buildAiPolishUnavailableMessage(offline.value, missingApiKey.value, warnings.value[0]),
+)
 
 function setViewMode(mode: 'sections' | 'consolidated') {
   const query = { ...route.query }
@@ -415,7 +422,7 @@ useHead(() => ({
             aria-live="polite"
           >
             <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">warning</span>
-            {{ warnings[0] || 'A supermarket aisle-grouped list requires successful AI consolidation.' }}
+            {{ aiPolishBannerMessage }}
           </div>
           <p
             data-testid="fallback-empty-state"
@@ -428,6 +435,7 @@ useHead(() => ({
               type="button"
               data-testid="retry-btn"
               class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-atelier-chip px-6 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover motion-reduce:transition-none"
+              :disabled="offline || missingApiKey"
               @click="consolidate"
             >
               <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
@@ -445,7 +453,7 @@ useHead(() => ({
             aria-live="polite"
           >
             <span class="material-symbols-outlined mr-2 align-middle text-[18px]" aria-hidden="true">info</span>
-            {{ warnings[0] || 'A supermarket aisle-grouped list requires successful AI consolidation.' }}
+            {{ aiPolishBannerMessage }}
           </div>
           <p
             data-testid="fallback-empty-state"
@@ -458,6 +466,7 @@ useHead(() => ({
               type="button"
               data-testid="retry-btn"
               class="inline-flex min-h-touch items-center justify-center gap-2 rounded-2xl bg-atelier-chip px-6 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover motion-reduce:transition-none"
+              :disabled="offline || missingApiKey"
               @click="consolidate"
             >
               <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>

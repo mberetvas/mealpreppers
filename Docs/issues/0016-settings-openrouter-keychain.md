@@ -13,11 +13,11 @@ Add **`/settings`** linked from **More**, with Tauri IPC for OS affordances only
 
 ## Acceptance criteria
 
-- [ ] `/settings` is reachable from More; masked key input with save/clear; connection hint links to OpenRouter
-- [ ] Key persists in OS keychain via Tauri commands; never appears in client bundle or public `runtimeConfig`
-- [ ] Nitro sidecar receives `OPENROUTER_API_KEY` from keychain on spawn; AI polish works when key is set and network is available
-- [ ] App version and data path display correctly; “Open data folder” opens the OS file manager at the app data root
-- [ ] README documents dev `.env` override for OpenRouter without desktop shell
+- [x] `/settings` is reachable from More; masked key input with save/clear; connection hint links to OpenRouter
+- [x] Key persists in OS keychain via Tauri commands; never appears in client bundle or public `runtimeConfig`
+- [x] Nitro sidecar receives `OPENROUTER_API_KEY` from keychain on spawn; AI polish works when key is set and network is available
+- [x] App version and data path display correctly; “Open data folder” opens the OS file manager at the app data root
+- [x] README documents dev `.env` override for OpenRouter without desktop shell
 
 ## Blocked by
 

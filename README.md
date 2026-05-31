@@ -23,6 +23,10 @@ bun run build:desktop        # Nitro sidecar + pinned Node resources
 bun run desktop:build        # Packaged app with bundled sidecar
 ```
 
+**OpenRouter (dev):** set `OPENROUTER_API_KEY` in `.env` when running `bun run dev` or loop A
+without Tauri. End users configure the key in **Settings** inside the packaged desktop app (OS
+keychain → Nitro sidecar env).
+
 Libelle recipe URL import uses Playwright (Chromium):
 
 ```bash

@@ -10,6 +10,7 @@
         "@nuxt/eslint": "1.15.2",
         "@nuxt/test-utils": "4.0.3",
         "@nuxtjs/tailwindcss": "6.14.0",
+        "@tauri-apps/api": "^2.9.1",
         "better-sqlite3": "^12.10.0",
         "cheerio": "^1.2.0",
         "drizzle-orm": "^0.45.2",
@@ -535,6 +536,8 @@
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
     "@stylistic/eslint-plugin": ["@stylistic/eslint-plugin@5.10.0", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.9.1", "@typescript-eslint/types": "^8.56.0", "eslint-visitor-keys": "^4.2.1", "espree": "^10.4.0", "estraverse": "^5.3.0", "picomatch": "^4.0.3" }, "peerDependencies": { "eslint": "^9.0.0 || ^10.0.0" } }, "sha512-nPK52ZHvot8Ju/0A4ucSX1dcPV2/1clx0kLcH5wDmrE4naKso7TUC/voUyU1O9OTKTrR6MYip6LP0ogEMQ9jPQ=="],
+
+    "@tauri-apps/api": ["@tauri-apps/api@2.11.0", "", {}, "sha512-7CinYODhky9lmO23xHnUFv0Xt43fbtWMyxZcLcRBlFkcgXKuEirBvHpmtJ89YMhyeGcq20Wuc47Fa4XjyniywA=="],
 
     "@tauri-apps/cli": ["@tauri-apps/cli@2.11.2", "", { "optionalDependencies": { "@tauri-apps/cli-darwin-arm64": "2.11.2", "@tauri-apps/cli-darwin-x64": "2.11.2", "@tauri-apps/cli-linux-arm-gnueabihf": "2.11.2", "@tauri-apps/cli-linux-arm64-gnu": "2.11.2", "@tauri-apps/cli-linux-arm64-musl": "2.11.2", "@tauri-apps/cli-linux-riscv64-gnu": "2.11.2", "@tauri-apps/cli-linux-x64-gnu": "2.11.2", "@tauri-apps/cli-linux-x64-musl": "2.11.2", "@tauri-apps/cli-win32-arm64-msvc": "2.11.2", "@tauri-apps/cli-win32-ia32-msvc": "2.11.2", "@tauri-apps/cli-win32-x64-msvc": "2.11.2" }, "bin": { "tauri": "tauri.js" } }, "sha512-bk3HemqvGRoy+5D/dVMUQHKMYLglD0jVnMm/0iGMH6ufZ+p8r14m6BpIixwij3PBvZdvORUp1YifTD8QxVZ1Nw=="],
 

@@ -13,10 +13,10 @@ Make **offline vs online-only** behavior explicit in the UI: core data paths wor
 
 ## Acceptance criteria
 
-- [ ] UI surfaces distinguish offline, missing API key, and online-only features (AI polish, recipe import) without silent failures
-- [ ] Tauri CSP allows localhost API and local images; external https links open in system browser, not arbitrary WebView navigation
-- [ ] Manual test checklist covers offline recipe/planner/shopping flows and online-only flows with expected messaging
-- [ ] README or CONTEXT notes fonts CDN requires network for first paint in v1
+- [x] UI surfaces distinguish offline, missing API key, and online-only features (AI polish, recipe import) without silent failures
+- [x] Tauri CSP allows localhost API and local images; external https links open in system browser, not arbitrary WebView navigation
+- [x] Manual test checklist covers offline recipe/planner/shopping flows and online-only flows with expected messaging
+- [x] README or CONTEXT notes fonts CDN requires network for first paint in v1
 
 ## Blocked by
 

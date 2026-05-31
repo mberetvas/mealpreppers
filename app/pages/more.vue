@@ -24,6 +24,15 @@ import { topNavItems } from '~/constants/primaryNavigation'
             <span class="material-symbols-outlined text-stone-400 text-xl" aria-hidden="true">chevron_right</span>
           </NuxtLink>
         </li>
+        <li class="py-3">
+          <NuxtLink
+            to="/settings"
+            class="flex items-center justify-between font-medium text-stone-800 transition-colors hover:text-primary dark:text-stone-200 dark:hover:text-primary"
+          >
+            Settings
+            <span class="material-symbols-outlined text-stone-400 text-xl" aria-hidden="true">chevron_right</span>
+          </NuxtLink>
+        </li>
       </ul>
     </nav>
   </div>

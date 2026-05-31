@@ -3,6 +3,8 @@ import { onBeforeUnmount } from 'vue'
 import type { RecipePreviewRequest, RecipePreviewResponse } from '~~/types/recipe-preview'
 import { validateRecipeImageFile } from '~/utils/recipeImageValidation'
 import { SUPPORTED_RECIPE_SOURCES } from '~/constants/supportedRecipeSources'
+import { buildRecipeImportUnavailableMessage } from '~/composables/useNetworkFeatureState'
+import { openExternalUrl } from '~/utils/tauriDesktop'
 
 definePageMeta({
   layout: 'fullwidth',
@@ -58,12 +60,22 @@ const recipeImageInputRef = ref<HTMLInputElement | null>(null)
 
 const imagePreviewSource = computed(() => localPreviewUrl.value || form.imageUrl.trim())
 
+const { offline } = useNetworkFeatureState()
+const urlImportBlocked = computed(() => offline.value)
+const urlImportBlockedMessage = computed(() => buildRecipeImportUnavailableMessage(offline.value))
+
 const canSave = computed(() => form.title.trim().length > 0 && normalizedIngredients().length > 0 && !isSaving.value)
 
 async function importRecipe(): Promise<void> {
   errorMessage.value = ''
   warnings.value = []
   importSuccessMessage.value = ''
+
+  if (urlImportBlocked.value) {
+    errorMessage.value = urlImportBlockedMessage.value
+    return
+  }
+
   isImporting.value = true
 
   try {
@@ -356,6 +368,13 @@ onBeforeUnmount(() => {
       </header>
 
       <AtelierParchmentSection v-if="entryMode === 'url'" density="compact">
+        <p
+          v-if="urlImportBlocked"
+          class="mb-4 rounded-xl border border-amber-200/70 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
+          role="status"
+        >
+          {{ urlImportBlockedMessage }}
+        </p>
         <label class="grid gap-3 text-sm font-semibold text-atelier-field-label">
           Recipe URL
           <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -364,9 +383,10 @@ onBeforeUnmount(() => {
               type="url"
               class="design-input"
               placeholder="https://..."
+              :disabled="urlImportBlocked"
             >
             <AtelierBlockButton
-              :disabled="isImporting || importUrl.trim().length === 0"
+              :disabled="urlImportBlocked || isImporting || importUrl.trim().length === 0"
               @click="importRecipe"
             >
               <span class="material-symbols-outlined text-[20px]">download</span>
@@ -379,14 +399,13 @@ onBeforeUnmount(() => {
             Supported websites
           </p>
           <div v-if="SUPPORTED_RECIPE_SOURCES.length > 0" class="flex flex-wrap gap-x-3 gap-y-1">
-            <a
+            <button
               v-for="source in SUPPORTED_RECIPE_SOURCES"
               :key="source.host"
-              :href="source.url"
-              target="_blank"
-              rel="noopener noreferrer"
+              type="button"
               class="text-xs text-atelier-description underline-offset-2 transition-colors hover:text-atelier-heading hover:underline"
-            >{{ source.host }}</a>
+              @click="openExternalUrl(source.url)"
+            >{{ source.host }}</button>
           </div>
           <p v-else class="text-xs text-atelier-error-foreground">
             Supported website list is currently unavailable.

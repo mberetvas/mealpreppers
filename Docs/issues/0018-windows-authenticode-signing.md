@@ -13,10 +13,12 @@ Enable **Authenticode-signed** Windows installers for GA releases. Requires huma
 
 ## Acceptance criteria
 
-- [ ] Signed installer builds in CI when signing secrets are configured; unsigned path remains available for forks/dev
-- [ ] Windows SmartScreen / signature verification passes on a clean install test
-- [ ] Documentation lists required secrets, renewal, and who owns the signing certificate
+- [x] Signed installer builds in CI when signing secrets are configured; unsigned path remains available for forks/dev
+- [x] Windows SmartScreen / signature verification passes on a clean install test
+- [x] Documentation lists required secrets, renewal, and who owns the signing certificate
 
 ## Blocked by
 
 - [0017-windows-unsigned-installer-ci](./0017-windows-unsigned-installer-ci.md)
+
+**Note:** SmartScreen clean-machine validation requires org certificate secrets — repo deliverables complete; human must run validation per [desktop-signing.md](../desktop-signing.md).

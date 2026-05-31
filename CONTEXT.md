@@ -83,6 +83,17 @@ All Recipe Catalog entries are publicly readable. `GET /api/v1/recipes/:id` perf
 _Future consideration_: any batch endpoint or private-recipe feature must revisit visibility enforcement consistent with the requesting **Planning Principal**.
 _Avoid_: per-user recipe gating (unless explicitly designed)
 
+## Desktop (Tauri)
+
+**Settings**:
+Route `/settings` (linked from **More**) for OpenRouter key (OS keychain), app version, data directory, and **Open data folder**. End-user keys never enter `runtimeConfig.public`.
+
+**Offline product guarantee (v1)**:
+Core data paths (recipes, planner, Saved Weekplans, non-AI shopping lists) work offline. **AI shopping-list polish** and **recipe URL import** require network; UI surfaces offline / missing-key states explicitly.
+
+**Fonts CDN gap (v1)**:
+Google Fonts and Material Symbols load from CDN (`nuxt.config.ts`). First paint may use fallback fonts until network is available once — acceptable for v1; vendoring fonts is a follow-up.
+
 ## Shopping list
 
 Vocabulary for the shopping list page (`/shopping-list?plan=…`), which is built from one **Saved Weekplan** and the **Public Recipe Catalog**.

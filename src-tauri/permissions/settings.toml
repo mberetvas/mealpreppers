@@ -1,0 +1,53 @@
+[[permission]]
+identifier = "allow-get-openrouter-key"
+description = "Enables the get_openrouter_key command."
+commands.allow = ["get_openrouter_key"]
+
+[[permission]]
+identifier = "allow-set-openrouter-key"
+description = "Enables the set_openrouter_key command."
+commands.allow = ["set_openrouter_key"]
+
+[[permission]]
+identifier = "allow-clear-openrouter-key"
+description = "Enables the clear_openrouter_key command."
+commands.allow = ["clear_openrouter_key"]
+
+[[permission]]
+identifier = "allow-has-openrouter-key"
+description = "Enables the has_openrouter_key command."
+commands.allow = ["has_openrouter_key"]
+
+[[permission]]
+identifier = "allow-get-app-version"
+description = "Enables the get_app_version command."
+commands.allow = ["get_app_version"]
+
+[[permission]]
+identifier = "allow-get-data-dir"
+description = "Enables the get_data_dir command."
+commands.allow = ["get_data_dir"]
+
+[[permission]]
+identifier = "allow-open-data-folder"
+description = "Enables the open_data_folder command."
+commands.allow = ["open_data_folder"]
+
+[[permission]]
+identifier = "allow-open-external-url"
+description = "Enables the open_external_url command."
+commands.allow = ["open_external_url"]
+
+[[set]]
+identifier = "settings-default"
+description = "Default Settings IPC permissions."
+permissions = [
+  "allow-get-openrouter-key",
+  "allow-set-openrouter-key",
+  "allow-clear-openrouter-key",
+  "allow-has-openrouter-key",
+  "allow-get-app-version",
+  "allow-get-data-dir",
+  "allow-open-data-folder",
+  "allow-open-external-url",
+]
