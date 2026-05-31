@@ -1,7 +1,7 @@
 import {
   AISLE_CATEGORY_ORDER,
   type AisleCategory,
-} from '../server/services/shopping-list/aisleSort'
+} from '~~/shared/aisleSort'
 
 /** Dutch aisle labels for Belgian/Dutch supermarket walk order. */
 export const AISLE_LABELS: Record<AisleCategory, string> = {

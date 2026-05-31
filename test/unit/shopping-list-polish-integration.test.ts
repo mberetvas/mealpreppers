@@ -358,7 +358,7 @@ describe('consolidation service with harness validation (AI-first)', () => {
       expect(result.baselineLines.map(l => l.unit).sort()).toEqual(['g', 'kg'])
     })
 
-    it('returns consolidatedLines equal to baselineLines when AI is skipped', async () => {
+    it('returns empty consolidatedLines when AI is skipped', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
         supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
@@ -368,7 +368,7 @@ describe('consolidation service with harness validation (AI-first)', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
+      expect(result.consolidatedLines).toEqual([])
       expect(result.baselineLines.map(l => l.name).sort()).toEqual(['olijfolie', 'pasta'])
     })
   })

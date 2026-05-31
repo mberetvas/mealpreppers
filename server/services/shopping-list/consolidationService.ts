@@ -124,13 +124,11 @@ export async function consolidateShoppingList(
     logger.info('shopping_list.polish_skipped', { reason: 'missing_api_key' })
     warnings.push(AI_REQUIRED_WARNING)
     polishStatus = 'ai_skipped'
-    consolidatedLines = baselineLines
   }
   else if (!polishPort) {
     logger.info('shopping_list.polish_skipped', { reason: 'no_polish_port' })
     warnings.push(AI_REQUIRED_WARNING)
     polishStatus = 'ai_skipped'
-    consolidatedLines = baselineLines
   }
   else {
     try {

@@ -41,12 +41,6 @@ export interface ValidationResult {
 }
 
 /**
- * Validates a Shopping list polish response against the Shopping list polish baseline.
- * Ensures the AI model cannot invent ingredients, inflate quantities, violate unit policy,
- * drop undocumented baseline lines, or produce duplicate line ids.
- * Returns a structured pass/fail result for orchestration flow control (never throws).
- */
-/**
  * Aligns model polish output with baseline conventions (line id casing, unit aliases, quantity rounding).
  */
 export function canonicalizePolishResponse(response: PolishResponse, baseline: PolishBaseline): PolishResponse {

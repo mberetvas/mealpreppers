@@ -5,7 +5,7 @@ import type { PolishStatus } from '~~/server/services/shopping-list/consolidatio
 import type { PolishHint } from '~~/server/services/shopping-list/polishHintBuilder'
 import type { SavedConsolidatedShoppingListRecord, SavedShoppingListLine, ShoppingListFlags } from '~~/server/services/shopping-list/consolidatedShoppingListRepository'
 import type { WeekTemplateRowWithShoppingListFlags } from '~~/server/services/planning/savedWeekplansRepository'
-import { sortLinesByStoreWalkOrder } from '~~/server/services/shopping-list/aisleSort'
+import { sortLinesByStoreWalkOrder } from '~~/shared/aisleSort'
 import { inferAisleCategoryFromName } from '~~/server/services/shopping-list/aisleInference'
 
 export interface ConsolidationResponse {

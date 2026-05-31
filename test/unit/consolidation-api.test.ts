@@ -200,11 +200,11 @@ describe('consolidate-shopping-list API handler', () => {
       })
     })
 
-    it('returns consolidatedLines equal to baselineLines when AI is skipped', async () => {
+    it('returns empty consolidatedLines when AI is skipped', async () => {
       const event = makeEvent()
       const result = await consolidateHandler(event)
 
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
+      expect(result.consolidatedLines).toEqual([])
     })
 
     it('includes a warning when polish is skipped', async () => {

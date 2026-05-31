@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 /**
  * Dismissible banner shown on the first open of the shopping-list page (or preview
@@ -34,6 +34,10 @@ function readDismissed(): boolean {
 }
 
 const locallyDismissed = ref(readDismissed())
+
+watch(() => props.planId, () => {
+  locallyDismissed.value = readDismissed()
+})
 
 const visible = computed(() => props.shoppingListCopiedFromMatch && !locallyDismissed.value)
 

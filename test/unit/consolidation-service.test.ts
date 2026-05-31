@@ -119,7 +119,7 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
+      expect(result.consolidatedLines).toEqual([])
       expect(result.baselineLines.length).toBeGreaterThan(0)
       // recipe-1 appears twice (day 1 breakfast + day 2 breakfast), so 400*2 = 800g pasta
       const pastaLine = result.baselineLines.find(l => l.name === 'pasta')
@@ -634,7 +634,7 @@ describe('consolidateShoppingList service', () => {
       })
     })
 
-    it('ai_skipped: returns consolidatedLines equal to baselineLines', async () => {
+    it('ai_skipped: returns empty consolidatedLines', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
         supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
@@ -644,7 +644,7 @@ describe('consolidateShoppingList service', () => {
       })
 
       expect(result.polishStatus).toBe('ai_skipped')
-      expect(result.consolidatedLines).toEqual(result.baselineLines)
+      expect(result.consolidatedLines).toEqual([])
     })
 
     it('baseline_fallback: returns empty consolidatedLines', async () => {
