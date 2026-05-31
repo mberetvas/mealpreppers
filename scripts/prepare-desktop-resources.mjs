@@ -61,15 +61,40 @@ async function download(url, destPath) {
   await pipeline(response.body, createWriteStream(destPath))
 }
 
+function removeTree(path) {
+  if (!existsSync(path)) {
+    return
+  }
+  rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+}
+
+/** Copies Nitro output; dereference avoids Windows EPERM on nested .nitro symlinks. */
 function copyNitroServer() {
   if (!existsSync(join(outputServer, 'index.mjs'))) {
     throw new Error(
       'Missing .output/server/index.mjs. Run `bun run build:desktop:nitro` first.',
     )
   }
-  rmSync(join(resourcesRoot, 'nitro'), { recursive: true, force: true })
+  const nitroRoot = join(resourcesRoot, 'nitro')
+  const stagingDest = join(nitroRoot, '.server-staging')
+
+  removeTree(stagingDest)
+  mkdirSync(dirname(stagingDest), { recursive: true })
+  cpSync(outputServer, stagingDest, {
+    recursive: true,
+    dereference: true,
+    force: true,
+  })
+
+  removeTree(join(nitroRoot, 'server'))
   mkdirSync(dirname(nitroDest), { recursive: true })
-  cpSync(outputServer, nitroDest, { recursive: true })
+  cpSync(stagingDest, nitroDest, {
+    recursive: true,
+    dereference: true,
+    force: true,
+  })
+  removeTree(stagingDest)
+
   console.log(`Copied Nitro server to ${nitroDest}`)
 }
 

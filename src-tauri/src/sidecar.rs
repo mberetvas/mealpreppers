@@ -47,7 +47,7 @@ pub fn should_run_sidecar() -> bool {
   if std::env::var("MEALPREPPER_SIDECAR").is_ok() {
     return true;
   }
-  std::env::var("TAURI_ENV").as_deref() != Ok("dev")
+  !tauri::is_dev()
 }
 
 fn node_executable(resource_dir: &Path) -> PathBuf {

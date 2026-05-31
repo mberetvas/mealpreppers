@@ -1,5 +1,5 @@
 use keyring::Entry;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 const SERVICE: &str = "com.mealprepper.app";
 const OPENROUTER_KEY_USER: &str = "openrouter-api-key";

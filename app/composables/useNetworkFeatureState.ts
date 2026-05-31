@@ -1,6 +1,6 @@
 import { computed, onMounted, onUnmounted, ref, type ComputedRef, type Ref } from 'vue'
 import { isDesktopShell } from '../../utils/desktopRuntime'
-import { invokeDesktopCommand } from '~/utils/tauriDesktop'
+import { invokeDesktopCommand } from '../utils/tauriDesktop'
 
 export interface NetworkFeatureState {
   isOnline: Readonly<Ref<boolean>>
