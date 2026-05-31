@@ -4,10 +4,6 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    /** Bearer secret for POST /api/v1/internal/saved-weekplans/purge-idle-anonymous (cron / batch). */
-    savedWeekplansIdlePurgeSecret: process.env.SAVED_WEEKPLANS_IDLE_PURGE_SECRET,
     /** OpenRouter API key for AI shopping list polish (server-only). */
     openrouterApiKey: process.env.OPENROUTER_API_KEY,
     /** OpenRouter model for shopping list polish (default: deepseek/deepseek-v4-flash). */

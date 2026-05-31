@@ -7,7 +7,7 @@ import { useTraceId } from './01.trace-context'
  * **Request Completion Logging** — emits a structured `http.request_completed` event at INFO
  * for every non-health client→gateway request when the resolved **Log Level** is not `debug`.
  *
- * When the level is `debug`, the **Request Diagnostics Logging** middleware (02) handles
+ * When the level is `debug`, the **Request Diagnostics Logging** middleware (03) handles
  * per-request logging; this middleware is a no-op in that case to avoid double-logging.
  *
  * Includes `method`, `path`, `status_code`, and `latency_ms`, plus any context already bound

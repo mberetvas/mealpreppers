@@ -90,12 +90,12 @@ describe('consolidatedShoppingListRepository', () => {
       insertWeekPlan({
         id: 'plan-1',
         body: makeWeekPlanBody(),
-        ownerUserId: null,
-        anonSessionId: 'sess-1',
+        ownerUserId: 'sess-1',
+        anonSessionId: null,
         consolidatedShoppingList: null,
       })
 
-      const result = await getConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'sess-1' })
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -161,7 +161,7 @@ describe('consolidatedShoppingListRepository', () => {
     })
 
     it('returns not_found for non-existent plan', async () => {
-      const result = await getConsolidatedShoppingList(ctx.db, 'non-existent', { kind: 'anonymous', sessionId: 'sess-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'non-existent', { kind: 'user', userId: 'sess-1' })
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -196,12 +196,12 @@ describe('consolidatedShoppingListRepository', () => {
       insertWeekPlan({
         id: 'plan-1',
         body,
-        ownerUserId: null,
-        anonSessionId: 'sess-1',
+        ownerUserId: 'sess-1',
+        anonSessionId: null,
         consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'sess-1' }, lines)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -224,12 +224,12 @@ describe('consolidatedShoppingListRepository', () => {
       insertWeekPlan({
         id: 'plan-1',
         body,
-        ownerUserId: null,
-        anonSessionId: 'sess-1',
+        ownerUserId: 'sess-1',
+        anonSessionId: null,
         consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'sess-1' }, lines)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -257,7 +257,7 @@ describe('consolidatedShoppingListRepository', () => {
     })
 
     it('rejects save for non-existent plan', async () => {
-      const result = await saveConsolidatedShoppingList(ctx.db, 'non-existent', { kind: 'anonymous', sessionId: 'sess-1' }, makeSavedLines())
+      const result = await saveConsolidatedShoppingList(ctx.db, 'non-existent', { kind: 'user', userId: 'sess-1' }, makeSavedLines())
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -265,17 +265,17 @@ describe('consolidatedShoppingListRepository', () => {
       }
     })
 
-    it('anonymous owner can save their own plan', async () => {
+    it('local owner can save their own plan', async () => {
       const body = makeWeekPlanBody()
       insertWeekPlan({
         id: 'plan-1',
         body,
-        ownerUserId: null,
-        anonSessionId: 'sess-1',
+        ownerUserId: 'sess-1',
+        anonSessionId: null,
         consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, makeSavedLines())
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'sess-1' }, makeSavedLines())
 
       expect(result.ok).toBe(true)
     })

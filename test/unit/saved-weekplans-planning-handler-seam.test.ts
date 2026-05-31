@@ -11,6 +11,13 @@ import { appLogger } from '../../server/utils/logger'
 import listSavedWeekplansHandler from '../../server/api/v1/saved-weekplans/index.get'
 import patchSavedWeekplanHandler from '../../server/api/v1/saved-weekplans/[id].patch'
 
+const LOCAL_USER_ID = '550e8400-e29b-41d4-a716-446655440000'
+
+vi.mock('../../server/services/planning/localPrincipal', () => ({
+  getLocalPlanningUserId: () => LOCAL_USER_ID,
+  backfillLocalPrincipalOwnership: vi.fn(),
+}))
+
 const h3Mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
 }))
@@ -54,19 +61,20 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', async (import
   }
 })
 
-const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
-
-function makeEvent(traceId?: string): H3Event {
+function makeEvent(traceId?: string, planningUserId?: string): H3Event {
   const socket = new Socket()
   const req = new IncomingMessage(socket)
   req.headers = {}
   const res = new ServerResponse(req)
   const event = createEvent(req, res)
+  const context = event.context as Record<string, unknown>
   if (traceId !== undefined) {
-    (event.context as Record<string, unknown>).traceId = traceId
+    context.traceId = traceId
   }
-  event.context.params = { id: 'plan-1' }
-  event.node.req.headers.cookie = `mp_planning_session=${SESSION_UUID}`
+  if (planningUserId !== undefined) {
+    context.planningUserId = planningUserId
+  }
+  context.params = { id: 'plan-1' }
   return event
 }
 
@@ -80,20 +88,20 @@ describe('saved-weekplans handlers via Planning Request Context seam', () => {
     const rows = [{ id: 'w1', name: 'Week', updatedAt: '2026-01-01T00:00:00.000Z' }]
     mocks.listSavedWeekplans.mockResolvedValue({ ok: true, value: rows })
 
-    const event = makeEvent('trace-list')
+    const event = makeEvent('trace-list', LOCAL_USER_ID)
     const out = await listSavedWeekplansHandler(event)
 
     expect(out).toEqual(rows)
     expect(mocks.listSavedWeekplans).toHaveBeenCalledWith(
       {},
-      { kind: 'anonymous', sessionId: SESSION_UUID },
+      { kind: 'user', userId: LOCAL_USER_ID },
     )
   })
 
   it('GET list wraps unexpected failures with Planning 500 and trace-correlated logging', async () => {
     mocks.listSavedWeekplans.mockRejectedValue(new Error('storage blew up'))
 
-    const event = makeEvent('trace-list-bad')
+    const event = makeEvent('trace-list-bad', LOCAL_USER_ID)
     const thrown = await listSavedWeekplansHandler(event).catch(e => e)
 
     expect(thrown).toMatchObject({
@@ -120,7 +128,7 @@ describe('saved-weekplans handlers via Planning Request Context seam', () => {
   it('PATCH wraps unexpected failures from updateSavedWeekplan with Planning 500', async () => {
     mocks.updateSavedWeekplan.mockRejectedValue(new Error('unexpected'))
 
-    const event = makeEvent('trace-patch-bad')
+    const event = makeEvent('trace-patch-bad', LOCAL_USER_ID)
     const thrown = await patchSavedWeekplanHandler(event).catch(e => e)
 
     expect(thrown).toMatchObject({

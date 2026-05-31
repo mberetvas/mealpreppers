@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, count, desc, eq, isNotNull, isNull, lt, ne } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import type { WeekPlanV1, WeekTemplateCreateInput, WeekTemplatePatchInput } from '../../../types/planning'
 import type { AppDb } from '../../db/sqlite'
 import { mealWeekTemplates } from '../../db/schema/planning'
@@ -7,7 +7,6 @@ import type { PlanningPrincipal } from './planningPrincipal'
 import { fail, ok, type PlanningResult } from './planningResult'
 import { interpretSavedWeekplanAccess } from './savedWeekplanAccess'
 import type { WeekTemplateListItem, WeekTemplateRow } from './planningRepository'
-import { anonymousSavedWeekplanIdleCutoffIso } from './anonymousSavedWeekplansIdlePurge'
 import { computeShoppingListFlags, type SavedConsolidatedShoppingListRecord } from '../shopping-list/consolidatedShoppingListRepository'
 
 type WeekTemplateSelectRow = typeof mealWeekTemplates.$inferSelect
@@ -34,23 +33,11 @@ function mapWeekTemplateRow(row: WeekTemplateSelectRow): WeekTemplateRow {
 }
 
 function principalFilter(principal: PlanningPrincipal) {
-  if (principal.kind === 'user') {
-    return and(
-      eq(mealWeekTemplates.ownerUserId, principal.userId),
-      isNull(mealWeekTemplates.anonSessionId),
-    )
-  }
-  return and(
-    eq(mealWeekTemplates.anonSessionId, principal.sessionId),
-    isNull(mealWeekTemplates.ownerUserId),
-  )
+  return eq(mealWeekTemplates.ownerUserId, principal.userId)
 }
 
-function ownerInsertPayload(principal: PlanningPrincipal): { ownerUserId: string | null, anonSessionId: string | null } {
-  if (principal.kind === 'user') {
-    return { ownerUserId: principal.userId, anonSessionId: null }
-  }
-  return { ownerUserId: null, anonSessionId: principal.sessionId }
+function ownerInsertPayload(principal: PlanningPrincipal): { ownerUserId: string, anonSessionId: null } {
+  return { ownerUserId: principal.userId, anonSessionId: null }
 }
 
 function storageError(message: string | undefined, fallback: string) {
@@ -296,102 +283,5 @@ export async function deleteSavedWeekplan(
   }
   catch (error) {
     return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplan could not be deleted.'))
-  }
-}
-
-/** Counts Saved Weekplans still tied to an anonymous session (not yet owned by a user). */
-export async function countAnonymousSavedWeekplansForSession(
-  db: AppDb,
-  sessionId: string,
-): Promise<PlanningResult<number>> {
-  try {
-    const row = db
-      .select({ value: count() })
-      .from(mealWeekTemplates)
-      .where(and(
-        eq(mealWeekTemplates.anonSessionId, sessionId),
-        isNull(mealWeekTemplates.ownerUserId),
-      ))
-      .get()
-
-    return ok(row?.value ?? 0)
-  }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplans could not be counted.'))
-  }
-}
-
-/** Reassigns all anonymous-session Saved Weekplans for `sessionId` to `userId` and clears anon linkage. */
-export async function mergeAnonymousSavedWeekplansToUser(
-  db: AppDb,
-  sessionId: string,
-  userId: string,
-): Promise<PlanningResult<{ moved: number }>> {
-  try {
-    const moved = db
-      .update(mealWeekTemplates)
-      .set({ ownerUserId: userId, anonSessionId: null, updatedAt: nowIso() })
-      .where(and(
-        eq(mealWeekTemplates.anonSessionId, sessionId),
-        isNull(mealWeekTemplates.ownerUserId),
-      ))
-      .returning({ id: mealWeekTemplates.id })
-      .all()
-
-    return ok({ moved: moved.length })
-  }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplans could not be moved to your account.'))
-  }
-}
-
-/** Deletes Saved Weekplans owned only by the anonymous session (hard delete; no anonymous retention). */
-export async function discardAnonymousSavedWeekplansForSession(
-  db: AppDb,
-  sessionId: string,
-): Promise<PlanningResult<{ deleted: number }>> {
-  try {
-    const deleted = db
-      .delete(mealWeekTemplates)
-      .where(and(
-        eq(mealWeekTemplates.anonSessionId, sessionId),
-        isNull(mealWeekTemplates.ownerUserId),
-      ))
-      .returning({ id: mealWeekTemplates.id })
-      .all()
-
-    return ok({ deleted: deleted.length })
-  }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplans could not be discarded.'))
-  }
-}
-
-/**
- * Hard-deletes anonymous-owned saved weekplans whose `updated_at` is older than the idle retention window.
- * Does not touch user-owned rows or legacy rows with both owner columns null.
- */
-export async function purgeAnonymousIdleSavedWeekplans(
-  db: AppDb,
-  options?: { now?: Date },
-): Promise<PlanningResult<{ deleted: number }>> {
-  try {
-    const now = options?.now ?? new Date()
-    const cutoffIso = anonymousSavedWeekplanIdleCutoffIso(now)
-
-    const deleted = db
-      .delete(mealWeekTemplates)
-      .where(and(
-        isNull(mealWeekTemplates.ownerUserId),
-        isNotNull(mealWeekTemplates.anonSessionId),
-        lt(mealWeekTemplates.updatedAt, cutoffIso),
-      ))
-      .returning({ id: mealWeekTemplates.id })
-      .all()
-
-    return ok({ deleted: deleted.length })
-  }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Idle anonymous saved weekplans could not be purged.'))
   }
 }

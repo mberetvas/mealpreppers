@@ -1,5 +1,9 @@
 # Mealprepper
 
+Requires **Node.js 22.x** (aligned with the bundled desktop runtime — see `engines.node` in
+`package.json`). `bun install` runs a native rebuild of `better-sqlite3` automatically; after
+switching Node versions run `bun run rebuild:native`.
+
 ```bash
 bun install          # deps
 bun run dev          # http://localhost:3000

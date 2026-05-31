@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest'
 const SERVER_DIR = resolve(__dirname, '../../server')
 const LOGGER_MODULE = resolve(SERVER_DIR, 'utils/logger.ts')
 const TRACE_MIDDLEWARE = resolve(SERVER_DIR, 'middleware/01.trace-context.ts')
-const DIAGNOSTICS_MIDDLEWARE = resolve(SERVER_DIR, 'middleware/02.request-diagnostics.ts')
+const DIAGNOSTICS_MIDDLEWARE = resolve(SERVER_DIR, 'middleware/03.request-diagnostics.ts')
 const PLANNING_CONTEXT_MODULE = resolve(SERVER_DIR, 'services/planning/planningRequestContext.ts')
 
 /** Recursively collects every `.ts` file under `dir`. */
@@ -97,7 +97,7 @@ describe('Logging V2 compliance — canonical terminology in logger-module doc c
     expect(content).toContain('Request Context Trace ID')
   })
 
-  it('server/middleware/02.request-diagnostics.ts uses Request Diagnostics Logging', () => {
+  it('server/middleware/03.request-diagnostics.ts uses Request Diagnostics Logging', () => {
     const content = readFile(DIAGNOSTICS_MIDDLEWARE)
     expect(content).toContain('Request Diagnostics Logging')
   })

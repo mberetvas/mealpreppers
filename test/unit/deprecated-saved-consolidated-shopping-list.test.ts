@@ -134,15 +134,15 @@ describe('saveConsolidatedShoppingList — rejection when deprecated', () => {
     insertWeekPlan({
       id: 'plan-1',
       body: changedBody,
-      ownerUserId: null,
-      anonSessionId: 'sess-1',
+      ownerUserId: 'sess-1',
+      anonSessionId: null,
       consolidatedShoppingList: existingRecord,
     })
 
     const result = await saveConsolidatedShoppingList(
       ctx.db,
       'plan-1',
-      { kind: 'anonymous', sessionId: 'sess-1' },
+      { kind: 'user', userId: 'sess-1' },
       makeSavedLines(),
     )
 
@@ -160,15 +160,15 @@ describe('saveConsolidatedShoppingList — rejection when deprecated', () => {
     insertWeekPlan({
       id: 'plan-1',
       body,
-      ownerUserId: null,
-      anonSessionId: 'sess-1',
+      ownerUserId: 'sess-1',
+      anonSessionId: null,
       consolidatedShoppingList: null,
     })
 
     const result = await saveConsolidatedShoppingList(
       ctx.db,
       'plan-1',
-      { kind: 'anonymous', sessionId: 'sess-1' },
+      { kind: 'user', userId: 'sess-1' },
       makeSavedLines(),
     )
 
@@ -188,15 +188,15 @@ describe('saveConsolidatedShoppingList — rejection when deprecated', () => {
     insertWeekPlan({
       id: 'plan-1',
       body,
-      ownerUserId: null,
-      anonSessionId: 'sess-1',
+      ownerUserId: 'sess-1',
+      anonSessionId: null,
       consolidatedShoppingList: existingRecord,
     })
 
     const result = await saveConsolidatedShoppingList(
       ctx.db,
       'plan-1',
-      { kind: 'anonymous', sessionId: 'sess-1' },
+      { kind: 'user', userId: 'sess-1' },
       makeSavedLines(),
     )
 

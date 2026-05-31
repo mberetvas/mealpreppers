@@ -290,7 +290,7 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
       if (result.ok) expect(result.value.copied).toBe(false)
     })
 
-    it('anonymous principal does not receive copies scoped to other sessions', async () => {
+    it('local user does not receive copies scoped to other owners', async () => {
       const body = makeWeekPlanBody()
       const fingerprint = computeSourceFingerprint(body)
       const sourceList: SavedConsolidatedShoppingListRecord = {
@@ -299,21 +299,21 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
         confirmedAt: '2026-05-26T10:00:00.000Z',
       }
       insertWeekPlan({
-        id: 'sess-a-plan',
+        id: 'user-a-plan',
         body,
-        ownerUserId: null,
-        anonSessionId: 'sess-a',
+        ownerUserId: 'user-a',
+        anonSessionId: null,
         consolidatedShoppingList: sourceList,
       })
       insertWeekPlan({
-        id: 'sess-b-new',
+        id: 'user-b-new',
         body,
-        ownerUserId: null,
-        anonSessionId: 'sess-b',
+        ownerUserId: 'user-b',
+        anonSessionId: null,
         consolidatedShoppingList: null,
       })
 
-      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'sess-b-new', { kind: 'anonymous', sessionId: 'sess-b' }, fingerprint)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'user-b-new', { kind: 'user', userId: 'user-b' }, fingerprint)
 
       expect(result.ok).toBe(true)
       if (result.ok) expect(result.value.copied).toBe(false)

@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
+use crate::keychain;
+
 const HEALTH_PATH: &str = "/health";
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(60);
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_millis(200);
@@ -103,7 +105,8 @@ fn spawn_nitro(resource_dir: &Path, port: u16, token: &str, data_dir: &Path) -> 
 
   let database_path = data_dir.join("mealprepper.db");
 
-  Command::new(&node)
+  let mut command = Command::new(&node);
+  command
     .arg(&entry)
     .current_dir(server_dir)
     .env("HOST", "127.0.0.1")
@@ -112,7 +115,14 @@ fn spawn_nitro(resource_dir: &Path, port: u16, token: &str, data_dir: &Path) -> 
     .env("NITRO_PORT", port.to_string())
     .env("DESKTOP_TOKEN", token)
     .env("MEALPREPPER_DATA_DIR", data_dir)
-    .env("DATABASE_PATH", &database_path)
+    .env("DATABASE_PATH", &database_path);
+
+  if let Some(api_key) = keychain::read_openrouter_key() {
+    command.env("OPENROUTER_API_KEY", api_key);
+    log::info!("Injected OPENROUTER_API_KEY from keychain into Nitro sidecar environment");
+  }
+
+  command
     .stdin(Stdio::null())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())

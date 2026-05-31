@@ -9,6 +9,12 @@ import {
   withPlanningHandler,
 } from '../../server/services/planning/planningRequestContext'
 
+const LOCAL_USER_ID = '550e8400-e29b-41d4-a716-446655440000'
+
+vi.mock('../../server/services/planning/localPrincipal', () => ({
+  getLocalPlanningUserId: () => LOCAL_USER_ID,
+}))
+
 vi.mock('../../server/utils/logger', () => ({
   appLogger: {
     withTag: vi.fn(() => ({
@@ -21,17 +27,19 @@ vi.mock('../../server/utils/logger', () => ({
   },
 }))
 
-const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
-
-/** Builds a minimal H3Event with optional traceId pre-set on context. */
-function makeEvent(traceId?: string): H3Event {
+/** Builds a minimal H3Event with optional traceId and planningUserId on context. */
+function makeEvent(traceId?: string, planningUserId?: string): H3Event {
   const socket = new Socket()
   const req = new IncomingMessage(socket)
   req.headers = {}
   const res = new ServerResponse(req)
   const event = createEvent(req, res)
+  const context = event.context as Record<string, unknown>
   if (traceId !== undefined) {
-    (event.context as Record<string, unknown>).traceId = traceId
+    context.traceId = traceId
+  }
+  if (planningUserId !== undefined) {
+    context.planningUserId = planningUserId
   }
   return event
 }
@@ -39,50 +47,44 @@ function makeEvent(traceId?: string): H3Event {
 describe('createPlanningRequestContext', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('resolves user principal when auth adapter returns a userId', async () => {
-    const event = makeEvent('trace-abc')
-    const adapter = vi.fn().mockResolvedValue('user-123')
+  it('resolves user principal from middleware context', () => {
+    const event = makeEvent('trace-abc', 'user-123')
 
-    const ctx = await createPlanningRequestContext(event, { tag: 'test', operation: 'op' }, adapter)
+    const ctx = createPlanningRequestContext(event, { tag: 'test', operation: 'op' })
 
     expect(ctx.principal).toEqual({ kind: 'user', userId: 'user-123' })
     expect(ctx.principalKind).toBe('user')
   })
 
-  it('resolves anonymous principal when auth adapter returns null', async () => {
+  it('falls back to the local install user id when context is unset', () => {
     const event = makeEvent('trace-abc')
-    event.node.req.headers.cookie = `mp_planning_session=${SESSION_UUID}`
-    const adapter = vi.fn().mockResolvedValue(null)
 
-    const ctx = await createPlanningRequestContext(event, { tag: 'test', operation: 'op' }, adapter)
+    const ctx = createPlanningRequestContext(event, { tag: 'test', operation: 'op' })
 
-    expect(ctx.principal).toEqual({ kind: 'anonymous', sessionId: SESSION_UUID })
-    expect(ctx.principalKind).toBe('anonymous')
+    expect(ctx.principal).toEqual({ kind: 'user', userId: LOCAL_USER_ID })
+    expect(ctx.principalKind).toBe('user')
   })
 
-  it('exposes the Request Context Trace ID from the event', async () => {
-    const event = makeEvent('trace-xyz')
-    const adapter = vi.fn().mockResolvedValue('user-456')
+  it('exposes the Request Context Trace ID from the event', () => {
+    const event = makeEvent('trace-xyz', 'user-456')
 
-    const ctx = await createPlanningRequestContext(event, { tag: 'test', operation: 'op' }, adapter)
+    const ctx = createPlanningRequestContext(event, { tag: 'test', operation: 'op' })
 
     expect(ctx.traceId).toBe('trace-xyz')
   })
 
-  it('exposes empty string when no traceId is set on event context', async () => {
-    const event = makeEvent()
-    const adapter = vi.fn().mockResolvedValue('user-789')
+  it('exposes empty string when no traceId is set on event context', () => {
+    const event = makeEvent(undefined, 'user-789')
 
-    const ctx = await createPlanningRequestContext(event, { tag: 'test', operation: 'op' }, adapter)
+    const ctx = createPlanningRequestContext(event, { tag: 'test', operation: 'op' })
 
     expect(ctx.traceId).toBe('')
   })
 
-  it('provides a StructuredLogger bound to the handler tag', async () => {
-    const event = makeEvent('trace-abc')
-    const adapter = vi.fn().mockResolvedValue('user-123')
+  it('provides a StructuredLogger bound to the handler tag', () => {
+    const event = makeEvent('trace-abc', 'user-123')
 
-    const ctx = await createPlanningRequestContext(event, { tag: 'my-handler', operation: 'op' }, adapter)
+    const ctx = createPlanningRequestContext(event, { tag: 'my-handler', operation: 'op' })
 
     expect(vi.mocked(appLogger.withTag)).toHaveBeenCalledWith('my-handler')
     expect(typeof ctx.logger.info).toBe('function')
@@ -94,11 +96,10 @@ describe('withPlanningHandler', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('passes PlanningRequestContext alongside the event to the handler', async () => {
-    const event = makeEvent('trace-abc')
-    const adapter = vi.fn().mockResolvedValue('user-123')
+    const event = makeEvent('trace-abc', 'user-123')
     const fn = vi.fn().mockResolvedValue({ id: 'result-1' })
 
-    const result = await withPlanningHandler({ tag: 'test', operation: 'op' }, fn, adapter)(event)
+    const result = await withPlanningHandler({ tag: 'test', operation: 'op' }, fn)(event)
 
     expect(result).toEqual({ id: 'result-1' })
     const [calledEvent, ctx] = fn.mock.calls[0] as [H3Event, ReturnType<typeof fn.mock.calls[0][1]>]
@@ -111,24 +112,20 @@ describe('withPlanningHandler', () => {
 
   it('passes expected H3 errors through unchanged', async () => {
     const event = makeEvent('trace-abc')
-    event.node.req.headers.cookie = `mp_planning_session=${SESSION_UUID}`
-    const adapter = vi.fn().mockResolvedValue(null)
     const h3Error = { statusCode: 404, statusMessage: 'Not found' }
     const fn = vi.fn().mockRejectedValue(h3Error)
 
     await expect(
-      withPlanningHandler({ tag: 'test', operation: 'op' }, fn, adapter)(event),
+      withPlanningHandler({ tag: 'test', operation: 'op' }, fn)(event),
     ).rejects.toBe(h3Error)
   })
 
   it('wraps unexpected failures as Planning 500 with an error identifier', async () => {
     const event = makeEvent('trace-unexpected')
-    event.node.req.headers.cookie = `mp_planning_session=${SESSION_UUID}`
-    const adapter = vi.fn().mockResolvedValue(null)
     const fn = vi.fn().mockRejectedValue(new Error('db exploded'))
 
     const thrown = await withPlanningHandler(
-      { tag: 'test', operation: 'op' }, fn, adapter,
+      { tag: 'test', operation: 'op' }, fn,
     )(event).catch(e => e)
 
     expect(thrown).toMatchObject({
@@ -142,12 +139,10 @@ describe('withPlanningHandler', () => {
 
   it('logs unexpected failures with trace correlation and the error identifier', async () => {
     const event = makeEvent('trace-unexpected')
-    event.node.req.headers.cookie = `mp_planning_session=${SESSION_UUID}`
-    const adapter = vi.fn().mockResolvedValue(null)
     const fn = vi.fn().mockRejectedValue(new Error('db exploded'))
 
     const thrown = await withPlanningHandler(
-      { tag: 'test', operation: 'op' }, fn, adapter,
+      { tag: 'test', operation: 'op' }, fn,
     )(event).catch(e => e)
 
     const taggedLogger = vi.mocked(appLogger.withTag).mock.results[0]?.value as {

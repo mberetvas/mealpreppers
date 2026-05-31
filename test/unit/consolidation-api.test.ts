@@ -40,9 +40,6 @@ vi.mock('../../server/utils/logger', () => ({
 
 const runtimeConfigMock = vi.hoisted(() => ({
   openrouterApiKey: '',
-  supabaseUrl: 'http://localhost',
-  supabaseServiceRoleKey: 'test-key',
-  savedWeekplansIdlePurgeSecret: '',
 }))
 
 vi.stubGlobal('useRuntimeConfig', () => runtimeConfigMock)

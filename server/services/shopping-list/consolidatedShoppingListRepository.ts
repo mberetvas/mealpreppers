@@ -172,16 +172,7 @@ export interface CopyOnMatchResult {
  * - Returns { copied: true, copiedList } on success, { copied: false } when no match.
  */
 function principalFilterForCopy(principal: PlanningPrincipal) {
-  if (principal.kind === 'user') {
-    return and(
-      eq(mealWeekTemplates.ownerUserId, principal.userId),
-      isNull(mealWeekTemplates.anonSessionId),
-    )
-  }
-  return and(
-    eq(mealWeekTemplates.anonSessionId, principal.sessionId),
-    isNull(mealWeekTemplates.ownerUserId),
-  )
+  return eq(mealWeekTemplates.ownerUserId, principal.userId)
 }
 
 export async function copyConsolidatedListFromMatchingPlan(

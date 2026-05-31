@@ -21,9 +21,9 @@ bun install
 bun run desktop:dev
 ```
 
-Runs `tauri dev` → `bun run dev` (Nuxt on `http://localhost:3000`) → Tauri WebView. Same
-`.env` as local web development (Supabase, OpenRouter, etc.). No bundled sidecar or desktop
-token in this loop.
+Runs `tauri dev` → `bun run dev` (Nuxt on `http://localhost:3000`) → Tauri WebView. Uses
+local SQLite (`.data/mealprepper.db` by default) and optional `.env` OpenRouter key. No bundled
+sidecar or desktop token in this loop.
 
 ## Dev loop B — bundled sidecar (integration)
 

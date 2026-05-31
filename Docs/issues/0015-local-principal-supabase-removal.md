@@ -13,11 +13,11 @@ Replace hosted identity with a **single implicit local user**: stable install-sc
 
 ## Acceptance criteria
 
-- [ ] Nitro middleware resolves a fixed local `{ kind: 'user', userId }` principal; no Bearer or anonymous cookie paths remain
-- [ ] Removed: `planningSupabaseAuth`, `usePlanningSupabaseAccessToken`, `anonymous-merge*`, `AnonymousSavedWeekplansHandoffModal`, `server/api/v1/internal/**`, purge services/tests, audit/legacy Supabase scripts
-- [ ] `supabase/` directory removed; `docs/archive/supabase-schema/` retained; no `@supabase/supabase-js` in dependencies
-- [ ] `.env.example` drops `SUPABASE_*` and purge secrets; documents `DATABASE_PATH` and desktop token dev notes
-- [ ] CONTEXT.md no longer describes anonymous idle purge/merge as active product behavior
+- [x] Nitro middleware resolves a fixed local `{ kind: 'user', userId }` principal; no Bearer or anonymous cookie paths remain
+- [x] Removed: `planningSupabaseAuth`, `usePlanningSupabaseAccessToken`, `anonymous-merge*`, `AnonymousSavedWeekplansHandoffModal`, `server/api/v1/internal/**`, purge services/tests, audit/legacy Supabase scripts
+- [x] `supabase/` directory removed; `docs/archive/supabase-schema/` retained; no `@supabase/supabase-js` in dependencies
+- [x] `.env.example` drops `SUPABASE_*` and purge secrets; documents `DATABASE_PATH` and desktop token dev notes
+- [x] CONTEXT.md no longer describes anonymous idle purge/merge as active product behavior
 
 ## Blocked by
 

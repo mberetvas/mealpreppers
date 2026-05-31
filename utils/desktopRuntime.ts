@@ -50,3 +50,11 @@ export function shouldAttachDesktopToken(requestUrl: string, bootstrap?: Mealpre
 
 /** Header name for loopback API authentication. */
 export const DESKTOP_TOKEN_HEADER = 'x-desktop-token'
+
+/** Whether the UI runs inside the Tauri desktop shell (loop A or B). */
+export function isDesktopShell(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return '__TAURI__' in window || readDesktopBootstrap() !== undefined
+}
