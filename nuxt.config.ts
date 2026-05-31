@@ -25,6 +25,9 @@ export default defineNuxtConfig({
   ],
 
   nitro: {
+    ...(process.env.NITRO_DESKTOP_OUTPUT_DIR
+      ? { output: { dir: process.env.NITRO_DESKTOP_OUTPUT_DIR } }
+      : {}),
     externals: {
       traceInclude: ['better-sqlite3', 'bindings'],
     },

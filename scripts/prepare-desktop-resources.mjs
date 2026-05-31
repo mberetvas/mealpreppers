@@ -16,7 +16,6 @@ import { pipeline } from 'node:stream/promises'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
-const outputServer = join(root, '.output', 'server')
 const resourcesRoot = join(root, 'src-tauri', 'resources')
 const nitroDest = join(resourcesRoot, 'nitro', 'server')
 
@@ -61,41 +60,14 @@ async function download(url, destPath) {
   await pipeline(response.body, createWriteStream(destPath))
 }
 
-function removeTree(path) {
-  if (!existsSync(path)) {
-    return
-  }
-  rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
-}
-
-/** Copies Nitro output; dereference avoids Windows EPERM on nested .nitro symlinks. */
-function copyNitroServer() {
-  if (!existsSync(join(outputServer, 'index.mjs'))) {
+/** Nitro is built in-place by build:desktop:nitro (see NITRO_DESKTOP_OUTPUT_DIR). */
+function verifyNitroServer() {
+  if (!existsSync(join(nitroDest, 'index.mjs'))) {
     throw new Error(
-      'Missing .output/server/index.mjs. Run `bun run build:desktop:nitro` first.',
+      'Missing src-tauri/resources/nitro/server/index.mjs. Run `bun run build:desktop:nitro` first.',
     )
   }
-  const nitroRoot = join(resourcesRoot, 'nitro')
-  const stagingDest = join(nitroRoot, '.server-staging')
-
-  removeTree(stagingDest)
-  mkdirSync(dirname(stagingDest), { recursive: true })
-  cpSync(outputServer, stagingDest, {
-    recursive: true,
-    dereference: true,
-    force: true,
-  })
-
-  removeTree(join(nitroRoot, 'server'))
-  mkdirSync(dirname(nitroDest), { recursive: true })
-  cpSync(stagingDest, nitroDest, {
-    recursive: true,
-    dereference: true,
-    force: true,
-  })
-  removeTree(stagingDest)
-
-  console.log(`Copied Nitro server to ${nitroDest}`)
+  console.log(`Nitro server ready at ${nitroDest}`)
 }
 
 async function ensureNodeRuntime() {
@@ -144,7 +116,7 @@ async function ensureNodeRuntime() {
 }
 
 async function main() {
-  copyNitroServer()
+  verifyNitroServer()
   await ensureNodeRuntime()
 }
 

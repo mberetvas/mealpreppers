@@ -3,18 +3,31 @@
  * Builds Nuxt with the Nitro node-server preset for the Tauri sidecar.
  */
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
-const outputServer = join(repoRoot, '.output', 'server')
+/** Build in-place to avoid copying Nitro's junction-heavy node_modules on Windows. */
+const nitroOutputDir = join(repoRoot, 'src-tauri', 'resources', 'nitro')
+const outputServer = join(nitroOutputDir, 'server')
 const migrationsSrc = join(repoRoot, 'server', 'db', 'migrations')
 const migrationsDest = join(outputServer, 'db', 'migrations')
 
+for (const sub of ['server', 'public']) {
+  const target = join(nitroOutputDir, sub)
+  if (existsSync(target)) {
+    rmSync(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+  }
+}
+
 const result = spawnSync('bun', ['x', 'nuxt', 'build'], {
   cwd: repoRoot,
-  env: { ...process.env, NITRO_PRESET: 'node-server' },
+  env: {
+    ...process.env,
+    NITRO_PRESET: 'node-server',
+    NITRO_DESKTOP_OUTPUT_DIR: nitroOutputDir,
+  },
   stdio: 'inherit',
   shell: process.platform === 'win32',
 })

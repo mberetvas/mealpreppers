@@ -52,8 +52,9 @@ bun run desktop:build
 bun run desktop:pack
 ```
 
-`build:desktop` runs `NITRO_PRESET=node-server` Nuxt build, copies `.output/server` into
-`src-tauri/resources/nitro/server`, downloads Node **22.14.0** into
+`build:desktop` runs `NITRO_PRESET=node-server` Nuxt build into
+`src-tauri/resources/nitro/` (in-place; avoids copying junction-heavy `node_modules` on
+Windows), downloads Node **22.14.0** into
 `src-tauri/resources/node/`, then `tauri build` bundles resources and compiles Rust.
 
 The packaged app:
