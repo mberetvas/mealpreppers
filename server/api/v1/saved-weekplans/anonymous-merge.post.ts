@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import { clearAnonymousPlanningSessionCookie, readAnonymousPlanningSessionCookie } from '../../../services/planning/planningPrincipal'
 import { resolveSupabaseUserIdFromBearer } from '../../../services/planning/planningSupabaseAuth'
@@ -40,11 +40,11 @@ export default defineEventHandler(async (event) => {
       return parsed.data.action === 'move' ? { moved: 0 } : { deleted: 0 }
     }
 
-    const supabase = getSupabaseServerClient()
+    const db = getDb()
     const log = useStructuredLogger(appLogger.withTag('saved-weekplans'), useTraceId(event))
 
     if (parsed.data.action === 'move') {
-      const result = await mergeAnonymousSavedWeekplansToUser(supabase, sessionId, userId)
+      const result = await mergeAnonymousSavedWeekplansToUser(db, sessionId, userId)
       if (!result.ok) {
         throw createError(toPlanningHttpError(result.error))
       }
@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
       return { moved: result.value.moved }
     }
 
-    const result = await discardAnonymousSavedWeekplansForSession(supabase, sessionId)
+    const result = await discardAnonymousSavedWeekplansForSession(db, sessionId)
     if (!result.ok) {
       throw createError(toPlanningHttpError(result.error))
     }

@@ -1,4 +1,4 @@
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import { readAnonymousPlanningSessionCookie } from '../../../services/planning/planningPrincipal'
 import { resolveSupabaseUserIdFromBearer } from '../../../services/planning/planningSupabaseAuth'
@@ -18,8 +18,8 @@ export default defineEventHandler(async (event) => {
       return { count: 0 }
     }
 
-    const supabase = getSupabaseServerClient()
-    const result = await countAnonymousSavedWeekplansForSession(supabase, sessionId)
+    const db = getDb()
+    const result = await countAnonymousSavedWeekplansForSession(db, sessionId)
     if (!result.ok) {
       throw createError(toPlanningHttpError(result.error))
     }

@@ -3,7 +3,6 @@
  * AI success always returns pending_review; fallback uses exact merge only.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../server/utils/structuredLogger'
 import type { ShoppingListPolishPort } from '../../server/services/shopping-list/polishPort'
 import type { PlanningPrincipal } from '../../server/services/planning/planningPrincipal'
@@ -20,6 +19,10 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', () => ({
 
 vi.mock('../../server/services/recipe-catalog/recipeRepository', () => ({
   listRecipes: mocks.listRecipes,
+}))
+
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: vi.fn(() => ({})),
 }))
 
 const PLAN_ID = 'plan-harness-test'
@@ -115,7 +118,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -140,7 +142,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -169,7 +170,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -192,7 +192,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -229,7 +228,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -254,7 +252,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -278,7 +275,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -302,7 +298,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -346,7 +341,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -360,7 +354,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
 
     it('returns empty consolidatedLines when AI is skipped', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -380,7 +373,6 @@ describe('consolidation service with harness validation (AI-first)', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,

@@ -1,16 +1,19 @@
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import * as recipeCatalogSchema from './schema/recipeCatalog'
+import * as planningSchema from './schema/planning'
 import { resolveDatabasePath } from './paths'
 import { runMigrations } from './migrate'
 
-const schema = { ...recipeCatalogSchema }
+const schema = { ...recipeCatalogSchema, ...planningSchema }
 
-export type RecipeCatalogDb = BetterSQLite3Database<typeof recipeCatalogSchema>
+export type AppDb = BetterSQLite3Database<typeof schema>
+/** @deprecated Use `AppDb` — alias kept for recipe-catalog call sites. */
+export type RecipeCatalogDb = AppDb
 
 interface DbHandle {
   sqlite: Database.Database
-  db: RecipeCatalogDb
+  db: AppDb
 }
 
 let handle: DbHandle | null = null
@@ -30,8 +33,8 @@ export function openRecipeCatalogDatabase(databasePath: string): DbHandle {
   return { sqlite, db }
 }
 
-/** Shared Drizzle DB for recipe catalog (and migrations on first open). */
-export function getDb(): RecipeCatalogDb {
+/** Shared Drizzle DB (recipe catalog, planning, migrations on first open). */
+export function getDb(): AppDb {
   if (!handle) {
     handle = openRecipeCatalogDatabase(resolveDatabasePath())
   }
@@ -51,7 +54,7 @@ export function resetDbForTests(): void {
 }
 
 /** Opens an isolated DB at `databasePath` (tests). */
-export function openTestDb(databasePath: string): RecipeCatalogDb {
+export function openTestDb(databasePath: string): AppDb {
   testHandle = openRecipeCatalogDatabase(databasePath)
   return testHandle.db
 }

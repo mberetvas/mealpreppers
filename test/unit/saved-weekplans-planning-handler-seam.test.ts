@@ -38,11 +38,11 @@ vi.mock('../../server/utils/logger', () => ({
 const mocks = vi.hoisted(() => ({
   listSavedWeekplans: vi.fn(),
   updateSavedWeekplan: vi.fn(),
-  getSupabaseServerClient: vi.fn(() => ({})),
+  getDb: vi.fn(() => ({})),
 }))
 
-vi.mock('../../server/db/supabaseClient', () => ({
-  getSupabaseServerClient: mocks.getSupabaseServerClient,
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: mocks.getDb,
 }))
 
 vi.mock('../../server/services/planning/savedWeekplansRepository', async (importOriginal) => {

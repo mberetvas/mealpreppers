@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import { withPlanningHandler } from '../../../services/planning/planningRequestContext'
 import { deleteSavedWeekplan } from '../../../services/planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../../utils/planningErrors'
@@ -13,7 +13,7 @@ export default defineEventHandler(
         throw createError({ statusCode: 400, statusMessage: 'Saved weekplan id is required.' })
       }
 
-      const result = await deleteSavedWeekplan(getSupabaseServerClient(), id, ctx.principal)
+      const result = await deleteSavedWeekplan(getDb(), id, ctx.principal)
       if (!result.ok) {
         throw createError(toPlanningHttpError(result.error))
       }

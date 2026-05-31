@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../utils/structuredLogger'
 import type { PlanningPrincipal } from '../planning/planningPrincipal'
 import type { MergedLine, RecipeProvenance } from './exactMerge'
@@ -38,7 +37,6 @@ export interface ConsolidationResult {
 }
 
 export interface ConsolidationDeps {
-  supabaseClient: SupabaseClient
   principal: PlanningPrincipal
   logger: StructuredLogger
   polishPort: ShoppingListPolishPort | null
@@ -55,11 +53,11 @@ export async function consolidateShoppingList(
   deps: ConsolidationDeps,
 ): Promise<ConsolidationResult> {
   const startTime = Date.now()
-  const { supabaseClient, principal, logger, polishPort, openrouterApiKey } = deps
+  const { principal, logger, polishPort, openrouterApiKey } = deps
 
   logger.info('shopping_list.consolidate_start', { planId })
 
-  const planResult = await getSavedWeekplanById(supabaseClient, planId, principal)
+  const planResult = await getSavedWeekplanById(getDb(), planId, principal)
   if (!planResult.ok) {
     throw createError(toPlanningHttpError(planResult.error))
   }

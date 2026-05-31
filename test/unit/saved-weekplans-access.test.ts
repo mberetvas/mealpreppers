@@ -1,8 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { emptyWeekPlan } from '../../utils/weekPlan'
+import { describe, expect, it } from 'vitest'
 import { interpretSavedWeekplanAccess } from '../../server/services/planning/savedWeekplanAccess'
-import { updateSavedWeekplan } from '../../server/services/planning/savedWeekplansRepository'
 
 describe('interpretSavedWeekplanAccess', () => {
   it('treats both-null owner columns as legacy unowned', () => {
@@ -41,47 +38,4 @@ describe('interpretSavedWeekplanAccess', () => {
   })
 })
 
-describe('updateSavedWeekplan cross-owner', () => {
-  it('returns forbidden without mutating when row belongs to another anonymous session', async () => {
-    const body = emptyWeekPlan()
-    const existingRow = {
-      id: '00000000-0000-4000-8000-000000000001',
-      name: 'Other',
-      body,
-      created_at: '2026-01-01T00:00:00.000Z',
-      updated_at: '2026-01-01T00:00:00.000Z',
-      owner_user_id: null,
-      anon_session_id: 'their-session',
-    }
-
-    const updateChain = vi.fn()
-
-    const client = {
-      from() {
-        return {
-          select() {
-            return {
-              eq() {
-                return {
-                  maybeSingle: async () => ({ data: existingRow, error: null }),
-                }
-              },
-            }
-          },
-          update: updateChain,
-        }
-      },
-    } as unknown as SupabaseClient
-
-    const result = await updateSavedWeekplan(
-      client,
-      existingRow.id,
-      { kind: 'anonymous', sessionId: 'my-session' },
-      { name: 'Renamed' },
-    )
-
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.kind).toBe('forbidden')
-    expect(updateChain).not.toHaveBeenCalled()
-  })
-})
+/** Cross-owner update behavior is covered in `planning-sqlite-repository.test.ts`. */

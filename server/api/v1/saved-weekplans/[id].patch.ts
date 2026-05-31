@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import {
   assertRecipeIdsExist,
   collectRecipeIdsFromWeekPlan,
@@ -23,15 +23,15 @@ export default defineEventHandler(
         throw createError({ statusCode: 400, statusMessage: 'Invalid saved weekplan patch.', data: parsed.error.flatten() })
       }
 
-      const supabase = getSupabaseServerClient()
+      const db = getDb()
       if (parsed.data.body) {
-        const recipeCheck = await assertRecipeIdsExist(supabase, collectRecipeIdsFromWeekPlan(parsed.data.body))
+        const recipeCheck = await assertRecipeIdsExist(db, collectRecipeIdsFromWeekPlan(parsed.data.body))
         if (!recipeCheck.ok) {
           throw createError(toPlanningHttpError(recipeCheck.error))
         }
       }
 
-      const result = await updateSavedWeekplan(supabase, id, ctx.principal, parsed.data)
+      const result = await updateSavedWeekplan(db, id, ctx.principal, parsed.data)
       if (!result.ok) {
         throw createError(toPlanningHttpError(result.error))
       }

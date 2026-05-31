@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createError, defineEventHandler, getRequestHeader } from 'h3'
-import { getSupabaseServerClient } from '../../../../db/supabaseClient'
+import { getDb } from '../../../../db/sqlite'
 import { useTraceId } from '../../../../middleware/01.trace-context'
 import {
   ANONYMOUS_SAVED_WEEKPLAN_IDLE_RETENTION_DAYS,
@@ -52,8 +52,8 @@ export default defineEventHandler(async (event) => {
       cutoff_at: cutoffIso,
     })
 
-    const supabase = getSupabaseServerClient()
-    const result = await purgeAnonymousIdleSavedWeekplans(supabase, { now })
+    const db = getDb()
+    const result = await purgeAnonymousIdleSavedWeekplans(db, { now })
 
     if (!result.ok) {
       slog.error('planning.anonymous_idle_purge_failed', {

@@ -36,3 +36,6 @@ export function useRecipeCatalogTestDb(): RecipeCatalogTestContext {
 
   return ctx
 }
+
+/** Alias for tests that exercise planning + recipe catalog on the same SQLite file. */
+export const useAppTestDb = useRecipeCatalogTestDb

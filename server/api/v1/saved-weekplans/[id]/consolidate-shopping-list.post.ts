@@ -1,5 +1,4 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
-import { getSupabaseServerClient } from '../../../../db/supabaseClient'
 import { withPlanningHandler } from '../../../../services/planning/planningRequestContext'
 import { consolidateShoppingList } from '../../../../services/shopping-list/consolidationService'
 import { createShoppingListPolishChain, LangChainShoppingListPolishPort } from '../../../../services/shopping-list/polishChainFactory'
@@ -33,7 +32,6 @@ export default defineEventHandler(
       }
 
       const result = await consolidateShoppingList(id, {
-        supabaseClient: getSupabaseServerClient(),
         principal: ctx.principal,
         logger: ctx.logger,
         polishPort,

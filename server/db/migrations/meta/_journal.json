@@ -8,6 +8,13 @@
       "when": 1780256247638,
       "tag": "0000_recipe_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780256986987,
+      "tag": "0001_planning",
+      "breakpoints": true
     }
   ]
 }

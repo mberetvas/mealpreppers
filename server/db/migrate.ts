@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type * as recipeCatalogSchema from './schema/recipeCatalog'
+import type * as planningSchema from './schema/planning'
+
+type AppSchema = typeof recipeCatalogSchema & typeof planningSchema
 
 function resolveMigrationsFolder(): string {
   const candidates = [
@@ -22,6 +25,6 @@ function resolveMigrationsFolder(): string {
 }
 
 /** Applies pending Drizzle migrations; must complete before serving API traffic. */
-export function runMigrations(db: BetterSQLite3Database<typeof recipeCatalogSchema>): void {
+export function runMigrations(db: BetterSQLite3Database<AppSchema>): void {
   migrate(db, { migrationsFolder: resolveMigrationsFolder() })
 }

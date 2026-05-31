@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import type { WeekPlanV1 } from '../../../types/planning'
+import type { AppDb } from '../../db/sqlite'
+import { mealWeekTemplates } from '../../db/schema/planning'
 import type { PlanningPrincipal } from '../planning/planningPrincipal'
 import type { PlanningResult } from '../planning/planningResult'
 import { fail, ok } from '../planning/planningResult'
@@ -150,14 +153,6 @@ export interface CopyOnMatchResult {
   copiedList?: SavedConsolidatedShoppingListRecord
 }
 
-interface WeekTemplateDbRowForCopy {
-  id: string
-  body: WeekPlanV1
-  consolidated_shopping_list: SavedConsolidatedShoppingListRecord | null
-  owner_user_id: string | null
-  anon_session_id: string | null
-}
-
 /**
  * Called after a new plan is created. Looks up whether another plan owned by the same
  * principal has a valid confirmed shopping list whose fingerprint matches `fingerprint`
@@ -171,62 +166,70 @@ interface WeekTemplateDbRowForCopy {
  * - Tie-break: source with the highest `confirmedAt` is used.
  * - Returns { copied: true, copiedList } on success, { copied: false } when no match.
  */
+function principalFilterForCopy(principal: PlanningPrincipal) {
+  if (principal.kind === 'user') {
+    return and(
+      eq(mealWeekTemplates.ownerUserId, principal.userId),
+      isNull(mealWeekTemplates.anonSessionId),
+    )
+  }
+  return and(
+    eq(mealWeekTemplates.anonSessionId, principal.sessionId),
+    isNull(mealWeekTemplates.ownerUserId),
+  )
+}
+
 export async function copyConsolidatedListFromMatchingPlan(
-  client: SupabaseClient,
+  db: AppDb,
   newPlanId: string,
   principal: PlanningPrincipal,
   fingerprint: string,
 ): Promise<PlanningResult<CopyOnMatchResult>> {
-  let q = client
-    .from('meal_week_templates')
-    .select('id, body, consolidated_shopping_list, owner_user_id, anon_session_id')
+  try {
+    const rows = db
+      .select({
+        id: mealWeekTemplates.id,
+        body: mealWeekTemplates.body,
+        consolidatedShoppingList: mealWeekTemplates.consolidatedShoppingList,
+      })
+      .from(mealWeekTemplates)
+      .where(and(
+        principalFilterForCopy(principal),
+        isNotNull(mealWeekTemplates.consolidatedShoppingList),
+        ne(mealWeekTemplates.id, newPlanId),
+      ))
+      .all()
 
-  if (principal.kind === 'user') {
-    q = q.eq('owner_user_id', principal.userId).is('anon_session_id', null)
+    const validMatches = rows.filter((row) => {
+      const list = row.consolidatedShoppingList
+      if (!list) return false
+      if (list.sourceFingerprint !== fingerprint) return false
+      return computeSourceFingerprint(row.body) === fingerprint
+    })
+
+    if (validMatches.length === 0) {
+      return ok({ copied: false })
+    }
+
+    validMatches.sort((a, b) =>
+      b.consolidatedShoppingList!.confirmedAt.localeCompare(a.consolidatedShoppingList!.confirmedAt),
+    )
+
+    const listToCopy = validMatches[0]!.consolidatedShoppingList!
+
+    db.update(mealWeekTemplates)
+      .set({ consolidatedShoppingList: listToCopy })
+      .where(eq(mealWeekTemplates.id, newPlanId))
+      .run()
+
+    return ok({ copied: true, copiedList: listToCopy })
   }
-  else {
-    q = q.eq('anon_session_id', principal.sessionId).is('owner_user_id', null)
+  catch (error) {
+    return fail(storageError(
+      error instanceof Error ? error.message : undefined,
+      'Could not look up matching plans for copy-on-match.',
+    ))
   }
-
-  q = q.not('consolidated_shopping_list', 'is', null).neq('id', newPlanId)
-
-  const { data, error } = await q
-
-  if (error) {
-    return fail(storageError(error.message, 'Could not look up matching plans for copy-on-match.'))
-  }
-
-  const rows = (data ?? []) as WeekTemplateDbRowForCopy[]
-
-  const validMatches = rows.filter((row) => {
-    const list = row.consolidated_shopping_list
-    if (!list) return false
-    if (list.sourceFingerprint !== fingerprint) return false
-    return computeSourceFingerprint(row.body) === fingerprint
-  })
-
-  if (validMatches.length === 0) {
-    return ok({ copied: false })
-  }
-
-  validMatches.sort((a, b) =>
-    b.consolidated_shopping_list!.confirmedAt.localeCompare(a.consolidated_shopping_list!.confirmedAt),
-  )
-
-  const listToCopy = validMatches[0]!.consolidated_shopping_list!
-
-  const { error: updateError } = await client
-    .from('meal_week_templates')
-    .update({ consolidated_shopping_list: listToCopy })
-    .eq('id', newPlanId)
-    .select('id')
-    .single()
-
-  if (updateError) {
-    return fail(storageError(updateError.message, 'Could not write copied shopping list.'))
-  }
-
-  return ok({ copied: true, copiedList: listToCopy })
 }
 
 /** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. Rejects if existing list is deprecated. */
