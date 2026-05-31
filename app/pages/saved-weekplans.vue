@@ -126,6 +126,15 @@ function formatUpdatedAt(iso: string): string {
 }
 
 const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
+
+const previewPlan = ref<{ id: string, hasSavedShoppingList: boolean, shoppingListDeprecated: boolean } | null>(null)
+const previewOpen = ref(false)
+
+/** Opens the shopping list preview modal for the given plan card. */
+function openPreview(item: SavedWeekplanListItem): void {
+  previewPlan.value = { id: item.id, hasSavedShoppingList: item.hasSavedShoppingList, shoppingListDeprecated: item.shoppingListDeprecated }
+  previewOpen.value = true
+}
 </script>
 
 <template>
@@ -250,6 +259,11 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
           <p class="mt-2 text-sm text-atelier-description">
             Updated {{ formatUpdatedAt(item.updatedAt) }}
           </p>
+          <ShoppingListWeekplanConsolidatedListStatus
+            :has-saved-shopping-list="item.hasSavedShoppingList"
+            :shopping-list-deprecated="item.shoppingListDeprecated"
+            class="mt-2"
+          />
         </div>
         <div class="flex flex-wrap items-center justify-end gap-2 sm:shrink-0">
           <button
@@ -267,6 +281,15 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
           >
             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">shopping_cart</span>
           </NuxtLink>
+          <button
+            type="button"
+            data-testid="view-shopping-list-btn"
+            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-atelier-neutral-action transition hover:bg-atelier-chip hover:text-atelier-heading"
+            :aria-label="`View shopping list preview for ${item.name}`"
+            @click="openPreview(item)"
+          >
+            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">preview</span>
+          </button>
           <button
             type="button"
             class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-atelier-neutral-action transition hover:bg-error-container hover:text-atelier-error-foreground"
@@ -330,5 +353,13 @@ const hasPlans = computed(() => (rawList.value?.length ?? 0) > 0)
         </div>
       </div>
     </Teleport>
+
+    <ShoppingListConsolidatedShoppingListPreview
+      v-if="previewPlan"
+      v-model:open="previewOpen"
+      :plan-id="previewPlan.id"
+      :has-saved-shopping-list="previewPlan.hasSavedShoppingList"
+      :shopping-list-deprecated="previewPlan.shoppingListDeprecated"
+    />
   </div>
 </template>

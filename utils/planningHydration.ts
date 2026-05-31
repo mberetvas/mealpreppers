@@ -6,6 +6,10 @@ type PlannerWeekRowOk = {
   id: string
   name: string
   body: WeekPlanV1
+  /** True when a consolidated shopping list row exists for this plan. */
+  hasSavedShoppingList: boolean
+  /** True when the saved list's source fingerprint no longer matches the current plan body. */
+  shoppingListDeprecated: boolean
 }
 
 /** Loads a week plan row for the planner via principal-scoped Saved Weekplans. */
@@ -18,8 +22,15 @@ export async function fetchSavedWeekplanForPlanner(
     return { ok: false }
   }
   try {
-    const row = await fetcher<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/saved-weekplans/${tid}`)
-    return { ok: true, id: row.id, name: row.name, body: row.body }
+    const row = await fetcher<{ id: string, name: string, body: WeekPlanV1, hasSavedShoppingList: boolean, shoppingListDeprecated: boolean }>(`/api/v1/saved-weekplans/${tid}`)
+    return {
+      ok: true,
+      id: row.id,
+      name: row.name,
+      body: row.body,
+      hasSavedShoppingList: row.hasSavedShoppingList ?? false,
+      shoppingListDeprecated: row.shoppingListDeprecated ?? false,
+    }
   }
   catch {
     return { ok: false }

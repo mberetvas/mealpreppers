@@ -3,6 +3,10 @@ export interface SavedWeekplanListItem {
   id: string
   name: string
   updatedAt: string
+  /** True when a consolidated shopping list row exists for this plan. */
+  hasSavedShoppingList: boolean
+  /** True when the saved list's source fingerprint no longer matches the current plan body. */
+  shoppingListDeprecated: boolean
 }
 
 /**

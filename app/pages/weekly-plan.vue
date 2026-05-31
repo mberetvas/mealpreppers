@@ -34,6 +34,9 @@ const weekPersistenceKind = ref<'none' | 'saved-weekplan'>('none')
 const firstSaveBusy = ref(false)
 /** Set to the plan ID immediately after the first-save POST succeeds; drives the nudge banner. */
 const shoppingListNudgeId = ref<string | null>(null)
+/** Shopping-list status flags for the currently loaded Saved Weekplan (false when in draft mode). */
+const hasSavedShoppingList = ref(false)
+const shoppingListDeprecated = ref(false)
 
 const saveStatus = ref<'saved' | 'saving' | 'dirty' | 'error'>('saved')
 
@@ -209,6 +212,8 @@ async function hydrateTemplateFromRoute(): Promise<void> {
   activeTemplateId.value = loaded.id
   weekPlanTitle.value = loaded.name
   weekPersistenceKind.value = 'saved-weekplan'
+  hasSavedShoppingList.value = loaded.hasSavedShoppingList
+  shoppingListDeprecated.value = loaded.shoppingListDeprecated
   saveStatus.value = 'saved'
   shoppingListNudgeId.value = null
 }
@@ -310,12 +315,14 @@ async function loadTemplateIntoWeek(id: string): Promise<void> {
   shoppingListNudgeId.value = null
   templateBusyId.value = id
   try {
-    const row = await $fetch<{ id: string, name: string, body: WeekPlanV1 }>(`/api/v1/saved-weekplans/${id}`)
+    const row = await $fetch<{ id: string, name: string, body: WeekPlanV1, hasSavedShoppingList: boolean, shoppingListDeprecated: boolean }>(`/api/v1/saved-weekplans/${id}`)
     clearPlannerWeekDraftSnapshot(getClientSessionStorage(), PLANNER_WEEK_DRAFT_SNAPSHOT_STORAGE_KEY)
     weekPlan.value = row.body
     activeTemplateId.value = row.id
     weekPlanTitle.value = row.name
     weekPersistenceKind.value = 'saved-weekplan'
+    hasSavedShoppingList.value = row.hasSavedShoppingList ?? false
+    shoppingListDeprecated.value = row.shoppingListDeprecated ?? false
     const q = { ...route.query, template: row.id }
     await router.replace({ query: q })
     activeTab.value = 'week'
@@ -338,6 +345,8 @@ async function deleteTemplate(id: string): Promise<void> {
       weekPlan.value = emptyWeekPlan()
       weekPlanTitle.value = ''
       weekPersistenceKind.value = 'none'
+      hasSavedShoppingList.value = false
+      shoppingListDeprecated.value = false
       const q = { ...route.query } as Record<string, string | string[] | undefined>
       delete q.template
       await router.replace({ query: q })
@@ -370,11 +379,16 @@ function onOpenWeek(_index: number, snapshot: WeekPlanV1): void {
   activeTemplateId.value = null
   weekPlanTitle.value = ''
   weekPersistenceKind.value = 'none'
+  hasSavedShoppingList.value = false
+  shoppingListDeprecated.value = false
   saveStatus.value = 'dirty'
   activeTab.value = 'week'
 }
 
 const weekValid = computed(() => isWeekPlanValid(weekPlan.value))
+
+/** Controls visibility of the shopping list preview modal. */
+const previewOpen = ref(false)
 
 const canPersistDraftSavedWeekplan = computed(
   () => Boolean(weekPlanTitle.value.trim()) && weekValid.value && !firstSaveBusy.value,
@@ -509,6 +523,22 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         >
           Add at least one recipe
         </span>
+        <ShoppingListWeekplanConsolidatedListStatus
+          v-if="activeTab === 'week' && weekPersistenceKind === 'saved-weekplan'"
+          :has-saved-shopping-list="hasSavedShoppingList"
+          :shopping-list-deprecated="shoppingListDeprecated"
+        />
+        <button
+          v-if="activeTab === 'week' && weekPersistenceKind === 'saved-weekplan'"
+          type="button"
+          data-testid="view-shopping-list-btn"
+          class="inline-flex items-center gap-1.5 rounded-2xl bg-atelier-chip px-3 py-1.5 font-body text-xs font-semibold text-atelier-neutral-action transition hover:bg-atelier-chip-hover hover:text-atelier-heading"
+          aria-label="View shopping list preview"
+          @click="previewOpen = true"
+        >
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">preview</span>
+          View shopping list
+        </button>
       </div>
     </header>
 
@@ -548,6 +578,22 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         >
           Need 1+ recipe
         </span>
+        <ShoppingListWeekplanConsolidatedListStatus
+          v-if="weekPersistenceKind === 'saved-weekplan'"
+          :has-saved-shopping-list="hasSavedShoppingList"
+          :shopping-list-deprecated="shoppingListDeprecated"
+        />
+        <button
+          v-if="weekPersistenceKind === 'saved-weekplan'"
+          type="button"
+          data-testid="view-shopping-list-btn"
+          class="inline-flex items-center gap-1 rounded-2xl bg-atelier-chip px-2.5 py-1 font-body text-xs font-semibold text-atelier-neutral-action transition hover:bg-atelier-chip-hover hover:text-atelier-heading"
+          aria-label="View shopping list preview"
+          @click="previewOpen = true"
+        >
+          <span class="material-symbols-outlined text-[14px]" aria-hidden="true">preview</span>
+          View shopping list
+        </button>
       </div>
     </div>
 
@@ -688,5 +734,13 @@ const categoryOptions = computed(() => options.value?.categories ?? [])
         </div>
       </div>
     </Teleport>
+
+    <ShoppingListConsolidatedShoppingListPreview
+      v-if="weekPersistenceKind === 'saved-weekplan' && activeTemplateId"
+      v-model:open="previewOpen"
+      :plan-id="activeTemplateId"
+      :has-saved-shopping-list="hasSavedShoppingList"
+      :shopping-list-deprecated="shoppingListDeprecated"
+    />
   </div>
 </template>

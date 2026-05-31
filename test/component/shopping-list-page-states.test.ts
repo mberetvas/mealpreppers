@@ -34,10 +34,28 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     load: vi.fn(),
   }
 
+  const consolidatedState = {
+    consolidating: ref(false),
+    consolidatedLines: ref([]),
+    consolidationError: ref(null),
+    polishStatus: ref(null),
+    warnings: ref([]),
+    baselineLines: ref([]),
+    changes: ref([]),
+    hasConsolidated: ref(false),
+    shoppingListDeprecated: ref(false),
+    savedListHydrationSettled: ref(true),
+    savedList: ref<unknown>(null),
+    consolidate: vi.fn(),
+    reset: vi.fn(),
+  }
+
   vi.stubGlobal('useRoute', () => ({ query }))
+  vi.stubGlobal('useRouter', () => ({ replace: vi.fn() }))
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('useShoppingList', () => state)
+  vi.stubGlobal('useConsolidatedShoppingList', () => consolidatedState)
   vi.stubGlobal('formatShoppingListIngredient', formatShoppingListIngredient)
 
   return state

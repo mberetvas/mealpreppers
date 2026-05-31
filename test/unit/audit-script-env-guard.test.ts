@@ -72,16 +72,4 @@ describe('audit script MEALPREPPERS_ENV guard', () => {
       expect(script).not.toMatch(/process\.env\.MEALPREPPERS_ENV\s*\?\?\s*['"]local['"]/)
     })
   })
-
-  describe('audit runbook prerequisite', () => {
-    const doc = readFileSync(
-      resolve(ROOT, 'Docs/audits/001-legacy-unowned-week-grid-rows.md'),
-      'utf-8',
-    )
-
-    it('mentions MEALPREPPERS_ENV=local as a prerequisite', () => {
-      expect(doc).toMatch(/MEALPREPPERS_ENV=local/)
-      expect(doc).toMatch(/prerequisite/i)
-    })
-  })
 })

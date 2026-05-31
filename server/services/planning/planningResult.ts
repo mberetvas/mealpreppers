@@ -18,6 +18,10 @@ export type PlanningFailure =
     missingRecipeIds: string[]
     message: string
   }
+  | {
+    kind: 'deprecated_list'
+    message: string
+  }
 
 export type PlanningResult<T> =
   | {

@@ -9,6 +9,7 @@ import {
   getSavedWeekplanById,
   listSavedWeekplans,
 } from '../../server/services/planning/savedWeekplansRepository'
+import { computeSourceFingerprint } from '../../server/services/shopping-list/sourceFingerprint'
 
 describe('planningRepository week-template surface removed', () => {
   it('does not export unscoped week-template CRUD', () => {
@@ -267,5 +268,92 @@ describe('deleteSavedWeekplan principal scoping', () => {
     expect(result.ok).toBe(true)
     expect(eqSecond).toHaveBeenCalledWith('owner_user_id', 'user-1')
     expect(is).toHaveBeenCalledWith('anon_session_id', null)
+  })
+})
+
+describe('listSavedWeekplans shopping list flags', () => {
+  const body = emptyWeekPlan()
+  const currentFingerprint = computeSourceFingerprint(body)
+
+  function makeDbRow(overrides: {
+    consolidated_shopping_list?: { lines: unknown[], sourceFingerprint: string, confirmedAt: string } | null
+  }) {
+    return {
+      id: 'plan-1',
+      name: 'My Plan',
+      body,
+      updated_at: '2026-01-01T00:00:00.000Z',
+      owner_user_id: 'user-1',
+      anon_session_id: null,
+      consolidated_shopping_list: null,
+      ...overrides,
+    }
+  }
+
+  function makeClient(rows: unknown[]) {
+    return {
+      from() {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  is() {
+                    return {
+                      order: vi.fn(async () => ({ data: rows, error: null })),
+                    }
+                  },
+                }
+              },
+            }
+          },
+        }
+      },
+    } as unknown as SupabaseClient
+  }
+
+  it('returns both flags false when no saved shopping list exists', async () => {
+    const client = makeClient([makeDbRow({ consolidated_shopping_list: null })])
+    const result = await listSavedWeekplans(client, { kind: 'user', userId: 'user-1' })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value[0]?.hasSavedShoppingList).toBe(false)
+      expect(result.value[0]?.shoppingListDeprecated).toBe(false)
+    }
+  })
+
+  it('returns hasSavedShoppingList true and shoppingListDeprecated false when fingerprint matches', async () => {
+    const client = makeClient([makeDbRow({
+      consolidated_shopping_list: {
+        lines: [],
+        sourceFingerprint: currentFingerprint,
+        confirmedAt: '2026-01-01T00:00:00.000Z',
+      },
+    })])
+    const result = await listSavedWeekplans(client, { kind: 'user', userId: 'user-1' })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value[0]?.hasSavedShoppingList).toBe(true)
+      expect(result.value[0]?.shoppingListDeprecated).toBe(false)
+    }
+  })
+
+  it('returns hasSavedShoppingList true and shoppingListDeprecated true when fingerprint is stale', async () => {
+    const client = makeClient([makeDbRow({
+      consolidated_shopping_list: {
+        lines: [],
+        sourceFingerprint: 'stale-fingerprint-does-not-match',
+        confirmedAt: '2026-01-01T00:00:00.000Z',
+      },
+    })])
+    const result = await listSavedWeekplans(client, { kind: 'user', userId: 'user-1' })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value[0]?.hasSavedShoppingList).toBe(true)
+      expect(result.value[0]?.shoppingListDeprecated).toBe(true)
+    }
   })
 })
