@@ -22,6 +22,16 @@ vi.mock('../../server/utils/logger', () => ({
   },
 }))
 
+/** Mocked metadata returned by extractRequestMetadata in unit tests. */
+const mockMetadata = {
+  request_headers: { host: 'mealprepper.test' },
+  query_params: {},
+}
+
+vi.mock('../../server/utils/requestMetadata', () => ({
+  extractRequestMetadata: vi.fn().mockResolvedValue(mockMetadata),
+}))
+
 /** Creates a minimal H3Event for unit testing with configurable URL and method. */
 function makeEvent(url = '/api/test', method = 'GET') {
   const socket = new Socket()
@@ -79,7 +89,7 @@ describe('request-diagnostics middleware', () => {
     expect(appLogger.debug).not.toHaveBeenCalled()
   })
 
-  it('emits when resolved log level is debug regardless of LOG_LEVEL env var', async () => {
+  it('emits request_started then request_handled when log level is debug', async () => {
     mockLogLevel = 'debug'
     delete process.env.LOG_LEVEL
     const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
@@ -92,20 +102,40 @@ describe('request-diagnostics middleware', () => {
     event.node.res.statusCode = 201
     event.node.res.emit('finish')
 
-    expect(appLogger.debug).toHaveBeenCalledOnce()
-    const [message, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(message).toBe('http.request_handled')
-    expect(data).toMatchObject({
+    expect(appLogger.debug).toHaveBeenCalledTimes(2)
+
+    const [[startedMsg, startedData], [handledMsg, handledData]] = (
+      appLogger.debug as ReturnType<typeof vi.fn>
+    ).mock.calls as [[string, Record<string, unknown>], [string, Record<string, unknown>]]
+
+    expect(startedMsg).toBe('http.request_started')
+    expect(startedData).toMatchObject({ method: 'POST', path: '/api/recipes', traceId: 'trace-abc' })
+
+    expect(handledMsg).toBe('http.request_handled')
+    expect(handledData).toMatchObject({
       method: 'POST',
       path: '/api/recipes',
       statusCode: 201,
       traceId: 'trace-abc',
     })
-    expect(typeof data.duration).toBe('number')
-    expect(data.duration).toBeGreaterThanOrEqual(0)
+    expect(typeof handledData.duration).toBe('number')
+    expect(handledData.duration).toBeGreaterThanOrEqual(0)
   })
 
-  it('captures the correct HTTP method', async () => {
+  it('request_started includes metadata from extractRequestMetadata', async () => {
+    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { appLogger } = await import('../../server/utils/logger')
+
+    const event = makeEvent('/api/recipes', 'GET')
+    await middleware(event)
+    event.node.res.emit('finish')
+
+    const [[, startedData]] = (appLogger.debug as ReturnType<typeof vi.fn>).mock
+      .calls as [[string, Record<string, unknown>]]
+    expect(startedData).toMatchObject(mockMetadata)
+  })
+
+  it('captures the correct HTTP method in request_started', async () => {
     const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
@@ -114,11 +144,14 @@ describe('request-diagnostics middleware', () => {
     event.node.res.statusCode = 204
     event.node.res.emit('finish')
 
-    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(data.method).toBe('DELETE')
+    const [, startedData] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ]
+    expect(startedData.method).toBe('DELETE')
   })
 
-  it('uses only the pathname, not query string', async () => {
+  it('uses only the pathname, not query string in request_started', async () => {
     const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
@@ -126,9 +159,12 @@ describe('request-diagnostics middleware', () => {
     await middleware(event)
     event.node.res.emit('finish')
 
-    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(data.path).toBe('/api/search')
-    expect(data.path).not.toContain('?')
+    const [, startedData] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ]
+    expect(startedData.path).toBe('/api/search')
+    expect(startedData.path).not.toContain('?')
   })
 
   it('uses empty traceId when event context has no traceId', async () => {
@@ -139,11 +175,14 @@ describe('request-diagnostics middleware', () => {
     await middleware(event)
     event.node.res.emit('finish')
 
-    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(data.traceId).toBe('')
+    const [, startedData] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ]
+    expect(startedData.traceId).toBe('')
   })
 
-  it('does not include request or response body in diagnostics', async () => {
+  it('does not include raw request or response body fields in diagnostics', async () => {
     const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
@@ -151,9 +190,12 @@ describe('request-diagnostics middleware', () => {
     await middleware(event)
     event.node.res.emit('finish')
 
-    const [, data] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(data).not.toHaveProperty('body')
-    expect(data).not.toHaveProperty('requestBody')
-    expect(data).not.toHaveProperty('responseBody')
+    const [, startedData] = (appLogger.debug as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ]
+    expect(startedData).not.toHaveProperty('body')
+    expect(startedData).not.toHaveProperty('requestBody')
+    expect(startedData).not.toHaveProperty('responseBody')
   })
 })
