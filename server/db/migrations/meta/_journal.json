@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780256247638,
+      "tag": "0000_recipe_catalog",
+      "breakpoints": true
+    }
+  ]
+}

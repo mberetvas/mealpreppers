@@ -1,31 +1,27 @@
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { createError } from 'h3'
+import { getDb } from '../../../db/sqlite'
 import { DEFAULT_RECIPE_CATEGORIES, DEFAULT_RECIPE_TAGS } from '../../../services/recipe-catalog/recipeDefaults'
+import { listStoredRecipeOptions } from '../../../services/recipe-catalog/recipeRepository'
 
 /**
  * Returns distinct categories and tags for use in selection dropdowns.
  * Predefined defaults are merged with any values already stored in the database.
  */
 export default defineEventHandler(async () => {
-  const supabase = getSupabaseServerClient()
+  const result = await listStoredRecipeOptions(getDb())
 
-  const { data: recipes, error } = await supabase
-    .from('recipes')
-    .select('categories, tags')
-
-  if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Could not load recipe options.' })
+  if (!result.ok) {
+    throw createError({ statusCode: 500, statusMessage: result.error.message })
   }
 
   const categoriesSet = new Set<string>(DEFAULT_RECIPE_CATEGORIES)
   const tagsSet = new Set<string>(DEFAULT_RECIPE_TAGS)
 
-  for (const recipe of recipes ?? []) {
-    for (const cat of (recipe as { categories: string[], tags: string[] }).categories) {
-      categoriesSet.add(cat)
-    }
-    for (const tag of (recipe as { categories: string[], tags: string[] }).tags) {
-      tagsSet.add(tag)
-    }
+  for (const category of result.value.categories) {
+    categoriesSet.add(category)
+  }
+  for (const tag of result.value.tags) {
+    tagsSet.add(tag)
   }
 
   return {

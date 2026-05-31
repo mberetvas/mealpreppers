@@ -17,6 +17,7 @@ import { canonicalizePolishResponse, validatePolishResponse } from './polishHarn
 import { buildPolishHints } from './polishHintBuilder'
 import { computeSourceFingerprint } from './sourceFingerprint'
 import { isPolishAbortTimeout } from './polishChainFactory'
+import { getDb } from '../../db/sqlite'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
@@ -77,7 +78,7 @@ export async function consolidateShoppingList(
     }
   }
 
-  const recipesResult = await listRecipes(supabaseClient)
+  const recipesResult = await listRecipes(getDb())
   if (!recipesResult.ok) {
     throw createError({ statusCode: 500, statusMessage: 'Recipes could not be loaded for consolidation.' })
   }

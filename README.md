@@ -8,6 +8,17 @@ bun run preview      # local prod preview
 bun run test         # Run tests
 ```
 
+### Desktop (Tauri spike)
+
+Requires [Rust](https://rustup.rs/) and Windows **C++ build tools** (see
+[Docs/desktop-development.md](./Docs/desktop-development.md)).
+
+```bash
+bun run desktop:dev          # Nuxt dev server + Tauri window (dev loop A)
+bun run build:desktop        # Nitro sidecar + pinned Node resources
+bun run desktop:build        # Packaged app with bundled sidecar
+```
+
 Libelle recipe URL import uses Playwright (Chromium):
 
 ```bash

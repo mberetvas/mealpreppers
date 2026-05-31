@@ -17,7 +17,16 @@
     "test:unit": "vitest --project unit",
     "test:component": "vitest --project component",
     "test:nuxt": "vitest --project nuxt",
-    "test:ui-quality-remediation": "vitest run test/unit/primary-navigation-integrity.test.ts test/unit/design-token-compliance.test.ts test/unit/state-messaging-contract.test.ts test/unit/touch-ergonomics-contract.test.ts test/unit/visual-cost-budget.test.ts test/unit/list-image-loading-strategy.test.ts test/unit/component-vocabulary-contract.test.ts test/component/accessible-overlay-contract.test.ts test/component/list-image-loading-strategy.test.ts test/component/form-flow-status-surfaces.test.ts"
+    "test:ui-quality-remediation": "vitest run test/unit/primary-navigation-integrity.test.ts test/unit/design-token-compliance.test.ts test/unit/state-messaging-contract.test.ts test/unit/touch-ergonomics-contract.test.ts test/unit/visual-cost-budget.test.ts test/unit/list-image-loading-strategy.test.ts test/unit/component-vocabulary-contract.test.ts test/component/accessible-overlay-contract.test.ts test/component/list-image-loading-strategy.test.ts test/component/form-flow-status-surfaces.test.ts",
+    "build:desktop:nitro": "bun scripts/build-desktop-nitro.mjs",
+    "build:desktop:resources": "bun scripts/prepare-desktop-resources.mjs",
+    "build:desktop": "bun run build:desktop:nitro && bun run build:desktop:resources",
+    "desktop:dev": "tauri dev",
+    "desktop:dev:sidecar": "bun scripts/tauri-dev-sidecar.mjs",
+    "desktop:build": "bun run build:desktop && tauri build",
+    "desktop:pack": "bun run desktop:build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@langchain/core": "^1.1.48",
@@ -26,7 +35,9 @@
     "@nuxt/test-utils": "4.0.3",
     "@nuxtjs/tailwindcss": "6.14.0",
     "@supabase/supabase-js": "^2.105.3",
+    "better-sqlite3": "^12.10.0",
     "cheerio": "^1.2.0",
+    "drizzle-orm": "^0.45.2",
     "eslint": "^10.3.0",
     "nuxt": "^4.4.4",
     "playwright": "^1.59.1",
@@ -36,11 +47,15 @@
   },
   "trustedDependencies": [
     "@parcel/watcher",
+    "better-sqlite3",
     "unrs-resolver"
   ],
   "devDependencies": {
+    "@tauri-apps/cli": "2",
+    "@types/better-sqlite3": "^7.6.13",
     "@vitest/coverage-v8": "^4.1.5",
     "@vue/test-utils": "^2.4.10",
+    "drizzle-kit": "^0.31.10",
     "happy-dom": "^20.9.0",
     "magic-string": "^0.30.21",
     "vitest": "^4.1.5"

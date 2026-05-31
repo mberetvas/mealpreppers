@@ -28,6 +28,12 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
   ],
 
+  nitro: {
+    externals: {
+      traceInclude: ['better-sqlite3', 'bindings'],
+    },
+  },
+
   css: ['~/assets/css/tailwind.css'],
 
   app: {
