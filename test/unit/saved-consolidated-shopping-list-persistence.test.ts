@@ -5,9 +5,9 @@
  * and composable load + save flow.
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { existsSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { eq } from 'drizzle-orm'
 import type { MergedLine } from '../../server/services/shopping-list/exactMerge'
 import {
   getConsolidatedShoppingList,
@@ -18,8 +18,11 @@ import {
 } from '../../server/services/shopping-list/consolidatedShoppingListRepository'
 import { computeSourceFingerprint } from '../../server/services/shopping-list/sourceFingerprint'
 import type { WeekPlanV1 } from '../../types/planning'
+import { useAppTestDb } from '../helpers/recipeCatalogTestDb'
+import { mealWeekTemplates } from '../../server/db/schema/planning'
 
 const REPO_ROOT = resolve(__dirname, '../..')
+const ctx = useAppTestDb()
 
 // --- Helpers ---
 
@@ -48,12 +51,34 @@ function makeSavedLines(): MergedLine[] {
   ]
 }
 
+function insertWeekPlan(fields: {
+  id: string
+  body: WeekPlanV1
+  ownerUserId: string | null
+  anonSessionId: string | null
+  consolidatedShoppingList: SavedConsolidatedShoppingListRecord | null
+}) {
+  const now = new Date().toISOString()
+  ctx.db.insert(mealWeekTemplates).values({
+    id: fields.id,
+    name: fields.id,
+    body: fields.body,
+    createdAt: now,
+    updatedAt: now,
+    ownerUserId: fields.ownerUserId,
+    anonSessionId: fields.anonSessionId,
+    consolidatedShoppingList: fields.consolidatedShoppingList,
+  }).run()
+}
+
 // --- Migration existence test ---
 
-describe('Supabase migration for consolidated_shopping_list column', () => {
-  it('migration file exists', () => {
-    const migrationPath = resolve(REPO_ROOT, 'supabase/migrations/20260526120000_consolidated_shopping_list.sql')
-    expect(existsSync(migrationPath)).toBe(true)
+describe('SQLite migration for consolidated_shopping_list column', () => {
+  it('planning migration defines consolidated_shopping_list on meal_week_templates', () => {
+    const migrationPath = resolve(REPO_ROOT, 'server/db/migrations/0001_planning.sql')
+    const sql = readFileSync(migrationPath, 'utf8')
+    expect(sql).toContain('consolidated_shopping_list')
+    expect(sql).toContain('meal_week_templates')
   })
 })
 
@@ -62,11 +87,15 @@ describe('Supabase migration for consolidated_shopping_list column', () => {
 describe('consolidatedShoppingListRepository', () => {
   describe('getConsolidatedShoppingList', () => {
     it('returns null when no saved list exists (column is null)', async () => {
-      const client = mockSupabaseClient({
-        selectResult: { id: 'plan-1', consolidated_shopping_list: null, body: makeWeekPlanBody(), owner_user_id: null, anon_session_id: 'sess-1' },
+      insertWeekPlan({
+        id: 'plan-1',
+        body: makeWeekPlanBody(),
+        ownerUserId: null,
+        anonSessionId: 'sess-1',
+        consolidatedShoppingList: null,
       })
 
-      const result = await getConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' })
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -83,11 +112,15 @@ describe('consolidatedShoppingListRepository', () => {
         sourceFingerprint: fingerprint,
         confirmedAt: '2026-05-26T10:00:00.000Z',
       }
-      const client = mockSupabaseClient({
-        selectResult: { id: 'plan-1', consolidated_shopping_list: record, body, owner_user_id: 'user-1', anon_session_id: null },
+      insertWeekPlan({
+        id: 'plan-1',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: record,
       })
 
-      const result = await getConsolidatedShoppingList(client, 'plan-1', { kind: 'user', userId: 'user-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'user-1' })
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -110,11 +143,15 @@ describe('consolidatedShoppingListRepository', () => {
         sourceFingerprint: fingerprint,
         confirmedAt: '2026-05-26T10:00:00.000Z',
       }
-      const client = mockSupabaseClient({
-        selectResult: { id: 'plan-1', consolidated_shopping_list: record, body, owner_user_id: 'user-1', anon_session_id: null },
+      insertWeekPlan({
+        id: 'plan-1',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: record,
       })
 
-      const result = await getConsolidatedShoppingList(client, 'plan-1', { kind: 'user', userId: 'user-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'user-1' })
 
       expect(result.ok).toBe(true)
       if (result.ok && result.value) {
@@ -124,9 +161,7 @@ describe('consolidatedShoppingListRepository', () => {
     })
 
     it('returns not_found for non-existent plan', async () => {
-      const client = mockSupabaseClient({ selectResult: null })
-
-      const result = await getConsolidatedShoppingList(client, 'non-existent', { kind: 'anonymous', sessionId: 'sess-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'non-existent', { kind: 'anonymous', sessionId: 'sess-1' })
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -135,11 +170,15 @@ describe('consolidatedShoppingListRepository', () => {
     })
 
     it('returns forbidden for wrong owner', async () => {
-      const client = mockSupabaseClient({
-        selectResult: { id: 'plan-1', consolidated_shopping_list: null, body: makeWeekPlanBody(), owner_user_id: 'other-user', anon_session_id: null },
+      insertWeekPlan({
+        id: 'plan-1',
+        body: makeWeekPlanBody(),
+        ownerUserId: 'other-user',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await getConsolidatedShoppingList(client, 'plan-1', { kind: 'user', userId: 'user-1' })
+      const result = await getConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'user-1' })
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -154,13 +193,15 @@ describe('consolidatedShoppingListRepository', () => {
       const lines = makeSavedLines()
       const expectedFingerprint = computeSourceFingerprint(body)
 
-      const updateFn = vi.fn()
-      const client = mockSupabaseClientForSave({
-        selectResult: { id: 'plan-1', body, owner_user_id: null, anon_session_id: 'sess-1', consolidated_shopping_list: null },
-        updateFn,
+      insertWeekPlan({
+        id: 'plan-1',
+        body,
+        ownerUserId: null,
+        anonSessionId: 'sess-1',
+        consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -168,7 +209,9 @@ describe('consolidatedShoppingListRepository', () => {
         expect(result.value.lines).toEqual(lines)
         expect(result.value.confirmedAt).toBeDefined()
       }
-      expect(updateFn).toHaveBeenCalled()
+
+      const row = ctx.db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, 'plan-1')).get()
+      expect(row?.consolidatedShoppingList?.sourceFingerprint).toBe(expectedFingerprint)
     })
 
     it('persists lines in input order with aisleCategory', async () => {
@@ -178,28 +221,34 @@ describe('consolidatedShoppingListRepository', () => {
         { id: 'L2', name: 'pasta', quantity: 800, unit: 'g', aisleCategory: 'dry_goods' as const },
         { id: 'L3', name: 'tomaten', quantity: 400, unit: 'g', aisleCategory: 'produce' as const },
       ]
-      const updateFn = vi.fn()
-      const client = mockSupabaseClientForSave({
-        selectResult: { id: 'plan-1', body, owner_user_id: null, anon_session_id: 'sess-1', consolidated_shopping_list: null },
-        updateFn,
+      insertWeekPlan({
+        id: 'plan-1',
+        body,
+        ownerUserId: null,
+        anonSessionId: 'sess-1',
+        consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, lines)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.value.lines).toEqual(lines)
       }
-      const written = updateFn.mock.calls[0]?.[0] as { consolidated_shopping_list: SavedConsolidatedShoppingListRecord }
-      expect(written.consolidated_shopping_list.lines).toEqual(lines)
+      const row = ctx.db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, 'plan-1')).get()
+      expect(row?.consolidatedShoppingList?.lines).toEqual(lines)
     })
 
     it('rejects save for wrong owner', async () => {
-      const client = mockSupabaseClientForSave({
-        selectResult: { id: 'plan-1', body: makeWeekPlanBody(), owner_user_id: 'other-user', anon_session_id: null, consolidated_shopping_list: null },
+      insertWeekPlan({
+        id: 'plan-1',
+        body: makeWeekPlanBody(),
+        ownerUserId: 'other-user',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'user', userId: 'me' }, makeSavedLines())
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'me' }, makeSavedLines())
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -208,9 +257,7 @@ describe('consolidatedShoppingListRepository', () => {
     })
 
     it('rejects save for non-existent plan', async () => {
-      const client = mockSupabaseClientForSave({ selectResult: null })
-
-      const result = await saveConsolidatedShoppingList(client, 'non-existent', { kind: 'anonymous', sessionId: 'sess-1' }, makeSavedLines())
+      const result = await saveConsolidatedShoppingList(ctx.db, 'non-existent', { kind: 'anonymous', sessionId: 'sess-1' }, makeSavedLines())
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -220,22 +267,30 @@ describe('consolidatedShoppingListRepository', () => {
 
     it('anonymous owner can save their own plan', async () => {
       const body = makeWeekPlanBody()
-      const client = mockSupabaseClientForSave({
-        selectResult: { id: 'plan-1', body, owner_user_id: null, anon_session_id: 'sess-1', consolidated_shopping_list: null },
+      insertWeekPlan({
+        id: 'plan-1',
+        body,
+        ownerUserId: null,
+        anonSessionId: 'sess-1',
+        consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, makeSavedLines())
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'anonymous', sessionId: 'sess-1' }, makeSavedLines())
 
       expect(result.ok).toBe(true)
     })
 
     it('authenticated owner can save their own plan', async () => {
       const body = makeWeekPlanBody()
-      const client = mockSupabaseClientForSave({
-        selectResult: { id: 'plan-1', body, owner_user_id: 'user-1', anon_session_id: null, consolidated_shopping_list: null },
+      insertWeekPlan({
+        id: 'plan-1',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await saveConsolidatedShoppingList(client, 'plan-1', { kind: 'user', userId: 'user-1' }, makeSavedLines())
+      const result = await saveConsolidatedShoppingList(ctx.db, 'plan-1', { kind: 'user', userId: 'user-1' }, makeSavedLines())
 
       expect(result.ok).toBe(true)
     })
@@ -333,49 +388,6 @@ describe('PUT /api/v1/saved-weekplans/:id/consolidated-shopping-list', () => {
     expect(result.lines![0].name).toBe('pasta')
   })
 })
-
-// --- Supabase mock helpers ---
-
-function mockSupabaseClient(opts: { selectResult: Record<string, unknown> | null, error?: { message: string } }) {
-  const maybeSingle = vi.fn(async () => ({
-    data: opts.selectResult,
-    error: opts.error ?? null,
-  }))
-  const eq = vi.fn(() => ({ maybeSingle }))
-  const select = vi.fn(() => ({ eq }))
-  const from = vi.fn(() => ({ select }))
-
-  return { from } as unknown as SupabaseClient
-}
-
-function mockSupabaseClientForSave(opts: {
-  selectResult: Record<string, unknown> | null
-  updateFn?: ReturnType<typeof vi.fn>
-  error?: { message: string }
-}) {
-  const updateFn = opts.updateFn ?? vi.fn()
-  const maybeSingle = vi.fn(async () => ({
-    data: opts.selectResult,
-    error: opts.error ?? null,
-  }))
-  const selectEq = vi.fn(() => ({ maybeSingle }))
-  const selectFn = vi.fn(() => ({ eq: selectEq }))
-
-  // For update path: chain update → eq → select → single
-  const updateSingle = vi.fn(async () => ({ data: { id: 'plan-1' }, error: null }))
-  const updateSelect = vi.fn(() => ({ single: updateSingle }))
-  const updateEq = vi.fn(() => ({ select: updateSelect }))
-  updateFn.mockReturnValue({ eq: updateEq })
-
-  const from = vi.fn((_table: string) => {
-    return {
-      select: selectFn,
-      update: updateFn,
-    }
-  })
-
-  return { from } as unknown as SupabaseClient
-}
 
 // --- Composable load + save flow tests ---
 

@@ -13,10 +13,10 @@ Port **consolidated shopping list** persistence and APIs to SQLite so shopping-l
 
 ## Acceptance criteria
 
-- [ ] Drizzle schema/migrations cover consolidated shopping list tables
-- [ ] Shopping list and consolidation API routes work E2E in desktop sidecar mode without Supabase
-- [ ] Vitest coverage for consolidation and list repositories passes against SQLite
-- [ ] Non-AI consolidation path works with no network; AI polish remains optional and degrades gracefully without a key
+- [x] Drizzle schema/migrations cover consolidated shopping list tables
+- [x] Shopping list and consolidation API routes work E2E in desktop sidecar mode without Supabase
+- [x] Vitest coverage for consolidation and list repositories passes against SQLite
+- [x] Non-AI consolidation path works with no network; AI polish remains optional and degrades gracefully without a key
 
 ## Blocked by
 

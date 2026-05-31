@@ -50,11 +50,10 @@ vi.stubGlobal('useRuntimeConfig', () => runtimeConfigMock)
 const mocks = vi.hoisted(() => ({
   getSavedWeekplanById: vi.fn(),
   listRecipes: vi.fn(),
-  getSupabaseServerClient: vi.fn(() => ({})),
 }))
 
-vi.mock('../../server/db/supabaseClient', () => ({
-  getSupabaseServerClient: mocks.getSupabaseServerClient,
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: vi.fn(() => ({})),
 }))
 
 vi.mock('../../server/services/planning/savedWeekplansRepository', async (importOriginal) => {

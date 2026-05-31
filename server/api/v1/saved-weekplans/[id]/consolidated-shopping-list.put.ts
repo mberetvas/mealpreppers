@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
-import { getSupabaseServerClient } from '../../../../db/supabaseClient'
+import { getDb } from '../../../../db/sqlite'
 import { withPlanningHandler } from '../../../../services/planning/planningRequestContext'
 import { saveConsolidatedShoppingList, validateConsolidatedShoppingListInput } from '../../../../services/shopping-list/consolidatedShoppingListRepository'
 import { toPlanningHttpError } from '../../../../utils/planningErrors'
@@ -20,7 +20,7 @@ export default defineEventHandler(
       }
 
       const result = await saveConsolidatedShoppingList(
-        getSupabaseServerClient(),
+        getDb(),
         id,
         ctx.principal,
         validation.lines!,
