@@ -14,11 +14,31 @@ const outputServer = join(nitroOutputDir, 'server')
 const migrationsSrc = join(repoRoot, 'server', 'db', 'migrations')
 const migrationsDest = join(outputServer, 'db', 'migrations')
 
-for (const sub of ['server', 'public']) {
-  const target = join(nitroOutputDir, sub)
-  if (existsSync(target)) {
-    rmSync(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+function removeTree(path) {
+  if (!existsSync(path)) {
+    return
   }
+  if (process.platform === 'win32') {
+    const escaped = path.replace(/'/g, "''")
+    const result = spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-Command',
+        `Remove-Item -LiteralPath '${escaped}' -Recurse -Force -ErrorAction Stop`,
+      ],
+      { stdio: 'inherit' },
+    )
+    if (result.status !== 0) {
+      throw new Error(`Failed to remove ${path}`)
+    }
+    return
+  }
+  rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+}
+
+for (const sub of ['server', 'public']) {
+  removeTree(join(nitroOutputDir, sub))
 }
 
 const result = spawnSync('bun', ['x', 'nuxt', 'build'], {
