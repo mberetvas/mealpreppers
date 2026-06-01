@@ -26,7 +26,6 @@
     "build:desktop:resources": "bun scripts/prepare-desktop-resources.mjs",
     "build:desktop": "bun run build:desktop:nitro && bun run build:desktop:resources",
     "analyze:desktop-bundle": "bun scripts/analyze-desktop-bundle.mjs",
-    "analyze:desktop-bundle": "bun scripts/analyze-desktop-bundle.mjs",
     "desktop:dev": "tauri dev",
     "desktop:dev:sidecar": "bun scripts/tauri-dev-sidecar.mjs",
     "desktop:build": "bun run build:desktop && tauri build",

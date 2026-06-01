@@ -40,7 +40,7 @@ bun run desktop:dev:sidecar
 ```
 
 Uses `MEALPREPPER_SIDECAR=1` and `src-tauri/tauri.sidecar.conf.json` (skips
-`beforeDevCommand`). The shell spawns Nitro on a random `127.0.0.1` port, waits for `GET
+`beforeDevCommand` and `tauri dev`’s frontend wait). The shell spawns Nitro on a random `127.0.0.1` port, waits for `GET
 /health`, injects `window.__MEALPREPPER_DESKTOP__` (API base + per-launch token), then shows
 the window.
 

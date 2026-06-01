@@ -72,3 +72,10 @@ bun run build:desktop:nitro
 ## Before / after (fill when optimizing)
 
 Document Phase 4 changes here with median `health_wait_ms` and `total_setup_ms` from the table above.
+
+### Phase 4 notes (initial pass)
+
+- `bun run analyze:desktop-bundle` reports Nitro server footprint after `build:desktop`.
+- **Playwright cleanup** — dynamic `import()` on Nitro `close` so Playwright is not loaded at sidecar cold start ([server/plugins/playwright-cleanup.ts](../server/plugins/playwright-cleanup.ts)).
+- **Langchain** — already lazy-imported in shopping-list polish handlers; `cheerio` / scrapers load from URL-preview routes only.
+- Revisit `nitro.externals.traceInclude` and `cleanNitroPackageCache` only after baselines show bundle size or `health_wait_ms` dominated by Node load rather than migrations.

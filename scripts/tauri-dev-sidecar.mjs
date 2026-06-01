@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 
 const result = spawnSync(
   'bun',
-  ['x', 'tauri', 'dev', '-c', 'src-tauri/tauri.sidecar.conf.json'],
+  ['x', 'tauri', 'dev', '-c', 'src-tauri/tauri.sidecar.conf.json', '--no-dev-server-wait'],
   {
     env: { ...process.env, MEALPREPPER_SIDECAR: '1' },
     stdio: 'inherit',

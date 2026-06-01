@@ -1,6 +1,5 @@
 {
   "build": {
-    "beforeDevCommand": "",
-    "devUrl": ""
+    "beforeDevCommand": null
   }
 }
