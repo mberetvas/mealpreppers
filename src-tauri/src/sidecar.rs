@@ -4,6 +4,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
@@ -53,31 +54,29 @@ pub fn should_run_sidecar() -> bool {
   !tauri::is_dev()
 }
 
-fn node_executable(resource_dir: &Path) -> PathBuf {
+fn resolve_resource(app: &AppHandle, path: &str) -> Result<PathBuf, String> {
+  app.path()
+    .resolve(path, BaseDirectory::Resource)
+    .map_err(|e| e.to_string())
+}
+
+fn node_executable(app: &AppHandle) -> Result<PathBuf, String> {
   #[cfg(windows)]
   {
-    return resource_dir.join("node").join("win-x64").join("node.exe");
+    return resolve_resource(app, "node/win-x64/node.exe");
   }
   #[cfg(target_os = "macos")]
   {
-    return resource_dir
-      .join("node")
-      .join("darwin-x64")
-      .join("bin")
-      .join("node");
+    return resolve_resource(app, "node/darwin-x64/bin/node");
   }
   #[cfg(target_os = "linux")]
   {
-    return resource_dir
-      .join("node")
-      .join("linux-x64")
-      .join("bin")
-      .join("node");
+    return resolve_resource(app, "node/linux-x64/bin/node");
   }
 }
 
-fn server_entry(resource_dir: &Path) -> PathBuf {
-  resource_dir.join("nitro").join("server").join("index.mjs")
+fn server_entry(app: &AppHandle) -> Result<PathBuf, String> {
+  resolve_resource(app, "nitro/server/index.mjs")
 }
 
 fn pick_loopback_port() -> Result<u16, String> {
@@ -85,9 +84,9 @@ fn pick_loopback_port() -> Result<u16, String> {
   Ok(listener.local_addr().map_err(|e| e.to_string())?.port())
 }
 
-fn spawn_nitro(resource_dir: &Path, port: u16, token: &str, data_dir: &Path) -> Result<Child, String> {
-  let node = node_executable(resource_dir);
-  let entry = server_entry(resource_dir);
+fn spawn_nitro(app: &AppHandle, port: u16, token: &str, data_dir: &Path) -> Result<Child, String> {
+  let node = node_executable(app)?;
+  let entry = server_entry(app)?;
 
   if !node.is_file() {
     return Err(format!(
@@ -166,12 +165,11 @@ pub fn wait_for_health(port: u16) -> Result<(), String> {
 }
 
 pub fn start_sidecar(app: &AppHandle) -> Result<SidecarState, String> {
-  let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
   let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
   std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
   let port = pick_loopback_port()?;
   let token = Uuid::new_v4().to_string();
-  let mut child = spawn_nitro(&resource_dir, port, &token, &data_dir)?;
+  let mut child = spawn_nitro(app, port, &token, &data_dir)?;
 
   log::info!(
     "Started Nitro sidecar on 127.0.0.1:{port} (pid {})",

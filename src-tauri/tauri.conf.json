@@ -18,10 +18,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": [
-      "resources/node/**/*",
-      "resources/nitro/**/*"
-    ],
+    "resources": {
+      "resources/node/": "node/",
+      "resources/nitro/": "nitro/"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
