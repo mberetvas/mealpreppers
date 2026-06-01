@@ -189,7 +189,7 @@ The Nuxt app stays the client: static/`ssr: false` desktop build, same `$fetch` 
 ## Further Notes
 
 - Update [Tauri + SQLite Migration Strategy](../plan/tauri-sqlite-migration-strategy.md) decision record when implementation starts—the “bundled Nitro sidecar” row becomes “in-process Desktop Local API (Axum).”
-- Tracker issue draft for deferred UI/backend pairing exists at `Docs/issues/0020-desktop-phase-2-deferred.md`; align naming with **Desktop backend phase 2** in this PRD.
+- Tracker issue for deferred UI/backend pairing: `Docs/issues/0027-desktop-backend-phase-2-deferred.md` (**Desktop backend phase 2**; run after 0021–0026 so filename sort matches dependency order).
 - After cutover, startup docs should replace `sidecar_spawn_ms` / Nitro migrate timing with Rust API milestones (`Docs/desktop-startup.md`).
 - **Offline product guarantee (v1):** cutover must keep sections shopping list + planner + catalog offline; consolidated/AI/import remain explicitly unavailable until phase 2, not failing silently.
 - Open question for a follow-up grill (not blocking PRD): sqlx vs refinery choice, Nuxt `frontendDist`/`ssr: false` packaging details, and whether to generate TypeScript DTOs from Rust or hand-maintain `types/`.
