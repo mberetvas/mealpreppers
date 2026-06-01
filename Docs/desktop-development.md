@@ -52,6 +52,20 @@ bun run desktop:build
 bun run desktop:pack
 ```
 
+### Debugging a silent release crash (Windows)
+
+Release builds hide the console by default. To see Rust panics, setup errors, and Nitro
+sidecar stderr:
+
+| Method | When to use |
+|--------|-------------|
+| `bun run desktop:build:console` | Rebuild with a terminal always attached (Cargo feature `console`). |
+| `$env:MEALPREPPER_CONSOLE='1'; .\mealprepper.exe` | Same diagnostics on an existing release exe (no rebuild). |
+| `bun run desktop:dev:sidecar` | Sidecar integration with live Node output in the terminal. |
+
+When diagnostics are on, a failed startup waits for Enter before exiting so Explorer
+launches do not flash the window closed.
+
 `build:desktop` runs `NITRO_PRESET=node-server` Nuxt build into
 `src-tauri/resources/nitro/` (in-place; avoids copying junction-heavy `node_modules` on
 Windows), downloads Node **22.14.0** into

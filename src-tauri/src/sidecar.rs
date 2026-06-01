@@ -7,6 +7,9 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
+use std::io::Read;
+
+use crate::diagnostics;
 use crate::keychain;
 
 const HEALTH_PATH: &str = "/health";
@@ -130,6 +133,21 @@ fn spawn_nitro(resource_dir: &Path, port: u16, token: &str, data_dir: &Path) -> 
     .map_err(|e| format!("Failed to spawn Nitro sidecar: {e}"))
 }
 
+fn read_child_stderr(child: &mut Child) -> String {
+  let Some(mut stderr) = child.stderr.take() else {
+    return String::from("(no stderr pipe)");
+  };
+  let mut buf = Vec::new();
+  if stderr.read_to_end(&mut buf).is_err() {
+    return String::from("(failed to read stderr)");
+  }
+  let text = String::from_utf8_lossy(&buf).trim().to_string();
+  if text.is_empty() {
+    return String::from("(empty)");
+  }
+  text
+}
+
 pub fn wait_for_health(port: u16) -> Result<(), String> {
   let url = format!("http://127.0.0.1:{port}{HEALTH_PATH}");
   let started = Instant::now();
@@ -153,14 +171,24 @@ pub fn start_sidecar(app: &AppHandle) -> Result<SidecarState, String> {
   std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
   let port = pick_loopback_port()?;
   let token = Uuid::new_v4().to_string();
-  let child = spawn_nitro(&resource_dir, port, &token, &data_dir)?;
+  let mut child = spawn_nitro(&resource_dir, port, &token, &data_dir)?;
 
   log::info!(
     "Started Nitro sidecar on 127.0.0.1:{port} (pid {})",
     child.id()
   );
 
-  wait_for_health(port)?;
+  if let Err(mut health_err) = wait_for_health(port) {
+    if diagnostics::enabled() {
+      let stderr = read_child_stderr(&mut child);
+      health_err.push_str("\n\n--- Nitro sidecar stderr ---\n");
+      health_err.push_str(&stderr);
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+    return Err(health_err);
+  }
+
   log::info!("Nitro sidecar health check passed");
 
   Ok(SidecarState {

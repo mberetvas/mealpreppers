@@ -10,10 +10,19 @@ type AppSchema = typeof recipeCatalogSchema & typeof planningSchema
 
 function resolveMigrationsFolder(): string {
   const candidates = [
-    path.join(fileURLToPath(new URL('.', import.meta.url)), 'migrations'),
+    // Sidecar sets cwd to `nitro/server` (see src-tauri/src/sidecar.rs).
     path.join(process.cwd(), 'db', 'migrations'),
     path.join(process.cwd(), 'server', 'db', 'migrations'),
   ]
+
+  try {
+    candidates.push(
+      path.join(fileURLToPath(new URL('.', import.meta.url)), 'migrations'),
+    )
+  }
+  catch {
+    // Bundled Nitro on Windows can expose a non-absolute import.meta.url; cwd paths above still apply.
+  }
 
   for (const folder of candidates) {
     if (existsSync(path.join(folder, 'meta', '_journal.json'))) {

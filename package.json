@@ -28,6 +28,7 @@
     "desktop:dev": "tauri dev",
     "desktop:dev:sidecar": "bun scripts/tauri-dev-sidecar.mjs",
     "desktop:build": "bun run build:desktop && tauri build",
+    "desktop:build:console": "bun run build:desktop && tauri build -- --features console",
     "desktop:pack": "bun run desktop:build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
