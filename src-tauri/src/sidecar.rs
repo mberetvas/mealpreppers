@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use crate::diagnostics;
-
 const HEALTH_PATH: &str = "/health";
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(60);
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_millis(200);

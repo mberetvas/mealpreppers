@@ -1326,3 +1326,143 @@ fn primary_server_health_reachable_via_api_base() {
     let json: serde_json::Value = serde_json::from_str(&body).expect("health body is JSON");
     assert_eq!(json["ok"], true);
 }
+
+// ---------------------------------------------------------------------------
+// Cutover feature gates — deferred Desktop Local API routes (issue 0025)
+//
+// These routes are registered but return 501 + `desktop.api.not_implemented`
+// during the planner-safe cutover phase. They will be implemented in
+// Desktop backend phase 2 (issue 0027).
+// ---------------------------------------------------------------------------
+
+/// Helper: asserts that a response has HTTP 501 and the H3 error body contains
+/// `statusCode: 501` and `data.code: "desktop.api.not_implemented"`.
+fn assert_not_implemented(status: u16, body: &str, route_label: &str) {
+    assert_eq!(
+        status, 501,
+        "{route_label}: expected 501 Not Implemented, body: {body}"
+    );
+    let json: serde_json::Value =
+        serde_json::from_str(body).expect("deferred route body should be JSON");
+    assert_eq!(
+        json["statusCode"], 501,
+        "{route_label}: H3 statusCode should be 501"
+    );
+    assert_eq!(
+        json["statusMessage"].as_str().unwrap_or(""),
+        "Not Implemented",
+        "{route_label}: H3 statusMessage should be 'Not Implemented'"
+    );
+    assert_eq!(
+        json["data"]["code"].as_str().unwrap_or(""),
+        "desktop.api.not_implemented",
+        "{route_label}: data.code should be 'desktop.api.not_implemented'"
+    );
+}
+
+#[test]
+fn recipe_preview_returns_501_not_implemented() {
+    let srv = TestServer::start(None);
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/recipes/preview"),
+        &serde_json::json!({ "url": "https://example.com/recipe" }),
+    );
+    assert_not_implemented(status, &body, "POST /api/v1/recipes/preview");
+}
+
+#[test]
+fn consolidate_shopping_list_returns_501_not_implemented() {
+    let srv = TestServer::start(None);
+
+    // Create a weekplan so the ID path looks plausible — the deferred handler must
+    // return 501 regardless of whether the plan exists.
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Gate Test"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let (status, body) = http_post_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidate-shopping-list")),
+        &serde_json::json!({}),
+    );
+    assert_not_implemented(
+        status,
+        &body,
+        "POST /api/v1/saved-weekplans/:id/consolidate-shopping-list",
+    );
+}
+
+#[test]
+fn get_consolidated_shopping_list_returns_501_not_implemented() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Gate Test 2"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let (status, body) = http_get(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &[],
+    );
+    assert_not_implemented(
+        status,
+        &body,
+        "GET /api/v1/saved-weekplans/:id/consolidated-shopping-list",
+    );
+}
+
+#[test]
+fn put_consolidated_shopping_list_returns_501_not_implemented() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Gate Test 3"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let (status, body) = http_put_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &serde_json::json!({ "lines": [] }),
+    );
+    assert_not_implemented(
+        status,
+        &body,
+        "PUT /api/v1/saved-weekplans/:id/consolidated-shopping-list",
+    );
+}
+
+#[test]
+fn deferred_routes_still_require_desktop_token_when_enforced() {
+    let srv = TestServer::start(Some("gate-token"));
+
+    // Without token — should get 401, not 501 (token gate fires first).
+    let (status, _body) = http_post_json(
+        &srv.url("/api/v1/recipes/preview"),
+        &serde_json::json!({ "url": "https://example.com" }),
+    );
+    assert_eq!(
+        status, 401,
+        "deferred routes must still enforce the desktop token"
+    );
+
+    // With correct token — now the deferred 501 should be returned.
+    let (status, body) = {
+        let json_bytes = serde_json::to_vec(&serde_json::json!({ "url": "https://example.com" }))
+            .expect("JSON serialization");
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .http_status_as_error(false)
+            .build()
+            .into();
+        let mut resp = agent
+            .post(&srv.url("/api/v1/recipes/preview"))
+            .header("content-type", "application/json")
+            .header("x-desktop-token", "gate-token")
+            .send(json_bytes.as_slice())
+            .expect("no transport error");
+        let s = resp.status().as_u16();
+        let b = resp.body_mut().read_to_string().unwrap_or_default();
+        (s, b)
+    };
+    assert_not_implemented(status, &body, "POST /api/v1/recipes/preview with correct token");
+}

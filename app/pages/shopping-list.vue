@@ -3,7 +3,7 @@ import { watch, ref, computed } from 'vue'
 import { formatShoppingListIngredient as formatIngredient, formatMergedLine } from '~~/utils/shoppingList'
 import type { MergedLine } from '~~/server/services/shopping-list/exactMerge'
 import ShoppingListAisleSection from '~/components/shopping-list/AisleSection.vue'
-import { buildAiPolishUnavailableMessage, useNetworkFeatureState } from '~/composables/useNetworkFeatureState'
+import { buildAiPolishUnavailableMessage, buildConsolidatedShoppingUnavailableMessage } from '~/composables/useNetworkFeatureState'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,7 +14,7 @@ const viewMode = computed(() =>
   route.query.view === 'consolidated' ? 'consolidated' : 'sections',
 )
 
-const { offline, missingApiKey } = useNetworkFeatureState()
+const { offline, missingApiKey, desktopCutover } = useNetworkFeatureState()
 
 const { loading, planName, sections, planLoaded, planError, failedRecipeCount, shoppingListCopiedFromMatch, load } = useShoppingList(planId)
 const {
@@ -43,25 +43,13 @@ const aiPolishBannerMessage = computed(() =>
   buildAiPolishUnavailableMessage(offline.value, missingApiKey.value, warnings.value[0]),
 )
 
+const desktopCutoverMessage = computed(() => buildConsolidatedShoppingUnavailableMessage())
+
 function setViewMode(mode: 'sections' | 'consolidated') {
   const query = { ...route.query }
   query.view = mode === 'consolidated' ? 'consolidated' : 'sections'
   router.replace({ path: route.path, query })
 }
-
-/**
- * Always defaults to the consolidated tab when no explicit view is set.
- * Fires whenever hydration settles or plan loads so the composable auto-trigger
- * can start consolidation or restore a session draft.
- */
-watch(
-  [planId, planLoaded, savedListHydrationSettled, () => route.query.view] as const,
-  () => {
-    if (!planId.value || !planLoaded.value || !savedListHydrationSettled.value) return
-    if (route.query.view) return
-    setViewMode('consolidated')
-  },
-)
 
 /**
  * Lines from the previous (deprecated) saved list, shown during consolidation and review
@@ -312,6 +300,8 @@ useHead(() => ({
           data-testid="view-mode-consolidated"
           class="rounded-lg px-4 py-2 text-sm font-semibold transition motion-reduce:transition-none"
           :class="viewMode === 'consolidated' ? 'active bg-atelier-parchment text-atelier-heading shadow-sm' : 'text-atelier-description hover:text-atelier-heading'"
+          :disabled="desktopCutover"
+          :title="desktopCutover ? desktopCutoverMessage : undefined"
           @click="setViewMode('consolidated')"
         >
           Consolidated
@@ -338,9 +328,29 @@ useHead(() => ({
 
       <!-- ═══ CONSOLIDATED VIEW ═══ -->
       <template v-if="viewMode === 'consolidated'">
+        <!-- Desktop cutover gate: consolidated list is deferred to phase 2 -->
+        <section
+          v-if="desktopCutover"
+          data-testid="desktop-cutover-notice"
+          class="rounded-[28px] bg-atelier-parchment p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
+        >
+          <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
+            <span class="material-symbols-outlined text-[28px]" aria-hidden="true">schedule</span>
+          </div>
+          <h2 class="mt-5 font-headline text-xl font-semibold text-atelier-heading">
+            Not available yet
+          </h2>
+          <p
+            data-testid="desktop-cutover-message"
+            class="mx-auto mt-3 max-w-md text-sm text-atelier-description"
+          >
+            {{ desktopCutoverMessage }}
+          </p>
+        </section>
+
         <!-- Consolidation error state -->
         <section
-          v-if="consolidationError"
+          v-else-if="consolidationError"
           data-testid="consolidation-error"
           class="rounded-[28px] bg-atelier-cream-error p-8 text-center shadow-atelier-float ring-1 ring-primary/10"
         >

@@ -1,6 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  /**
+   * Desktop-only product: all pages render client-side.
+   * Static build (`nuxt generate`) produces a pure HTML/JS bundle served by the Tauri
+   * WebView via frontendDist; the Rust Axum server handles all `/api/v1` traffic.
+   */
+  ssr: false,
   devtools: { enabled: true },
 
   runtimeConfig: {
@@ -25,9 +31,6 @@ export default defineNuxtConfig({
   ],
 
   nitro: {
-    ...(process.env.NITRO_DESKTOP_OUTPUT_DIR
-      ? { output: { dir: process.env.NITRO_DESKTOP_OUTPUT_DIR } }
-      : {}),
     externals: {
       traceInclude: ['better-sqlite3', 'bindings'],
     },

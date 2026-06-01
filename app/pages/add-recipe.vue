@@ -60,9 +60,9 @@ const recipeImageInputRef = ref<HTMLInputElement | null>(null)
 
 const imagePreviewSource = computed(() => localPreviewUrl.value || form.imageUrl.trim())
 
-const { offline } = useNetworkFeatureState()
-const urlImportBlocked = computed(() => offline.value)
-const urlImportBlockedMessage = computed(() => buildRecipeImportUnavailableMessage(offline.value))
+const { offline, desktopCutover } = useNetworkFeatureState()
+const urlImportBlocked = computed(() => offline.value || desktopCutover.value)
+const urlImportBlockedMessage = computed(() => buildRecipeImportUnavailableMessage(offline.value, desktopCutover.value))
 
 const canSave = computed(() => form.title.trim().length > 0 && normalizedIngredients().length > 0 && !isSaving.value)
 

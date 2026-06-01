@@ -8,6 +8,8 @@ export interface NetworkFeatureState {
   offline: ComputedRef<boolean>
   missingApiKey: ComputedRef<boolean>
   onlineReady: ComputedRef<boolean>
+  /** `true` on Desktop during the planner-safe cutover phase (phase 1 only). */
+  desktopCutover: ComputedRef<boolean>
   refreshOpenRouterKeyState: () => Promise<void>
 }
 
@@ -51,6 +53,8 @@ export function useNetworkFeatureState(): NetworkFeatureState {
   const offline = computed(() => !isOnline.value)
   const missingApiKey = computed(() => isDesktopShell() && !hasOpenRouterKey.value)
   const onlineReady = computed(() => isOnline.value && !missingApiKey.value)
+  // Desktop phase-1 cutover: consolidated shopping and recipe URL import are deferred.
+  const desktopCutover = computed(() => isDesktopShell())
 
   return {
     isOnline,
@@ -58,6 +62,7 @@ export function useNetworkFeatureState(): NetworkFeatureState {
     offline,
     missingApiKey,
     onlineReady,
+    desktopCutover,
     refreshOpenRouterKeyState,
   }
 }
@@ -77,10 +82,23 @@ export function buildAiPolishUnavailableMessage(
   return serverWarning ?? 'AI polish was not applied. Configure OpenRouter in Settings or retry when online.'
 }
 
-/** User-facing hint when recipe URL import is unavailable. */
-export function buildRecipeImportUnavailableMessage(offline: boolean): string {
+/**
+ * User-facing hint when recipe URL import is unavailable.
+ *
+ * `desktopCutover` takes priority over generic offline copy because it provides
+ * a more specific explanation during the Desktop phase-1 cutover.
+ */
+export function buildRecipeImportUnavailableMessage(offline: boolean, desktopCutover?: boolean): string {
+  if (desktopCutover) {
+    return 'Recipe URL import is not available in the current desktop version. Use manual entry to add your recipe.'
+  }
   if (offline) {
     return 'Recipe URL import requires an internet connection. Switch to manual entry or try again when online.'
   }
   return 'Recipe URL import is unavailable right now.'
+}
+
+/** User-facing hint when consolidated shopping is unavailable during Desktop phase-1 cutover. */
+export function buildConsolidatedShoppingUnavailableMessage(): string {
+  return 'Consolidated shopping list is not available yet. Use Recipe sections for offline shopping.'
 }

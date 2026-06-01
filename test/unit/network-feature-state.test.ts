@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildAiPolishUnavailableMessage,
+  buildConsolidatedShoppingUnavailableMessage,
   buildRecipeImportUnavailableMessage,
 } from '../../app/composables/useNetworkFeatureState'
 import { normalizeOpenRouterKeyInput } from '../../app/utils/tauriDesktop'
@@ -40,6 +41,32 @@ describe('buildAiPolishUnavailableMessage', () => {
 describe('buildRecipeImportUnavailableMessage', () => {
   it('explains offline import blocking', () => {
     expect(buildRecipeImportUnavailableMessage(true)).toMatch(/internet connection/i)
+  })
+
+  it('explains desktop cutover blocking (takes priority over offline copy)', () => {
+    expect(buildRecipeImportUnavailableMessage(false, true)).toMatch(/desktop version/i)
+    expect(buildRecipeImportUnavailableMessage(false, true)).toMatch(/manual entry/i)
+  })
+
+  it('desktop cutover message takes priority over offline message', () => {
+    const msg = buildRecipeImportUnavailableMessage(true, true)
+    expect(msg).toMatch(/desktop version/i)
+    expect(msg).not.toMatch(/internet connection/i)
+  })
+
+  it('returns generic message when neither offline nor cutover', () => {
+    const msg = buildRecipeImportUnavailableMessage(false, false)
+    expect(msg).toMatch(/unavailable/i)
+  })
+})
+
+describe('buildConsolidatedShoppingUnavailableMessage', () => {
+  it('mentions Recipe sections as the alternative', () => {
+    expect(buildConsolidatedShoppingUnavailableMessage()).toMatch(/Recipe sections/i)
+  })
+
+  it('mentions availability status', () => {
+    expect(buildConsolidatedShoppingUnavailableMessage()).toMatch(/not available/i)
   })
 })
 

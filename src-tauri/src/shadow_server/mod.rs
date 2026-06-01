@@ -1,4 +1,4 @@
-//! Desktop Local API shadow server — phase 1 platform milestone.
+//! Desktop Local API — the primary in-process Axum server for the Tauri desktop app.
 //!
 //! `start()` runs the in-process Axum server on a random `127.0.0.1` loopback port:
 //! 1. Opens SQLite with WAL + FK and runs **Install database migrations**.
@@ -8,8 +8,8 @@
 //! The returned `ShadowServerState` owns the shutdown sender; dropping it triggers
 //! graceful shutdown of the Axum server.
 //!
-//! Nitro continues to serve all user-facing `/api/v1` routes in this phase. The shadow
-//! server is a parallel listen-only process used for migrations and integration testing.
+//! All user-facing `/api/v1` routes are served exclusively by this Rust server.
+//! The Nuxt/Nitro sidecar is no longer used in the desktop product.
 
 pub mod db;
 pub mod error;

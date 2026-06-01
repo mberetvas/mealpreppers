@@ -10,9 +10,10 @@ use keychain::{
   clear_openrouter_key, get_app_version, get_data_dir, get_openrouter_key, has_openrouter_key,
   open_data_folder, open_external_url, set_openrouter_key,
 };
-use sidecar::{should_run_sidecar, SidecarState};
+use sidecar::should_run_sidecar;
 use startup::StartupTiming;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use uuid::Uuid;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,12 +43,11 @@ pub fn run() {
       pause_on_fatal_error();
       std::process::exit(1);
     })
-    .run(|app, event| {
+    .run(|_app, event| {
+      // ShadowServerState (Rust primary API) drop triggers graceful Axum shutdown automatically
+      // when Tauri releases managed state on exit.
       if matches!(event, RunEvent::Exit) {
-        if let Some(state) = app.try_state::<SidecarState>() {
-          state.stop();
-        }
-        // ShadowServerState drop triggers graceful Axum shutdown automatically.
+        // No explicit action required — shutdown_tx drop in ShadowServerState handles cleanup.
       }
     });
 }
@@ -69,31 +69,6 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
   let mut timing = StartupTiming::begin();
 
-  // Start the Desktop Local API shadow server in-process (platform milestone).
-  // Runs on a separate loopback port; Nitro remains the user-facing API for this phase.
-  let data_dir = app
-    .path()
-    .app_data_dir()
-    .map_err(|e| format!("resolve data dir: {e}"))?;
-  std::fs::create_dir_all(&data_dir).map_err(|e| format!("create data dir: {e}"))?;
-
-  let shadow_token = std::env::var("DESKTOP_TOKEN").ok();
-  match shadow_server::start(&data_dir, shadow_token.as_deref()) {
-    Ok(shadow_state) => {
-      log::info!(
-        "Desktop Local API shadow server running on 127.0.0.1:{}",
-        shadow_state.port
-      );
-      timing.mark_shadow_api_spawned();
-      app.manage(shadow_state);
-    }
-    Err(e) => {
-      // Non-fatal in phase 1: the shadow server failing does not block the main window.
-      diagnostics::eprintln(&format!("Shadow server failed to start: {e}"));
-      log::warn!("desktop.shadow_server.start_failed error={e}");
-    }
-  }
-
   let setup_result = setup_main_window(app, &mut timing);
 
   if setup_result.is_err() {
@@ -110,41 +85,50 @@ fn setup_main_window(
   timing: &mut StartupTiming,
 ) -> Result<(), Box<dyn std::error::Error>> {
   if should_run_sidecar() {
-    let launch = sidecar::prepare_sidecar_launch(app.handle())?;
-    let bootstrap = sidecar::bootstrap_script(launch.port, &launch.token);
-    let blank = tauri::Url::parse("about:blank")?;
+    // Desktop Local API (Rust/Axum) is the primary server.
+    // No Node/Nitro child process is spawned.
+    let data_dir = app
+      .path()
+      .app_data_dir()
+      .map_err(|e| format!("resolve data dir: {e}"))?;
+    std::fs::create_dir_all(&data_dir).map_err(|e| format!("create data dir: {e}"))?;
 
-    WebviewWindowBuilder::new(app.handle(), "main", WebviewUrl::External(blank))
-      .title("Mealprepper")
-      .inner_size(1280.0, 800.0)
-      .center()
-      .initialization_script(&bootstrap)
-      .build()?;
-    timing.mark_main_window_created();
-    timing.mark_main_window_shown();
+    let token = Uuid::new_v4().to_string();
+    let rust_state = shadow_server::start(&data_dir, Some(&token))
+      .map_err(|e| format!("Desktop Local API failed to start: {e}"))?;
+    timing.mark_rust_api_spawned();
 
-    let state = match sidecar::finish_sidecar_launch(app.handle(), launch, timing) {
-      Ok(state) => state,
-      Err(e) => {
-        close_main(app);
-        return Err(e.into());
-      }
-    };
+    log::info!(
+      "Desktop Local API running on 127.0.0.1:{}",
+      rust_state.port
+    );
 
-    let api_url = tauri::Url::parse(&format!("{}/", state.api_base()))?;
-    let main = app
-      .get_webview_window("main")
-      .ok_or("Main window missing after sidecar setup")?;
-    if let Err(e) = main.navigate(api_url) {
-      if diagnostics::enabled() {
-        diagnostics::eprintln(&format!("Failed to navigate main window to API: {e}"));
-      }
-      close_main(app);
+    // Wait for the Rust API to be ready before opening the window so the
+    // initialization script can immediately reach `/health` on first render.
+    if let Err(e) = sidecar::wait_for_health(rust_state.port) {
       return Err(e.into());
     }
+    timing.mark_rust_api_healthy();
+
+    let bootstrap = sidecar::bootstrap_script(rust_state.port, &token);
+
+    // Tauri serves the static frontend from `frontendDist` via the internal
+    // tauri://localhost/ (or https://tauri.localhost/ on Windows) protocol.
+    WebviewWindowBuilder::new(
+      app.handle(),
+      "main",
+      WebviewUrl::App(std::path::PathBuf::from("index.html")),
+    )
+    .title("Mealprepper")
+    .inner_size(1280.0, 800.0)
+    .center()
+    .initialization_script(&bootstrap)
+    .build()?;
+    timing.mark_main_window_created();
+    timing.mark_main_window_shown();
     timing.mark_main_navigated();
 
-    app.manage(state);
+    app.manage(rust_state);
   } else if let Some(dev_url) = app.config().build.dev_url.clone() {
     WebviewWindowBuilder::new(app.handle(), "main", WebviewUrl::External(dev_url))
       .title("Mealprepper")

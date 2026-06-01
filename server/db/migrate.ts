@@ -10,7 +10,6 @@ type AppSchema = typeof recipeCatalogSchema & typeof planningSchema
 
 function resolveMigrationsFolder(): string {
   const candidates = [
-    // Sidecar sets cwd to `nitro/server` (see src-tauri/src/sidecar.rs).
     path.join(process.cwd(), 'db', 'migrations'),
     path.join(process.cwd(), 'server', 'db', 'migrations'),
   ]
@@ -21,7 +20,7 @@ function resolveMigrationsFolder(): string {
     )
   }
   catch {
-    // Bundled Nitro on Windows can expose a non-absolute import.meta.url; cwd paths above still apply.
+    // import.meta.url may not be resolvable in all bundled contexts; cwd paths above still apply.
   }
 
   for (const folder of candidates) {

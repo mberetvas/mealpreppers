@@ -27,6 +27,12 @@
 //! - `GET    /api/v1/planning/month-plans/:id` — get month plan
 //! - `PATCH  /api/v1/planning/month-plans/:id` — patch month plan
 //! - `DELETE /api/v1/planning/month-plans/:id` — delete month plan
+//!
+//! Cutover feature gates (deferred — Desktop backend phase 2):
+//! - `POST /api/v1/recipes/preview`                                    — recipe URL import (501)
+//! - `POST /api/v1/saved-weekplans/:id/consolidate-shopping-list`      — consolidation (501)
+//! - `GET  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — saved list read (501)
+//! - `PUT  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — saved list write (501)
 
 use std::path::PathBuf;
 
@@ -131,6 +137,18 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(patch_month_plan_handler)
                 .delete(delete_month_plan_handler),
         )
+        // Cutover feature gates — deferred (Desktop backend phase 2).
+        // Static sub-paths before parameterised routes to satisfy matchit ordering.
+        // These return 501 + desktop.api.not_implemented until phase 2 ships.
+        .route("/v1/recipes/preview", post(not_implemented_handler))
+        .route(
+            "/v1/saved-weekplans/:id/consolidate-shopping-list",
+            post(not_implemented_handler),
+        )
+        .route(
+            "/v1/saved-weekplans/:id/consolidated-shopping-list",
+            get(not_implemented_handler).put(not_implemented_handler),
+        )
         .route_layer(middleware::from_fn_with_state(state.clone(), token_gate));
 
     Router::new()
@@ -163,4 +181,12 @@ async fn stub_handler(
         "traceId": ctx.trace_id,
         "planningUserId": ctx.planning_principal.user_id,
     })))
+}
+
+/// Deferred route handler — returns `501 Not Implemented` with `desktop.api.not_implemented`
+/// for cutover feature gates that are not yet available in Desktop backend phase 1.
+///
+/// Used by: recipe URL import preview, shopping-list consolidation (read + write).
+async fn not_implemented_handler() -> Result<Json<Value>, AppError> {
+    Err(AppError::not_implemented())
 }
