@@ -59,7 +59,7 @@ A **persisted** weekly meal grid (the `WeekPlanV1` document) plus a human-readab
 Planner work that is **not** stored as a Saved Weekplan yet (no create **POST**). It may exist only in the client until the user saves with a valid title.
 
 **Planning Principal**:
-The current actor for Planning reads and mutations — a single local `{ kind: 'user', userId }` resolved on every Nitro request from the install-scoped `local-user-id` file. It scopes access to **Saved Weekplans** and legacy planning records.
+The current actor for Planning reads and mutations — a single local `{ kind: 'user', userId }` resolved on every **Desktop Local API** request from the install-scoped `local-user-id` file. It scopes access to **Saved Weekplans** and legacy planning records.
 _Avoid_: raw bearer lookup, per-handler auth branching, anonymous session cookies
 
 **Planning Request Context**:
@@ -84,6 +84,34 @@ _Future consideration_: any batch endpoint or private-recipe feature must revisi
 _Avoid_: per-user recipe gating (unless explicitly designed)
 
 ## Desktop (Tauri)
+
+**Desktop Local API**:
+The install-scoped HTTP server on loopback (`127.0.0.1:{port}`) that implements `/health`, `/api/v1/*`, and local recipe-image routes. It runs **in-process** with the Tauri shell (Axum), replaces the bundled Node/Nitro child, and keeps the same URL shapes the Nuxt UI already calls via `$fetch`.
+_Avoid_: Nitro sidecar, Node backend process (retired target)
+
+**Desktop IPC**:
+Tauri commands used only for OS integration — keychain, opening paths/URLs, and similar — not for domain CRUD (recipes, **Saved Weekplans**, shopping lists).
+_Avoid_: `invoke` for `/api/v1` data operations
+
+**Desktop API platform milestone**:
+The first Rust merge that lands in-process Axum, SQLite access, migrations, `/health`, and request plumbing on loopback while the Nitro child **still** serves all user-facing `/api/v1` routes.
+_Avoid_: calling this milestone “Nitro removal”
+
+**Planner-safe cutover**:
+The desktop release that **stops** the Nitro child and serves planner/core catalog APIs from the **Desktop Local API**: Recipe Catalog (including local **recipe-images**), **Saved Weekplans**, and month-plans. Recipe URL preview and shopping-list consolidation routes are explicitly **out of scope** until the following backend phase.
+_Avoid_: partial Nitro + partial Rust serving the same paths in production
+
+**Cutover feature gate**:
+Product and UI behavior at **planner-safe cutover** that keeps the happy path off phase-deferred APIs: shopping list without `view` opens the **sections** tab (works offline); consolidated shopping and recipe URL import stay hidden or disabled with clear copy. The **Desktop Local API** still registers those routes and answers accidental calls with `501` and a stable code (`desktop.api.not_implemented`).
+_Avoid_: stub success responses, relying on 501 for normal navigation
+
+**Install database migrations**:
+Versioned SQL under `src-tauri/migrations/`, applied by the Rust stack (e.g. sqlx/refinery) at **Desktop Local API** startup. Schema history is Rust-owned; there is no requirement to read Drizzle’s `__drizzle_migrations` ledger (greenfield installs and dev databases may be reset during the migration program).
+_Avoid_: Drizzle-compatible migrator, dual migration tables
+
+**Desktop API platform development**:
+While the **Desktop API platform milestone** is in progress: **Loop A** (`desktop:dev`) remains the default UI path (Nitro in Nuxt); the Rust **Desktop Local API** also listens on a **shadow** loopback port during Tauri startup for `/health`, migrations, and integration tests. Switching between Nitro and Rust against the same files requires resetting the dev database or pointing `DATABASE_PATH` / `MEALPREPPER_DATA_DIR` at separate directories. Bootstrap cutover to Rust (`MEALPREPPER_RUST_API` / loop B swap) waits until pre-**planner-safe cutover**.
+_Avoid_: sharing one `.data` directory across Nitro-migrated and Rust-migrated DBs without reset
 
 **Settings**:
 Route `/settings` (linked from **More**) for OpenRouter key (OS keychain), app version, data directory, and **Open data folder**. End-user keys never enter `runtimeConfig.public`.
