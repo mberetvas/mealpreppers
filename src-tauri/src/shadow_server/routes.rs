@@ -34,7 +34,7 @@ use axum::{
     extract::Extension,
     middleware,
     response::Json,
-    routing::{delete, get, patch, post},
+    routing::{get, post},
     Router,
 };
 use serde_json::{json, Value};

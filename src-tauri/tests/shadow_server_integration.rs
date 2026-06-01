@@ -1279,3 +1279,50 @@ fn weekplan_with_known_recipe_id_succeeds() {
     let (status, body) = http_post_json(&srv.url("/api/v1/saved-weekplans"), &payload);
     assert_eq!(status, 200, "weekplan with known recipe should succeed, body: {body}");
 }
+
+// ---------------------------------------------------------------------------
+// Planner-safe cutover — Rust primary API topology (issue 0024)
+// ---------------------------------------------------------------------------
+
+/// `ShadowServerState` must expose an `api_base()` method returning the loopback
+/// origin so callers (startup, bootstrap) can build URLs without knowing internals.
+#[test]
+fn primary_server_state_api_base_matches_port() {
+    let temp = tempfile::TempDir::new().expect("tempdir");
+    let state = shadow_server::start(temp.path(), None).expect("start primary server");
+    let expected = format!("http://127.0.0.1:{}", state.port);
+    assert_eq!(state.api_base(), expected, "api_base() should return loopback URL matching port");
+}
+
+/// When no token is configured, `ShadowServerState.token` should be `None`.
+#[test]
+fn primary_server_state_no_token_when_none_configured() {
+    let temp = tempfile::TempDir::new().expect("tempdir");
+    let state = shadow_server::start(temp.path(), None).expect("start primary server");
+    assert!(state.token.is_none(), "token should be None when not configured");
+}
+
+/// When a token is passed to `start()`, `ShadowServerState.token` should echo it back
+/// so the Tauri startup can inject the same token into the WebView bootstrap script.
+#[test]
+fn primary_server_state_token_matches_input() {
+    let temp = tempfile::TempDir::new().expect("tempdir");
+    let state = shadow_server::start(temp.path(), Some("launch-token-abc")).expect("start primary server");
+    assert_eq!(
+        state.token.as_deref(),
+        Some("launch-token-abc"),
+        "token should be stored on state for bootstrap script generation"
+    );
+}
+
+/// The Rust primary API health endpoint is reachable via `api_base()`.
+#[test]
+fn primary_server_health_reachable_via_api_base() {
+    let temp = tempfile::TempDir::new().expect("tempdir");
+    let state = shadow_server::start(temp.path(), None).expect("start primary server");
+    let health_url = format!("{}/health", state.api_base());
+    let (status, body) = http_get(&health_url, &[]);
+    assert_eq!(status, 200, "health at api_base() URL should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("health body is JSON");
+    assert_eq!(json["ok"], true);
+}

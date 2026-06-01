@@ -298,7 +298,7 @@ pub async fn patch_month_plan_handler(
             assert_recipe_ids_exist(&conn, &recipe_ids)?;
         }
         // name field: Some(Some(s)) = set to s, Some(None) = set to null, None = don't touch
-        let name_arg: Option<Option<&str>> = payload.name.as_ref().map(|n| n.as_deref());
+        let name_arg: Option<Option<&str>> = payload.name.as_deref().map(Some);
         let body_ref = payload.body.as_ref();
         update_month_plan(&mut conn, &id, name_arg, body_ref)
     })

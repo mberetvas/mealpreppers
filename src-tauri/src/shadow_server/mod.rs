@@ -27,8 +27,18 @@ use std::time::Duration;
 pub struct ShadowServerState {
     /// Loopback port the shadow server is listening on.
     pub port: u16,
+    /// Desktop token used to authenticate `/api/**` requests; `None` when unenforced.
+    /// Stored here so Tauri startup can embed the same value in the WebView bootstrap script.
+    pub token: Option<String>,
     /// Sending a value (or dropping) triggers Axum graceful shutdown.
     _shutdown_tx: tokio::sync::oneshot::Sender<()>,
+}
+
+impl ShadowServerState {
+    /// Loopback origin for the Desktop Local API (e.g. `http://127.0.0.1:49152`).
+    pub fn api_base(&self) -> String {
+        format!("http://127.0.0.1:{}", self.port)
+    }
 }
 
 /// Starts the in-process Desktop Local API shadow server.
@@ -103,6 +113,7 @@ pub fn start(
 
     Ok(ShadowServerState {
         port,
+        token: token.map(|s| s.to_string()),
         _shutdown_tx: shutdown_tx,
     })
 }
