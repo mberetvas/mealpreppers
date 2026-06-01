@@ -1,8 +1,14 @@
-# Desktop bundle resources (generated)
+# Desktop bundle resources
 
-Populated by `bun run build:desktop:resources` (also runs as part of `build:desktop`):
+This directory previously held generated Nitro sidecar and Node binary outputs (`nitro/`, `node/`).
+Those resources are no longer bundled as part of the Tauri desktop build.
 
-- `node/win-x64/node.exe` — pinned Node runtime (Windows x64)
-- `nitro/server/` — Nitro `node-server` output (built in-place via `NITRO_DESKTOP_OUTPUT_DIR`)
+The desktop build now uses:
+- `nuxt generate` (`ssr: false`) → static client bundle at `../.output/public/` (repo root)
+- `frontendDist = "../.output/public"` in `tauri.conf.json` — Tauri serves the static frontend directly
 
-These paths are gitignored. Run `bun run build:desktop` before `desktop:build` or `desktop:pack`.
+No Node binary and no Nitro server output are included in the installer.
+
+> The `nitro/` and `node/` subdirectories (with their `.gitkeep` files) are preserved to avoid
+> breaking local developer workspaces that may still have old build artifacts there. They are
+> gitignored and not read at runtime.

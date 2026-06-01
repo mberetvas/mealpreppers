@@ -3,8 +3,8 @@
 Strategy for shipping Mealprepper as a **desktop-only** **Tauri** application with
 **SQLite** persistence, replacing the hosted web app and **Supabase** backend.
 
-> **Status:** proposal for implementation. Defines decisions and sequencing. Does not
-> change application code until implementation phases land.
+> **Status:** implementation complete for Desktop Local API (Axum). Nuxt generates a static
+> client bundle; the Rust shadow server serves all `/api/v1` routes.
 >
 > **Supersedes:** [electron-migration-strategy.md](./electron-migration-strategy.md)
 > (Electron + Supabase preserved).
@@ -14,13 +14,13 @@ Strategy for shipping Mealprepper as a **desktop-only** **Tauri** application wi
 ## 1. Objective and scope
 
 **Objective.** Ship Mealprepper as a signed **Windows-first** desktop application using
-**Tauri**, a **bundled Nitro sidecar**, and **SQLite**, while keeping the existing Nuxt/Vue
-UI and `server/api/v1/**` domain logic wherever possible.
+**Tauri**, an **in-process Rust/Axum API**, and **SQLite**, keeping the existing Nuxt/Vue
+UI and domain logic wherever possible.
 
 **In scope**
 
-- Tauri shell (Rust): lifecycle, window, OS integration, keychain, child-process supervision.
-- Bundled **Nitro `node-server`** sidecar on `127.0.0.1` (same trust model as the Electron plan).
+- Tauri shell (Rust): lifecycle, window, OS integration, keychain.
+- **In-process Desktop Local API (Axum)** on `127.0.0.1` — no Node/Nitro child process.
 - **Drizzle + `better-sqlite3`** as the sole persistence layer; **local filesystem** recipe images.
 - **Single implicit local user** (no Supabase Auth, no anonymous sessions).
 - **Settings** UI: OpenRouter API key + app metadata (version, data path, open folder).
@@ -38,7 +38,7 @@ UI and `server/api/v1/**` domain logic wherever possible.
 
 **Success criteria**
 
-- Same feature set as today’s web app for local planning, recipes, Saved Weekplans, shopping lists.
+- Same feature set as today's web app for local planning, recipes, Saved Weekplans, shopping lists.
 - All privileged secrets stay out of the WebView bundle.
 - Fresh install creates DB + app data dirs; core flows work with no network.
 - One Windows signed installer artifact from CI (unsigned dev builds before signing lands).
@@ -51,17 +51,17 @@ UI and `server/api/v1/**` domain logic wherever possible.
 |--------|----------|
 | Product | **Desktop-only** — retire web/Supabase as product target |
 | Shell | **Tauri** (not Electron) |
-| App topology | **Bundled Nitro sidecar** — WebView → `http://127.0.0.1:<port>` |
+| App topology | **In-process Desktop Local API (Axum)** — WebView → `http://127.0.0.1:<port>` |
 | Identity | **Single implicit local user** — fixed/stable `userId` per install |
 | Database | **Drizzle + `better-sqlite3`**; file in OS app data dir |
-| Images | **Local filesystem** under app data; Nitro serves HTTP URLs |
+| Images | **Local filesystem** under app data; Axum serves HTTP URLs |
 | Data migration | **Fresh start** — no Supabase import for v1 |
-| AI | **User-owned OpenRouter key** via Settings → keychain → Nitro env; existing `ai_skipped` degradation |
+| AI | **User-owned OpenRouter key** via Settings → keychain; existing `ai_skipped` degradation |
 | Updates | **Signed installer, manual update** v1; Tauri updater phase 2 |
 | Platforms | **Windows-first**; macOS/Linux signed releases later |
 | Offline | **Core product offline**; online-only: AI polish + recipe URL import |
-| Node | **Bundle pinned Node** per OS/arch in Tauri resources |
-| Local API security | **`127.0.0.1` + per-launch desktop token** header on Nitro |
+| Node | **Not bundled** — no Node binary required; Nuxt generates a static client |
+| Local API security | **`127.0.0.1` + per-launch desktop token** header on Axum |
 | Settings UI | **OpenRouter key + app meta** (version, data path, open folder); route **`/settings`** from More |
 | Internal routes | **Remove entirely** — purge route, purge secret, anonymous stack |
 | Repo hygiene | **Archive** PG migrations → `docs/archive/supabase-schema/`; delete live `supabase/` when SQLite lands; drop audit/legacy scripts |
@@ -74,11 +74,11 @@ Derived from the repository (`package.json`, `nuxt.config.ts`, `server/`, `supab
 
 | Concern | Current (web) | Target (desktop) |
 |---------|---------------|------------------|
-| Client | Nuxt 4 / Vue 3 | Same UI in Tauri WebView |
-| API | Nitro `server/api/v1/**` | Same routes; SQLite repositories |
+| Client | Nuxt 4 / Vue 3 | Static client bundle (`nuxt generate`, `ssr: false`) in Tauri WebView |
+| API | Nitro `server/api/v1/**` | **Rust Axum** — same route shapes; SQLite repositories |
 | Data | Supabase Postgres + Storage | SQLite + local `recipe-images/` |
 | Auth | Supabase Bearer + anonymous cookie | Single local `Planning Principal` |
-| Secrets | `runtimeConfig` env (service role, OpenRouter, purge) | Keychain → Nitro env; no service role |
+| Secrets | `runtimeConfig` env (service role, OpenRouter, purge) | Keychain → Axum env; no service role |
 | Cron | `POST .../internal/.../purge-idle-anonymous` | **Removed** |
 | AI | OpenRouter server-side | Same; key from Settings, not `.env` for end users |
 | Deploy | Hosted Nitro + Supabase | Tauri `.msi`/NSIS (Windows v1) |
@@ -88,9 +88,9 @@ Context**, structured logging, trace IDs, Vitest, Bun for dev/build.
 
 ---
 
-## 4. Recommended desktop architecture
+## 4. Desktop architecture
 
-**Tauri (Rust) + bundled Nitro sidecar + Nuxt renderer on localhost.**
+**Tauri (Rust) + in-process Axum API + Nuxt static client.**
 
 ```
 +------------------------------------------------------------------+
@@ -98,59 +98,52 @@ Context**, structured logging, trace IDs, Vitest, Bun for dev/build.
 |                                                                   |
 |  Rust main                                                        |
 |   - app lifecycle, window, menus                                  |
-|   - spawn/stop bundled Node → Nitro `.output/server/index.mjs`  |
-|   - random 127.0.0.1 port; health gate before showing WebView     |
+|   - start in-process Axum server (shadow_server::start)          |
+|   - random 127.0.0.1 port; health gate BEFORE showing WebView    |
 |   - OS keychain: OpenRouter key (+ optional dev overrides)        |
-|   - inject env + DESKTOP_TOKEN + DB_PATH at Nitro spawn           |
+|   - inject apiBase + DESKTOP_TOKEN via initialization_script      |
 |   - IPC: open data folder, app version, (future) updater          |
 |        |                              ^                           |
-|        | child process                | preload / invoke (thin)  |
+|        | in-process Tokio runtime     | initialization_script    |
 |        v                              |                           |
-|  Nitro sidecar (127.0.0.1:PORT)       WebView (Nuxt client)       |
-|   - server/api/v1/** unchanged shape   - $fetch → localhost        |
-|   - Drizzle → SQLite                  - X-Desktop-Token on API      |
-|   - local recipe-images static/route  - /settings for secrets UX  |
-|   - OpenRouter when key + online      - no Supabase in renderer   |
+|  Axum server (127.0.0.1:PORT)         WebView (Nuxt static)       |
+|   - /api/v1/** all routes              - frontendDist index.html  |
+|   - Drizzle → SQLite                  - $fetch → localhost        |
+|   - local recipe-images route         - X-Desktop-Token on API   |
+|   - /health                           - /settings for secrets UX |
 +------------------------------------------------------------------+
 ```
 
 **Rationale**
 
-- Reuses the **trusted server boundary** from the Electron plan without rewriting handlers in Rust.
-- Repository swap (Supabase client → Drizzle) is smaller than `nuxt generate` + Tauri `invoke` for all APIs.
-- OpenRouter and file validation stay in TypeScript where they already live.
-
-**Tradeoff:** ships **Rust + Node + Nitro output**; mitigated by Windows-first packaging and pinned Node.
+- Single Rust binary — no Node runtime bundled, no child process lifecycle to manage.
+- Axum serves all `/api/v1` routes with the same request shape as Nitro.
+- Static client (`nuxt generate`, `ssr: false`) removes Nitro's node-server preset from the build.
+- OpenRouter and file validation still live in TypeScript for dev/server code; Axum re-implements these endpoints natively.
 
 ---
 
-## 5. Tauri, Nitro, and process responsibilities
+## 5. Tauri, Axum, and process responsibilities
 
 ### Rust main (trusted)
 
-- Create window after Nitro health check (`GET` health route or `/api/v1/...` probe).
-- Pick free TCP port on `127.0.0.1`; pass port + `DESKTOP_TOKEN` to renderer bootstrap (inline script or first-party config endpoint).
-- Spawn bundled Node with Nitro output; pass `DATABASE_URL` / `DATABASE_PATH`, `OPENROUTER_API_KEY` from keychain, `DESKTOP_TOKEN`, paths for images.
-- On quit: terminate Nitro child cleanly.
+- Health-check the Axum server BEFORE creating the WebView window.
+- Open the window to `index.html` via `WebviewUrl::App` — Tauri serves the static bundle from `frontendDist` (`../.output/public`); no explicit navigate call.
+- Inject `window.__MEALPREPPER_DESKTOP__` (`apiBase`, `token`) via `initialization_script`.
 - Expose minimal commands: `open_data_folder`, `get_app_version`, `set_openrouter_key` / `get_openrouter_key` (keychain wrappers).
-
-### Preload / Tauri IPC (minimal)
-
-- Prefer **not** routing app CRUD through Rust; data stays on Nitro.
-- Use IPC only for OS affordances Settings needs (folder reveal, version string).
 
 ### WebView / Nuxt client (untrusted)
 
-- Existing pages and composables; remove Supabase access token composable.
-- API client middleware attaches `X-Desktop-Token` (name TBD) on all `$fetch` to localhost.
+- Existing pages and composables; Supabase access token composable removed.
+- `01.desktop-api.client.ts` attaches `X-Desktop-Token` on all `$fetch` to localhost.
 - **Settings** at `/settings`, linked from **More** (`app/pages/more.vue`).
 
-### Nitro sidecar (trusted)
+### Axum server (trusted)
 
-- All `server/api/v1/**` handlers.
+- All `/api/v1/**` handlers.
 - **Desktop token middleware:** reject non-health requests without valid per-launch token.
-- **SQLite:** single writer; WAL mode recommended; migrations on startup before accepting traffic.
-- **Local principal middleware:** set `event.context.planningUserId` to install-scoped local id (replace `resolveSupabaseUserIdFromBearer`).
+- **SQLite:** single writer; WAL mode; Rust-owned migrations run at startup before accepting traffic.
+- **Local principal middleware:** set planning user context to install-scoped local id.
 
 ---
 
@@ -215,7 +208,7 @@ Update **CONTEXT.md** to remove anonymous idle purge / merge vocabulary for desk
 
 | Control | Behavior |
 |---------|----------|
-| OpenRouter API key | Masked input; save/clear; persisted via Tauri keychain; injected into Nitro on spawn |
+| OpenRouter API key | Masked input; save/clear; persisted via Tauri keychain; injected into Axum env on startup |
 | Connection hint | Link to OpenRouter; explain AI shopping-list polish is optional |
 | App version | Read-only from Tauri package metadata |
 | Data directory | Read-only path to SQLite + `recipe-images/` parent |
@@ -234,11 +227,11 @@ Update **CONTEXT.md** to remove anonymous idle purge / merge vocabulary for desk
 - No Node integration in the page; Tauri CSP restricts script and connect targets.
 - No Supabase keys, service role, or OpenRouter key in client bundle or `runtimeConfig` public keys.
 
-**Nitro**
+**Security model**
 
 - Bind **`127.0.0.1` only**; random port per launch.
-- **`DESKTOP_TOKEN`:** generated by Tauri at startup; required header on API routes (except health); timing-safe compare in middleware.
-- Renderer receives token only from trusted bootstrap, not hardcoded in built assets.
+- **`DESKTOP_TOKEN`:** generated by Tauri at startup; required header on API routes (except health); timing-safe compare in Axum middleware.
+- Renderer receives token only from trusted `initialization_script`, not hardcoded in built assets.
 
 **Secrets**
 
@@ -246,7 +239,7 @@ Update **CONTEXT.md** to remove anonymous idle purge / merge vocabulary for desk
 |--------|---------|
 | OpenRouter API key | OS keychain via Tauri; optional dev `.env` |
 | SQLite path | App data dir; optional env override |
-| Desktop token | Ephemeral env per run; not persisted |
+| Desktop token | Ephemeral per run; not persisted |
 
 **Navigation**
 
@@ -275,8 +268,8 @@ UI must show clear **offline** / **no API key** states; reuse existing consolida
 ## 12. AI (OpenRouter)
 
 - End users configure key in **Settings**; never ship a bundled shared key.
-- Nitro reads `openrouterApiKey` from runtime config populated at spawn from keychain.
-- Model/timeout/attribution env vars remain server-side defaults in `nuxt.config.ts` (or fixed product defaults).
+- Axum reads `OPENROUTER_API_KEY` from its environment, populated from keychain at startup.
+- Model/timeout/attribution env vars remain server-side defaults.
 - LangSmith remains optional dev-only via env if desired.
 
 ---
@@ -288,7 +281,7 @@ UI must show clear **offline** / **no API key** states; reuse existing consolida
 | OS | **Windows** signed installer (NSIS or MSI via Tauri bundler) | macOS notarized + Linux AppImage/deb |
 | Updates | Manual download/install | `tauri-plugin-updater` + release feed |
 | CI | GitHub Actions `windows-latest` build + sign | Matrix expand |
-| Node + Nitro | `extraResources` / bundled sidecar layout | Same pattern per OS |
+| Bundle | Rust binary + static Nuxt client (`nuxt generate`) | Same pattern per OS |
 
 **Signing:** Authenticode for Windows v1 GA; Apple/Linux credentials not blocking SQLite migration work.
 
@@ -297,16 +290,16 @@ UI must show clear **offline** / **no API key** states; reuse existing consolida
 ## 14. Development workflow
 
 - **Bun** remains package manager and Vitest runner.
-- Add `src-tauri/` (or `tauri/`) workspace; scripts: `desktop:dev`, `desktop:build`, `desktop:pack`.
+- `src-tauri/` workspace; scripts: `desktop:dev`, `desktop:build` (`nuxt generate` + static bundle), `desktop:pack`.
 - **Dev loop A:** `nuxt dev` + Tauri window pointed at dev server (fast UI iteration).
-- **Dev loop B:** bundled Nitro sidecar + production-like token/DB paths (integration).
+- **Dev loop B:** `bun run desktop:dev:sidecar` — Rust API + `MEALPREPPER_SIDECAR=1`; production-like token/DB paths.
 - **Local DB:** file under repo `.data/` or env `DATABASE_PATH` when not using Tauri app data dir.
 - ESLint: cover Tauri/Rust only as needed; existing app lint unchanged.
-- Tests: keep Vitest projects; add Nitro middleware tests for desktop token; smoke test sidecar health + DB migration apply.
+- Tests: keep Vitest projects; add Axum middleware tests for desktop token; smoke test health + DB migration apply.
 
 **`.env.example` (target shape)**
 
-- Remove `SUPABASE_*`, `SAVED_WEEKPLANS_IDLE_PURGE_SECRET`.
+- Remove `SUPABASE_*`, `SAVED_WEEKPLANS_IDLE_PURGE_SECRET`, `NITRO_DESKTOP_OUTPUT_DIR`.
 - Add `DATABASE_PATH` (optional), document `DESKTOP_TOKEN` for local sidecar-only dev, OpenRouter notes.
 - Keep logging and optional LangSmith vars.
 
@@ -330,8 +323,8 @@ Execute when SQLite repositories merge (not before archive copy):
 
 | Phase | Milestone | Outcome |
 |-------|-----------|---------|
-| 0 | Spike | Tauri window loads app against `nuxt dev` OR local Nitro; validates WebView + toolchain |
-| 1 | Sidecar | `NITRO_PRESET=node-server` build; bundled Node; health-gated startup; desktop token middleware |
+| 0 | Spike | Tauri window loads app against `nuxt dev` OR local Rust API; validates WebView + toolchain |
+| 1 | Desktop Local API | In-process Axum server; health-gated startup; desktop token middleware; static `nuxt generate` client |
 | 2 | SQLite | Drizzle schema + migrations; repository port; archive Supabase SQL; local image upload/serve |
 | 3 | Identity & cleanup | Local principal; remove anonymous/merge/purge/internal routes; drop Supabase client |
 | 4 | Settings | `/settings` page; keychain OpenRouter; data path + open folder |
@@ -347,8 +340,8 @@ Phases 0–4 can keep a git branch deployable for dogfooding before deleting `su
 
 | Risk | Mitigation |
 |------|------------|
-| Two runtimes (Rust + Node) | Windows-first; pinned Node; clear spawn/kill lifecycle |
-| Large installer | Accept for v1; later evaluate single-binary Nitro tooling only if painful |
+| Axum route parity with Nitro handlers | Implement slice-by-slice; CI tests each route |
+| Large installer | Nuxt static bundle is small; Rust binary replaces Node + Nitro bundle |
 | Schema port errors | Archive PG DDL; repository tests; migrate on startup in dev CI |
 | Local port scanning | `127.0.0.1` + per-launch token |
 | No backup v1 | Document data path in Settings; add backup in phase 2 if needed |
@@ -358,7 +351,7 @@ Phases 0–4 can keep a git branch deployable for dogfooding before deleting `su
 
 ## 18. Open items (deferred)
 
-- Unix socket / named pipe instead of TCP for Nitro (drop port scanning entirely).
+- Unix socket / named pipe instead of TCP for Axum (drop port scanning entirely).
 - Orphan recipe-image GC job and whether it needs an `internal/` route.
 - Vendoring Google Fonts / Material Symbols for fully offline UI assets.
 - Backup/restore format and conflict policy.

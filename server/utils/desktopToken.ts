@@ -5,13 +5,13 @@ import { createError, getHeader, getRequestURL } from 'h3'
 /** Header the desktop WebView sends on loopback API calls. */
 export const DESKTOP_TOKEN_HEADER = 'x-desktop-token'
 
-/** Returns the expected token from the Nitro process environment (unset outside desktop sidecar). */
+/** Returns the expected token from the process environment (unset outside desktop sidecar context). */
 export function getExpectedDesktopToken(): string | undefined {
   const token = process.env.DESKTOP_TOKEN?.trim()
   return token && token.length > 0 ? token : undefined
 }
 
-/** True when desktop token enforcement is active for this Nitro process. */
+/** True when desktop token enforcement is active for this process. */
 export function isDesktopTokenEnforced(): boolean {
   return getExpectedDesktopToken() !== undefined
 }

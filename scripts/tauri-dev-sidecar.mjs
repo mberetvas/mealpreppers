@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Dev loop B: Tauri window against a local Nitro sidecar (run build:desktop:resources first). */
+/** Dev loop B: Tauri window with in-process Rust API (MEALPREPPER_SIDECAR=1). */
 import { spawnSync } from 'node:child_process'
 
 const result = spawnSync(
