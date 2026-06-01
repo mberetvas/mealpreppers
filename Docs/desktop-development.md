@@ -113,9 +113,10 @@ The packaged app:
 | Shopping list (non-AI baseline) | Yes | AI polish shows banner when skipped |
 | AI shopping-list polish | No | Requires OpenRouter key + network |
 | Recipe URL import | No | UI disabled offline with explicit message |
-| Google Fonts / Material Symbols | First paint needs network | CDN in `nuxt.config.ts`; see [desktop-release.md](./desktop-release.md) |
+| Typography / icons | Yes | Bundled `@fontsource` — see [desktop-startup.md](./desktop-startup.md) |
 
-Manual smoke checklist: [desktop-release.md](./desktop-release.md).
+Manual smoke checklist: [desktop-release.md](./desktop-release.md). Cold-start profiling and splash:
+[desktop-startup.md](./desktop-startup.md).
 
 ## CI
 

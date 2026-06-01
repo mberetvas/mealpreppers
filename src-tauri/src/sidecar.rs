@@ -12,6 +12,7 @@ use std::io::Read;
 
 use crate::diagnostics;
 use crate::keychain;
+use crate::startup::{self, StartupTiming};
 
 const HEALTH_PATH: &str = "/health";
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(60);
@@ -124,6 +125,10 @@ fn spawn_nitro(app: &AppHandle, port: u16, token: &str, data_dir: &Path) -> Resu
     log::info!("Injected OPENROUTER_API_KEY from keychain into Nitro sidecar environment");
   }
 
+  if startup::timing_enabled() {
+    command.env("MEALPREPPER_STARTUP_TIMING", "1");
+  }
+
   command
     .stdin(Stdio::null())
     .stdout(Stdio::piped())
@@ -164,12 +169,13 @@ pub fn wait_for_health(port: u16) -> Result<(), String> {
   ))
 }
 
-pub fn start_sidecar(app: &AppHandle) -> Result<SidecarState, String> {
+pub fn start_sidecar(app: &AppHandle, timing: &mut StartupTiming) -> Result<SidecarState, String> {
   let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
   std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
   let port = pick_loopback_port()?;
   let token = Uuid::new_v4().to_string();
   let mut child = spawn_nitro(app, port, &token, &data_dir)?;
+  timing.mark_sidecar_spawned();
 
   log::info!(
     "Started Nitro sidecar on 127.0.0.1:{port} (pid {})",
@@ -188,6 +194,7 @@ pub fn start_sidecar(app: &AppHandle) -> Result<SidecarState, String> {
   }
 
   log::info!("Nitro sidecar health check passed");
+  timing.mark_sidecar_healthy();
 
   Ok(SidecarState {
     port,

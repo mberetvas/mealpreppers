@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mealprepper</title>
+    <style>
+      :root {
+        --atelier-canvas: 247 242 232;
+        --atelier-heading: 18 54 40;
+        --atelier-muted: 82 100 88;
+        --atelier-cta: 183 102 47;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        padding: 2rem;
+        font-family: system-ui, sans-serif;
+        background: rgb(var(--atelier-canvas));
+        color: rgb(var(--atelier-heading));
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: rgb(var(--atelier-muted));
+      }
+
+      .spinner {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 3px solid rgb(var(--atelier-heading) / 0.15);
+        border-top-color: rgb(var(--atelier-cta));
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="spinner" role="status" aria-label="Loading"></div>
+    <h1>Mealprepper</h1>
+    <p>Starting Mealprepper…</p>
+  </body>
+</html>

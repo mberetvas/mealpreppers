@@ -22,7 +22,8 @@ Run on a clean Windows VM or spare machine when validating a release candidate.
 
 ### Offline core flows (disconnect network after install)
 
-- [ ] App launches and shows primary navigation
+- [ ] Splash appears briefly on first launch, then main window with navigation
+- [ ] App launches; splash appears briefly (sidecar mode), then primary navigation
 - [ ] **Recipes**: create, edit, delete a manual recipe; local image upload works
 - [ ] **Weekly Plan**: build a draft week plan
 - [ ] **Saved Weekplans**: save plan with title; reopen from Manage plans
@@ -38,8 +39,9 @@ Run on a clean Windows VM or spare machine when validating a release candidate.
 
 ### Fonts note
 
-Google Fonts and Material Symbols load from CDN on first paint (`nuxt.config.ts`). Offline install
-may show fallback fonts until network is available once. Core data features remain offline-capable.
+Newsreader, Plus Jakarta Sans, and Material Symbols are bundled with the app (see
+[desktop-startup.md](./desktop-startup.md)). First paint should match online typography without a
+network call.
 
 ## Manual update (v1 — no in-app updater)
 

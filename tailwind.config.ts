@@ -91,9 +91,9 @@ export default {
         'surface-container-lowest': '#ffffff',
       },
       fontFamily: {
-        headline: ['Newsreader', 'serif'],
-        body: ['Plus Jakarta Sans', 'sans-serif'],
-        label: ['Plus Jakarta Sans', 'sans-serif'],
+        headline: ['"Newsreader Variable"', 'Newsreader', 'serif'],
+        body: ['"Plus Jakarta Sans Variable"', '"Plus Jakarta Sans"', 'sans-serif'],
+        label: ['"Plus Jakarta Sans Variable"', '"Plus Jakarta Sans"', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '0.25rem',
