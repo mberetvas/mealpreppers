@@ -16,9 +16,9 @@ export function isDesktopTokenEnforced(): boolean {
   return getExpectedDesktopToken() !== undefined
 }
 
-/** Paths that skip desktop token checks (health probe, public recipe images). */
-export function isDesktopTokenExemptPath(pathname: string): boolean {
-  return pathname === '/health' || pathname.startsWith('/recipe-images/')
+/** API paths that require the desktop token when enforcement is active. */
+export function isDesktopTokenProtectedPath(pathname: string): boolean {
+  return pathname.startsWith('/api/')
 }
 
 /** Timing-safe comparison of desktop tokens. */
@@ -39,7 +39,7 @@ export function assertValidDesktopToken(event: H3Event): void {
   }
 
   const { pathname } = getRequestURL(event)
-  if (isDesktopTokenExemptPath(pathname)) {
+  if (!isDesktopTokenProtectedPath(pathname)) {
     return
   }
 

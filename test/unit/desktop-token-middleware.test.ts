@@ -43,6 +43,14 @@ describe('desktop token middleware', () => {
     expect(() => middleware(makeEvent('/health', 'GET'))).not.toThrow()
   })
 
+  it('allows page loads without a token when enforcement is on', async () => {
+    process.env.DESKTOP_TOKEN = 'expected-secret-token'
+    const { default: middleware } = await import('../../server/middleware/00.desktop-token')
+    expect(() => middleware(makeEvent('/', 'GET'))).not.toThrow()
+    expect(() => middleware(makeEvent('/recipes', 'GET'))).not.toThrow()
+    expect(() => middleware(makeEvent('/_nuxt/entry.js', 'GET'))).not.toThrow()
+  })
+
   it('rejects API requests without a token when enforcement is on', async () => {
     process.env.DESKTOP_TOKEN = 'expected-secret-token'
     const { default: middleware } = await import('../../server/middleware/00.desktop-token')
