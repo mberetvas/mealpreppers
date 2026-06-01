@@ -3,7 +3,7 @@
  * Builds Nuxt with the Nitro node-server preset for the Tauri sidecar.
  */
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -37,6 +37,55 @@ function removeTree(path) {
   rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }
 
+/**
+ * Removes all `node_modules/` directories nested inside the Nitro `.nitro/`
+ * package cache. Nitro uses symlinks from `node_modules/pkg → .nitro/pkg@ver`
+ * for deduplication, but those cached packages contain their own `node_modules/`
+ * with symlinks back into `.nitro/`, forming circular chains that exceed
+ * Windows MAX_PATH (260 chars) when `tauri_build` walks resources for
+ * `cargo:rerun-if-changed` registration.
+ *
+ * After removal Node.js resolves peer deps by traversing UP from `.nitro/pkg@ver`
+ * through the `.nitro/` cache directory to the outer `node_modules/`, which
+ * contains all required packages as top-level symlinks.
+ */
+function cleanNitroPackageCache(serverNodeModules) {
+  const nitroDir = join(serverNodeModules, '.nitro')
+  if (!existsSync(nitroDir)) return
+
+  console.log('Removing circular node_modules from .nitro package cache...')
+
+  function recurse(dir) {
+    let names
+    try {
+      names = readdirSync(dir)
+    }
+    catch {
+      return
+    }
+    for (const name of names) {
+      const fullPath = join(dir, name)
+      let stat
+      try {
+        stat = lstatSync(fullPath)
+      }
+      catch {
+        continue
+      }
+      if (stat.isSymbolicLink()) continue
+      if (name === 'node_modules' && stat.isDirectory()) {
+        removeTree(fullPath)
+      }
+      else if (stat.isDirectory()) {
+        recurse(fullPath)
+      }
+    }
+  }
+
+  recurse(nitroDir)
+  console.log('Done removing internal node_modules from .nitro cache.')
+}
+
 removeTree(nitroOutputDir)
 mkdirSync(nitroOutputDir, { recursive: true })
 
@@ -54,6 +103,8 @@ const result = spawnSync('bun', ['x', 'nuxt', 'build'], {
 if (result.status !== 0) {
   process.exit(result.status ?? 1)
 }
+
+cleanNitroPackageCache(join(outputServer, 'node_modules'))
 
 if (existsSync(migrationsSrc)) {
   mkdirSync(dirname(migrationsDest), { recursive: true })
