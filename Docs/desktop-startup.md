@@ -42,9 +42,15 @@ Run **three cold starts** (quit app fully between runs). Record summary lines:
 
 | Run | sidecar_spawn_ms | health_wait_ms | main_create_ms | main_show_ms | total_setup_ms | nitro_sqlite_migrate_ms |
 |-----|------------------|----------------|----------------|--------------|----------------|-------------------------|
-| 1 | | | | | | |
-| 2 | | | | | | |
-| 3 | | | | | | |
+| 1 | 2737 | 2834 | 352 | 44 | 5968 | — |
+| 2 | 1081 | 1069 | 297 | 45 | 2494 | — |
+| 3 | 1186 | 1070 | 407 | 57 | 2722 | — |
+
+**Baseline captured:** 2026-06-01, `bun run desktop:dev:sidecar`, debug `mealprepper.exe`, `MEALPREPPER_STARTUP_TIMING=1`, after `build:desktop`.
+
+- **Run 1** was immediately after a full `cargo` rebuild (~37 s compile); sidecar spawn and health wait were ~2.5× runs 2–3 — treat as post-build cold start, not steady state.
+- **Runs 2–3 median:** `sidecar_spawn_ms` 1186, `health_wait_ms` 1070, `total_setup_ms` ~2608. Sidecar + health poll dominate; main window create/show under 500 ms combined.
+- `nitro_sqlite_migrate_ms` not in console output for these runs; check Nitro stderr if needed (same env flag).
 
 Packaged release: set both env vars on `mealprepper.exe` or use `bun run desktop:build:console` for a visible console.
 
