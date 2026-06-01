@@ -2,6 +2,7 @@ mod diagnostics;
 mod keychain;
 mod sidecar;
 mod startup;
+pub mod shadow_server;
 
 pub use diagnostics::{maybe_attach_console, pause_on_fatal_error};
 
@@ -10,6 +11,7 @@ use keychain::{
   open_data_folder, open_external_url, set_openrouter_key,
 };
 use sidecar::{should_run_sidecar, SidecarState};
+use shadow_server::ShadowServerState;
 use startup::StartupTiming;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
@@ -46,6 +48,7 @@ pub fn run() {
         if let Some(state) = app.try_state::<SidecarState>() {
           state.stop();
         }
+        // ShadowServerState drop triggers graceful Axum shutdown automatically.
       }
     });
 }
@@ -66,6 +69,31 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   }
 
   let mut timing = StartupTiming::begin();
+
+  // Start the Desktop Local API shadow server in-process (platform milestone).
+  // Runs on a separate loopback port; Nitro remains the user-facing API for this phase.
+  let data_dir = app
+    .path()
+    .app_data_dir()
+    .map_err(|e| format!("resolve data dir: {e}"))?;
+  std::fs::create_dir_all(&data_dir).map_err(|e| format!("create data dir: {e}"))?;
+
+  let shadow_token = std::env::var("DESKTOP_TOKEN").ok();
+  match shadow_server::start(&data_dir, shadow_token.as_deref(), &mut timing) {
+    Ok(shadow_state) => {
+      log::info!(
+        "Desktop Local API shadow server running on 127.0.0.1:{}",
+        shadow_state.port
+      );
+      app.manage(shadow_state);
+    }
+    Err(e) => {
+      // Non-fatal in phase 1: the shadow server failing does not block the main window.
+      diagnostics::eprintln(&format!("Shadow server failed to start: {e}"));
+      log::warn!("desktop.shadow_server.start_failed error={e}");
+    }
+  }
+
   let setup_result = setup_main_window(app, &mut timing);
 
   if setup_result.is_err() {

@@ -17,6 +17,8 @@ pub struct StartupTiming {
   sidecar_spawn: Option<Instant>,
   sidecar_healthy: Option<Instant>,
   main_navigated: Option<Instant>,
+  /// Desktop Local API shadow server bound and listening (platform milestone).
+  shadow_api_spawned: Option<Instant>,
 }
 
 impl StartupTiming {
@@ -32,6 +34,7 @@ impl StartupTiming {
       sidecar_spawn: None,
       sidecar_healthy: None,
       main_navigated: None,
+      shadow_api_spawned: None,
     }
   }
 
@@ -58,6 +61,12 @@ impl StartupTiming {
   pub fn mark_main_navigated(&mut self) {
     self.main_navigated = Some(Instant::now());
     self.log_milestone("main_navigated");
+  }
+
+  /// Records when the Desktop Local API shadow server is bound and accepting requests.
+  pub fn mark_shadow_api_spawned(&mut self) {
+    self.shadow_api_spawned = Some(Instant::now());
+    self.log_milestone("shadow_api_spawned");
   }
 
   fn log_milestone(&self, name: &str) {
@@ -106,8 +115,13 @@ impl StartupTiming {
       .map(|t| Self::ms_since(self.setup_begin, t))
       .unwrap_or_else(|| self.setup_begin.elapsed().as_millis());
 
+    let shadow_api_spawned_ms = self
+      .shadow_api_spawned
+      .map(|t| Self::ms_since(self.setup_begin, t))
+      .unwrap_or(0);
+
     let line = format!(
-      "startup_timing main_create_ms={main_create_ms} main_show_ms={main_show_ms} sidecar_spawn_ms={sidecar_spawn_ms} health_wait_ms={health_wait_ms} main_navigate_ms={main_navigate_ms} total_setup_ms={total_setup_ms}"
+      "startup_timing main_create_ms={main_create_ms} main_show_ms={main_show_ms} sidecar_spawn_ms={sidecar_spawn_ms} health_wait_ms={health_wait_ms} main_navigate_ms={main_navigate_ms} shadow_api_spawned_ms={shadow_api_spawned_ms} total_setup_ms={total_setup_ms}"
     );
     log::info!("{line}");
     diagnostics::eprintln(&line);
