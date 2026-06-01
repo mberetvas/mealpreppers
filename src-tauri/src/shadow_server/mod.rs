@@ -21,8 +21,6 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::time::Duration;
 
-use crate::startup::StartupTiming;
-
 /// Handle for the running shadow server. Dropping this stops the server gracefully.
 pub struct ShadowServerState {
     /// Loopback port the shadow server is listening on.
@@ -36,11 +34,11 @@ pub struct ShadowServerState {
 /// - Opens and migrates the install database at `data_dir/mealprepper.db`
 ///   (or `$DATABASE_PATH` when set).
 /// - Spawns a Tokio runtime on a background thread and starts the Axum listener.
-/// - Records the `shadow_api_spawned` startup timing milestone.
+///
+/// Callers are responsible for recording startup timing milestones after this returns.
 pub fn start(
     data_dir: &Path,
     token: Option<&str>,
-    timing: &mut StartupTiming,
 ) -> Result<ShadowServerState, String> {
     let db_path = resolve_db_path(data_dir);
     db::open_and_migrate(&db_path)?;
@@ -97,7 +95,6 @@ pub fn start(
     log::info!(
         "startup_timing desktop.shadow_server.started port={port}"
     );
-    timing.mark_shadow_api_spawned();
 
     Ok(ShadowServerState {
         port,

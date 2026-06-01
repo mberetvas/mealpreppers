@@ -3,7 +3,6 @@
 /// Each test starts a fresh server against an ephemeral temp directory so there is
 /// no cross-test DB state and no interaction with the Nitro / Drizzle database.
 use mealprepper_lib::shadow_server;
-use mealprepper_lib::startup::StartupTiming;
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -18,9 +17,7 @@ struct TestServer {
 impl TestServer {
     fn start(token: Option<&str>) -> Self {
         let temp = tempfile::TempDir::new().expect("tempdir");
-        let mut timing = StartupTiming::begin();
-        let state =
-            shadow_server::start(temp.path(), token, &mut timing).expect("shadow server start");
+        let state = shadow_server::start(temp.path(), token).expect("shadow server start");
         let port = state.port;
         TestServer {
             port,
@@ -35,23 +32,26 @@ impl TestServer {
 }
 
 /// Performs a GET with optional headers, returns `(status_code, body_string)`.
+///
+/// Uses `http_status_as_error(false)` so 4xx/5xx come back as `Ok(Response)`,
+/// enabling tests to inspect both the status code and the error JSON body.
 fn http_get(url: &str, headers: &[(&str, &str)]) -> (u16, String) {
-    let mut req = ureq::get(url);
+    // Build a per-call agent with http_status_as_error disabled so 4xx/5xx
+    // don't short-circuit before we can read the response body.
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .build()
+        .into();
+
+    let mut req = agent.get(url);
     for (name, value) in headers {
         req = req.header(*name, *value);
     }
-    match req.call() {
-        Ok(resp) => {
-            let status = resp.status();
-            let body = resp.into_string().unwrap_or_default();
-            (status, body)
-        }
-        Err(ureq::Error::Status(code, resp)) => {
-            let body = resp.into_string().unwrap_or_default();
-            (code, body)
-        }
-        Err(e) => panic!("Transport error: {e}"),
-    }
+
+    let mut resp = req.call().expect("no transport error expected");
+    let status = resp.status().as_u16();
+    let body = resp.body_mut().read_to_string().unwrap_or_default();
+    (status, body)
 }
 
 // ---------------------------------------------------------------------------

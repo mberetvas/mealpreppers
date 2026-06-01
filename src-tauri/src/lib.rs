@@ -11,7 +11,6 @@ use keychain::{
   open_data_folder, open_external_url, set_openrouter_key,
 };
 use sidecar::{should_run_sidecar, SidecarState};
-use shadow_server::ShadowServerState;
 use startup::StartupTiming;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
@@ -79,12 +78,13 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   std::fs::create_dir_all(&data_dir).map_err(|e| format!("create data dir: {e}"))?;
 
   let shadow_token = std::env::var("DESKTOP_TOKEN").ok();
-  match shadow_server::start(&data_dir, shadow_token.as_deref(), &mut timing) {
+  match shadow_server::start(&data_dir, shadow_token.as_deref()) {
     Ok(shadow_state) => {
       log::info!(
         "Desktop Local API shadow server running on 127.0.0.1:{}",
         shadow_state.port
       );
+      timing.mark_shadow_api_spawned();
       app.manage(shadow_state);
     }
     Err(e) => {
