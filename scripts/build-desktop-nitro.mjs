@@ -37,9 +37,8 @@ function removeTree(path) {
   rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }
 
-for (const sub of ['server', 'public']) {
-  removeTree(join(nitroOutputDir, sub))
-}
+removeTree(nitroOutputDir)
+mkdirSync(nitroOutputDir, { recursive: true })
 
 const result = spawnSync('bun', ['x', 'nuxt', 'build'], {
   cwd: repoRoot,
