@@ -22,8 +22,7 @@ Run on a clean Windows VM or spare machine when validating a release candidate.
 
 ### Offline core flows (disconnect network after install)
 
-- [ ] Splash appears briefly on first launch, then main window with navigation
-- [ ] App launches; splash appears briefly (sidecar mode), then primary navigation
+- [ ] App launches with main window visible; navigation loads after sidecar is ready (no splash)
 - [ ] **Recipes**: create, edit, delete a manual recipe; local image upload works
 - [ ] **Weekly Plan**: build a draft week plan
 - [ ] **Saved Weekplans**: save plan with title; reopen from Manage plans

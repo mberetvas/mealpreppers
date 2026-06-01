@@ -10,7 +10,7 @@ use keychain::{
   open_data_folder, open_external_url, set_openrouter_key,
 };
 use sidecar::{should_run_sidecar, SidecarState};
-use startup::{StartupTiming, uses_splash_screen};
+use startup::StartupTiming;
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -50,21 +50,10 @@ pub fn run() {
     });
 }
 
-fn close_splash(app: &tauri::App) {
-  if let Some(splash) = app.get_webview_window("splash") {
-    let _ = splash.close();
+fn close_main(app: &tauri::App) {
+  if let Some(main) = app.get_webview_window("main") {
+    let _ = main.close();
   }
-}
-
-fn open_splash(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-  WebviewWindowBuilder::new(app.handle(), "splash", WebviewUrl::App("splash.html".into()))
-    .title("Mealprepper")
-    .inner_size(360.0, 280.0)
-    .center()
-    .resizable(false)
-    .always_on_top(true)
-    .build()?;
-  Ok(())
 }
 
 fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -77,20 +66,13 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   }
 
   let mut timing = StartupTiming::begin();
-  let show_splash = uses_splash_screen();
-
-  if show_splash {
-    open_splash(app)?;
-  }
-
   let setup_result = setup_main_window(app, &mut timing);
 
   if setup_result.is_err() {
-    close_splash(app);
+    close_main(app);
     return setup_result;
   }
 
-  close_splash(app);
   timing.log_summary();
   Ok(())
 }
@@ -100,23 +82,39 @@ fn setup_main_window(
   timing: &mut StartupTiming,
 ) -> Result<(), Box<dyn std::error::Error>> {
   if should_run_sidecar() {
-    let state = sidecar::start_sidecar(app.handle(), timing)?;
-    let bootstrap = state.bootstrap_script();
-    let url = tauri::Url::parse(&format!("{}/", state.api_base()))?;
+    let launch = sidecar::prepare_sidecar_launch(app.handle())?;
+    let bootstrap = sidecar::bootstrap_script(launch.port, &launch.token);
+    let blank = tauri::Url::parse("about:blank")?;
 
-    WebviewWindowBuilder::new(app.handle(), "main", WebviewUrl::External(url))
+    WebviewWindowBuilder::new(app.handle(), "main", WebviewUrl::External(blank))
       .title("Mealprepper")
       .inner_size(1280.0, 800.0)
       .center()
-      .visible(false)
       .initialization_script(&bootstrap)
       .build()?;
     timing.mark_main_window_created();
+    timing.mark_main_window_shown();
 
-    if let Some(window) = app.get_webview_window("main") {
-      window.show().map_err(|e| e.to_string())?;
-      timing.mark_main_window_shown();
+    let state = match sidecar::finish_sidecar_launch(app.handle(), launch, timing) {
+      Ok(state) => state,
+      Err(e) => {
+        close_main(app);
+        return Err(e.into());
+      }
+    };
+
+    let api_url = tauri::Url::parse(&format!("{}/", state.api_base()))?;
+    let main = app
+      .get_webview_window("main")
+      .ok_or("Main window missing after sidecar setup")?;
+    if let Err(e) = main.navigate(api_url) {
+      if diagnostics::enabled() {
+        diagnostics::eprintln(&format!("Failed to navigate main window to API: {e}"));
+      }
+      close_main(app);
+      return Err(e.into());
     }
+    timing.mark_main_navigated();
 
     app.manage(state);
   } else if let Some(dev_url) = app.config().build.dev_url.clone() {

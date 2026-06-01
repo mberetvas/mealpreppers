@@ -18,23 +18,20 @@ const HEALTH_PATH: &str = "/health";
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(60);
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_millis(200);
 
-pub struct SidecarState {
+pub struct SidecarLaunch {
   pub port: u16,
   pub token: String,
+  pub data_dir: PathBuf,
+}
+
+pub struct SidecarState {
+  pub port: u16,
   child: Mutex<Option<Child>>,
 }
 
 impl SidecarState {
   pub fn api_base(&self) -> String {
     format!("http://127.0.0.1:{}", self.port)
-  }
-
-  pub fn bootstrap_script(&self) -> String {
-    let payload = serde_json::json!({
-      "apiBase": self.api_base(),
-      "token": self.token,
-    });
-    format!("window.__MEALPREPPER_DESKTOP__ = {};", payload)
   }
 
   pub fn stop(&self) {
@@ -53,6 +50,65 @@ pub fn should_run_sidecar() -> bool {
     return true;
   }
   !tauri::is_dev()
+}
+
+pub fn bootstrap_script(port: u16, token: &str) -> String {
+  let api_base = format!("http://127.0.0.1:{port}");
+  let payload = serde_json::json!({
+    "apiBase": api_base,
+    "token": token,
+  });
+  format!("window.__MEALPREPPER_DESKTOP__ = {};", payload)
+}
+
+pub fn prepare_sidecar_launch(app: &AppHandle) -> Result<SidecarLaunch, String> {
+  let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+  std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+  let port = pick_loopback_port()?;
+  let token = Uuid::new_v4().to_string();
+  Ok(SidecarLaunch {
+    port,
+    token,
+    data_dir,
+  })
+}
+
+pub fn finish_sidecar_launch(
+  app: &AppHandle,
+  launch: SidecarLaunch,
+  timing: &mut StartupTiming,
+) -> Result<SidecarState, String> {
+  let SidecarLaunch {
+    port,
+    token,
+    data_dir,
+  } = launch;
+  let mut child = spawn_nitro(app, port, &token, &data_dir)?;
+  timing.mark_sidecar_spawned();
+
+  log::info!(
+    "Started Nitro sidecar on 127.0.0.1:{port} (pid {})",
+    child.id()
+  );
+
+  if let Err(mut health_err) = wait_for_health(port) {
+    if diagnostics::enabled() {
+      let stderr = read_child_stderr(&mut child);
+      health_err.push_str("\n\n--- Nitro sidecar stderr ---\n");
+      health_err.push_str(&stderr);
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+    return Err(health_err);
+  }
+
+  log::info!("Nitro sidecar health check passed");
+  timing.mark_sidecar_healthy();
+
+  Ok(SidecarState {
+    port,
+    child: Mutex::new(Some(child)),
+  })
 }
 
 fn resolve_resource(app: &AppHandle, path: &str) -> Result<PathBuf, String> {
@@ -169,36 +225,15 @@ pub fn wait_for_health(port: u16) -> Result<(), String> {
   ))
 }
 
-pub fn start_sidecar(app: &AppHandle, timing: &mut StartupTiming) -> Result<SidecarState, String> {
-  let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-  std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
-  let port = pick_loopback_port()?;
-  let token = Uuid::new_v4().to_string();
-  let mut child = spawn_nitro(app, port, &token, &data_dir)?;
-  timing.mark_sidecar_spawned();
+#[cfg(test)]
+mod tests {
+  use super::*;
 
-  log::info!(
-    "Started Nitro sidecar on 127.0.0.1:{port} (pid {})",
-    child.id()
-  );
-
-  if let Err(mut health_err) = wait_for_health(port) {
-    if diagnostics::enabled() {
-      let stderr = read_child_stderr(&mut child);
-      health_err.push_str("\n\n--- Nitro sidecar stderr ---\n");
-      health_err.push_str(&stderr);
-    }
-    let _ = child.kill();
-    let _ = child.wait();
-    return Err(health_err);
+  #[test]
+  fn bootstrap_script_sets_desktop_global() {
+    let script = bootstrap_script(49152, "test-token");
+    assert!(script.contains("window.__MEALPREPPER_DESKTOP__"));
+    assert!(script.contains("\"apiBase\":\"http://127.0.0.1:49152\""));
+    assert!(script.contains("\"token\":\"test-token\""));
   }
-
-  log::info!("Nitro sidecar health check passed");
-  timing.mark_sidecar_healthy();
-
-  Ok(SidecarState {
-    port,
-    token,
-    child: Mutex::new(Some(child)),
-  })
 }

@@ -12,10 +12,11 @@ pub fn timing_enabled() -> bool {
 /// Tracks setup milestones and emits one summary line when enabled.
 pub struct StartupTiming {
   setup_begin: Instant,
-  sidecar_spawn: Option<Instant>,
-  sidecar_healthy: Option<Instant>,
   main_window_created: Option<Instant>,
   main_window_shown: Option<Instant>,
+  sidecar_spawn: Option<Instant>,
+  sidecar_healthy: Option<Instant>,
+  main_navigated: Option<Instant>,
 }
 
 impl StartupTiming {
@@ -26,11 +27,22 @@ impl StartupTiming {
     }
     Self {
       setup_begin,
-      sidecar_spawn: None,
-      sidecar_healthy: None,
       main_window_created: None,
       main_window_shown: None,
+      sidecar_spawn: None,
+      sidecar_healthy: None,
+      main_navigated: None,
     }
+  }
+
+  pub fn mark_main_window_created(&mut self) {
+    self.main_window_created = Some(Instant::now());
+    self.log_milestone("main_window_created");
+  }
+
+  pub fn mark_main_window_shown(&mut self) {
+    self.main_window_shown = Some(Instant::now());
+    self.log_milestone("main_window_shown");
   }
 
   pub fn mark_sidecar_spawned(&mut self) {
@@ -43,14 +55,9 @@ impl StartupTiming {
     self.log_milestone("sidecar_healthy");
   }
 
-  pub fn mark_main_window_created(&mut self) {
-    self.main_window_created = Some(Instant::now());
-    self.log_milestone("main_window_created");
-  }
-
-  pub fn mark_main_window_shown(&mut self) {
-    self.main_window_shown = Some(Instant::now());
-    self.log_milestone("main_window_shown");
+  pub fn mark_main_navigated(&mut self) {
+    self.main_navigated = Some(Instant::now());
+    self.log_milestone("main_navigated");
   }
 
   fn log_milestone(&self, name: &str) {
@@ -71,46 +78,38 @@ impl StartupTiming {
       return;
     }
 
-    let sidecar_spawn_ms = self
-      .sidecar_spawn
+    let main_create_ms = self
+      .main_window_created
       .map(|t| Self::ms_since(self.setup_begin, t))
       .unwrap_or(0);
-    let health_wait_ms = match (self.sidecar_spawn, self.sidecar_healthy) {
-      (Some(spawn), Some(healthy)) => Self::ms_since(spawn, healthy),
-      _ => 0,
-    };
-    let main_create_ms = match (self.sidecar_healthy, self.main_window_created) {
-      (Some(healthy), Some(created)) => Self::ms_since(healthy, created),
-      _ => 0,
-    };
     let main_show_ms = match (self.main_window_created, self.main_window_shown) {
       (Some(created), Some(shown)) => Self::ms_since(created, shown),
       _ => 0,
     };
+    let sidecar_spawn_ms = match (self.main_window_shown, self.sidecar_spawn) {
+      (Some(shown), Some(spawn)) => Self::ms_since(shown, spawn),
+      _ => 0,
+    };
+    let health_wait_ms = match (self.sidecar_spawn, self.sidecar_healthy) {
+      (Some(spawn), Some(healthy)) => Self::ms_since(spawn, healthy),
+      _ => 0,
+    };
+    let main_navigate_ms = match (self.sidecar_healthy, self.main_navigated) {
+      (Some(healthy), Some(navigated)) => Self::ms_since(healthy, navigated),
+      _ => 0,
+    };
     let total_setup_ms = self
-      .main_window_shown
-      .or(self.main_window_created)
+      .main_navigated
       .or(self.sidecar_healthy)
+      .or(self.main_window_shown)
+      .or(self.main_window_created)
       .map(|t| Self::ms_since(self.setup_begin, t))
       .unwrap_or_else(|| self.setup_begin.elapsed().as_millis());
 
     let line = format!(
-      "startup_timing sidecar_spawn_ms={sidecar_spawn_ms} health_wait_ms={health_wait_ms} main_create_ms={main_create_ms} main_show_ms={main_show_ms} total_setup_ms={total_setup_ms}"
+      "startup_timing main_create_ms={main_create_ms} main_show_ms={main_show_ms} sidecar_spawn_ms={sidecar_spawn_ms} health_wait_ms={health_wait_ms} main_navigate_ms={main_navigate_ms} total_setup_ms={total_setup_ms}"
     );
     log::info!("{line}");
     diagnostics::eprintln(&line);
   }
-}
-
-#[cfg(test)]
-mod tests {
-  #[test]
-  fn uses_splash_screen_matches_sidecar_mode() {
-    assert_eq!(super::uses_splash_screen(), crate::sidecar::should_run_sidecar());
-  }
-}
-
-/// Splash is shown only in packaged / sidecar dev loop B (not Nuxt dev loop A).
-pub fn uses_splash_screen() -> bool {
-  crate::sidecar::should_run_sidecar()
 }

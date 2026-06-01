@@ -40,9 +40,8 @@ bun run desktop:dev:sidecar
 ```
 
 Uses `MEALPREPPER_SIDECAR=1` and `src-tauri/tauri.sidecar.conf.json` (skips
-`beforeDevCommand` and `tauri dev`’s frontend wait). The shell spawns Nitro on a random `127.0.0.1` port, waits for `GET
-/health`, injects `window.__MEALPREPPER_DESKTOP__` (API base + per-launch token), then shows
-the window.
+`beforeDevCommand` and `tauri dev`’s frontend wait). The shell opens a visible main window on
+`about:blank` with `window.__MEALPREPPER_DESKTOP__` (API base + per-launch token), spawns Nitro on a random `127.0.0.1` port, waits for `GET /health`, then navigates the main WebView to the sidecar origin.
 
 ## Production-like build
 
@@ -115,7 +114,7 @@ The packaged app:
 | Recipe URL import | No | UI disabled offline with explicit message |
 | Typography / icons | Yes | Bundled `@fontsource` — see [desktop-startup.md](./desktop-startup.md) |
 
-Manual smoke checklist: [desktop-release.md](./desktop-release.md). Cold-start profiling and splash:
+Manual smoke checklist: [desktop-release.md](./desktop-release.md). Cold-start profiling:
 [desktop-startup.md](./desktop-startup.md).
 
 ## CI
