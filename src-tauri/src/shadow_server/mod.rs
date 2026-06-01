@@ -14,6 +14,8 @@
 pub mod db;
 pub mod error;
 pub mod middleware;
+pub mod planning;
+pub mod recipe_catalog;
 pub mod request_context;
 pub mod routes;
 
@@ -57,33 +59,36 @@ pub fn start(
             .expect("tokio runtime for shadow server");
 
         rt.block_on(async move {
+            let listener = match tokio::net::TcpListener::bind("127.0.0.1:0").await {
+                Ok(l) => l,
+                Err(e) => {
+                    let _ = port_tx.send(Err(format!("bind failed: {e}")));
+                    return;
+                }
+            };
+
+            let port = match listener.local_addr() {
+                Ok(addr) => addr.port(),
+                Err(e) => {
+                    let _ = port_tx.send(Err(e.to_string()));
+                    return;
+                }
+            };
+
             let app_state = routes::AppState {
                 data_dir: data_dir_owned,
                 token: token_owned,
+                port,
             };
             let router = routes::build_router(app_state);
 
-            match tokio::net::TcpListener::bind("127.0.0.1:0").await {
-                Ok(listener) => {
-                    match listener.local_addr() {
-                        Ok(addr) => {
-                            let _ = port_tx.send(Ok(addr.port()));
-                            axum::serve(listener, router)
-                                .with_graceful_shutdown(async {
-                                    shutdown_rx.await.ok();
-                                })
-                                .await
-                                .ok();
-                        }
-                        Err(e) => {
-                            let _ = port_tx.send(Err(e.to_string()));
-                        }
-                    }
-                }
-                Err(e) => {
-                    let _ = port_tx.send(Err(format!("bind failed: {e}")));
-                }
-            }
+            let _ = port_tx.send(Ok(port));
+            axum::serve(listener, router)
+                .with_graceful_shutdown(async {
+                    shutdown_rx.await.ok();
+                })
+                .await
+                .ok();
         });
     });
 

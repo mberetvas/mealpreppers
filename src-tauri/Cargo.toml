@@ -34,10 +34,12 @@ keyring = "3"
 open = "5"
 url = "2"
 # Desktop Local API shadow server
-axum = "0.7"
+axum = { version = "0.7", features = ["multipart"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 subtle = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+sha2 = "0.10"
 
 [dev-dependencies]
 tempfile = "3"

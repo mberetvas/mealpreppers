@@ -43,6 +43,62 @@ impl AppError {
         }
     }
 
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::NOT_FOUND,
+            status_message: "Not Found",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            status_message: "Bad Request",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            status_message: "Internal Server Error",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
+    pub fn forbidden(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
+            status_message: "Forbidden",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
+    /// `400` with `data.missingRecipeIds` — used when a weekplan/month-plan references unknown recipes.
+    pub fn missing_recipe_ids(missing: Vec<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            status_message: "Bad Request",
+            message: Some("One or more recipe ids are not in the catalog.".to_string()),
+            data: Some(serde_json::json!({ "missingRecipeIds": missing })),
+        }
+    }
+
+    /// `500` with `data.errorId` — used for unexpected planner failures to allow support correlation.
+    pub fn planning_unexpected(error_id: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            status_message: "Internal Server Error",
+            message: Some("The planner could not complete this request.".to_string()),
+            data: Some(serde_json::json!({ "errorId": error_id.into() })),
+        }
+    }
+
     /// `501` with `data.code = "desktop.api.not_implemented"` per the cutover feature gate contract.
     #[allow(dead_code)]
     pub fn not_implemented() -> Self {

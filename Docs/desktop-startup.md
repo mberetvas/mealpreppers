@@ -24,14 +24,48 @@ Enable structured milestones in Rust and Nitro:
 | Milestone | Source |
 |-----------|--------|
 | `setup_begin` | `StartupTiming::begin` |
+| `shadow_api_spawned` | after in-process Axum shadow server binds (Desktop Local API phase 1) |
 | `main_window_created` | after main `WebviewWindowBuilder::build` (blank shell, before health) |
 | `main_window_shown` | after main is visible (before health) |
 | `sidecar_spawned` | after Nitro `Command::spawn` |
 | `sidecar_healthy` | after `/health` 200 |
 | `main_navigated` | after `main.navigate(apiBase)` |
-| Summary line | `main_shell_ms`, `sidecar_spawn_ms`, `health_wait_ms`, `main_navigate_ms`, `total_setup_ms` |
+| Summary line | `main_shell_ms`, `sidecar_spawn_ms`, `health_wait_ms`, `main_navigate_ms`, `shadow_api_spawned_ms`, `total_setup_ms` |
 
 Nitro (when env is set): `startup_timing nitro_sqlite_migrate_ms=…`
+
+## Desktop Local API shadow server (phase 1)
+
+An in-process **Axum** server starts alongside Nitro on a random loopback port. It is **not** user-facing in phase 1 — Nitro still serves all `/api/v1` routes from the WebView.
+
+### Dev note: database path isolation
+
+The shadow server opens its own SQLite file using **Rust-owned migrations** (`src-tauri/migrations/`). Nitro uses Drizzle migrations and a separate file. By default both land in the same Tauri app-data directory under different file names, but their migration ledgers are independent:
+
+| Migrator | File | Ledger table |
+|----------|------|--------------|
+| Drizzle (Nitro) | `mealprepper.db` (shared default) | `__drizzle_migrations` |
+| Rust shadow server | `mealprepper.db` (or `$DATABASE_PATH`) | `_rust_schema_migrations` |
+
+**When switching between migrators** (e.g. resetting schema during development), either:
+
+- Delete / reset your `.data` directory so both migrators start fresh, **or**
+- Set `DATABASE_PATH` to point the Rust shadow server at a dedicated file:
+
+  ```powershell
+  $env:DATABASE_PATH = "$env:APPDATA\mealprepper-dev\shadow.db"
+  bun run desktop:dev:sidecar
+  ```
+
+Integration tests always pass an ephemeral `TempDir` so they never share the Drizzle ledger.
+
+### Shadow server health check
+
+```powershell
+# Find the port from startup_timing log, then:
+curl http://127.0.0.1:<shadow_port>/health
+# {"ok":true}
+```
 
 ### Historical baseline (2026-06-01, pre reorder)
 

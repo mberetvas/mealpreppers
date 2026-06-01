@@ -18,27 +18,27 @@ use crate::shadow_server::{
     routes::AppState,
 };
 
-/// Rejects requests to `/api/**` with `401` when a desktop token is configured and the
+/// Rejects requests with `401` when a desktop token is configured and the
 /// `X-Desktop-Token` header is missing or does not match (timing-safe comparison).
+///
+/// This middleware is applied via `route_layer` on the `/api/**` sub-router so it only
+/// runs for API routes — no path prefix check needed here.
 pub async fn token_gate(
     State(state): State<AppState>,
     request: Request,
     next: Next,
 ) -> Result<Response, AppError> {
     if let Some(ref expected_token) = state.token {
-        let path = request.uri().path();
-        if path.starts_with("/api/") {
-            let provided = request
-                .headers()
-                .get("x-desktop-token")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("")
-                .trim()
-                .to_string();
+        let provided = request
+            .headers()
+            .get("x-desktop-token")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .trim()
+            .to_string();
 
-            if !tokens_match(&provided, expected_token) {
-                return Err(AppError::unauthorized("Invalid or missing desktop token"));
-            }
+        if !tokens_match(&provided, expected_token) {
+            return Err(AppError::unauthorized("Invalid or missing desktop token"));
         }
     }
     Ok(next.run(request).await)
