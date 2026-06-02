@@ -1,7 +1,8 @@
 //! Consolidates ingredients from a saved weekplan into a shopping list.
 //!
-//! Orchestrates exact-merge and optional OpenRouter AI polish. Algorithm modules
-//! (`exact_merge`, `openrouter`) are called unchanged.
+//! Orchestrates exact-merge and optional OpenRouter AI polish via
+//! [`ShoppingListPolishPort`]. Algorithm modules (`exact_merge`, `openrouter`) are
+//! called from the port infrastructure, not directly here.
 
 use std::{collections::HashMap, sync::Arc};
 
@@ -16,13 +17,18 @@ use crate::shadow_server::{
         ports::RecipeRepository,
     },
     shopping_list::{
-        exact_merge::{build_consolidation_context, exact_merge},
+        exact_merge::{build_consolidation_context, build_source_baseline, exact_merge},
         internal::{ShoppingListIngredient, ShoppingListSection},
-        models::{coerce_aisle_category, ConsolidationResult, MergedLine, PolishResponseChange, PolishStatus},
-        openrouter::call_openrouter_polish,
-        ports::WeekplanForConsolidationReader,
+        models::{
+            coerce_aisle_category, ConsolidationResult, MergedLine, PolishResponse,
+            PolishResponseChange, PolishStatus,
+        },
+        ports::{ShoppingListPolishPort, WeekplanForConsolidationReader},
     },
 };
+
+/// Mirrors `consolidationService.ts` — shown when AI polish is unavailable.
+const AI_REQUIRED_WARNING: &str = "AI polish skipped — a supermarket aisle-grouped list requires successful AI consolidation. Configure OpenRouter or retry.";
 
 fn collect_recipe_occurrences(body: &WeekPlanV1) -> IndexMap<String, u32> {
     let mut map: IndexMap<String, u32> = IndexMap::new();
@@ -78,16 +84,67 @@ fn build_shopping_sections(
     (sections, warnings)
 }
 
+fn attach_provenance_to_lines(
+    response: &PolishResponse,
+    source_baseline: &[MergedLine],
+) -> Vec<MergedLine> {
+    let source_by_id: HashMap<&str, &MergedLine> = source_baseline
+        .iter()
+        .map(|line| (line.id.as_str(), line))
+        .collect();
+
+    response
+        .lines
+        .iter()
+        .map(|line| {
+            let mut source_ids = vec![line.id.as_str()];
+            if let Some(change) = response.changes.as_ref().and_then(|changes| {
+                changes.iter().find(|c| c.id == line.id)
+            }) {
+                if let Some(absorbed) = &change.absorbed_ids {
+                    for id in absorbed {
+                        source_ids.push(id.as_str());
+                    }
+                }
+            }
+
+            let mut provenance = Vec::new();
+            let mut seen_recipe_ids = std::collections::HashSet::new();
+            for source_id in source_ids {
+                let Some(source_line) = source_by_id.get(source_id) else {
+                    continue;
+                };
+                for entry in &source_line.provenance {
+                    if seen_recipe_ids.insert(entry.recipe_id.clone()) {
+                        provenance.push(entry.clone());
+                    }
+                }
+            }
+
+            MergedLine {
+                id: line.id.clone(),
+                name: line.name.clone(),
+                quantity: line.quantity,
+                unit: line.unit.clone(),
+                provenance,
+                aisle_category: Some(coerce_aisle_category(&line.aisle_category).to_string()),
+            }
+        })
+        .collect()
+}
+
 /// Runs the full consolidation pipeline for a saved weekplan.
 pub async fn execute(
     weekplan_reader: Arc<dyn WeekplanForConsolidationReader>,
     recipes: Arc<dyn RecipeRepository>,
+    polish: Arc<dyn ShoppingListPolishPort>,
     plan_id: &str,
     user_id: &str,
-    openrouter_key: Option<String>,
 ) -> Result<ConsolidationResult, AppError> {
     let plan_id_owned = plan_id.to_string();
     let user_id_owned = user_id.to_string();
+
+    log::info!("shopping_list.consolidate_start plan_id={plan_id}");
 
     let weekplan_reader_clone = weekplan_reader.clone();
     let (body, source_fingerprint) = spawn_blocking(move || {
@@ -102,6 +159,7 @@ pub async fn execute(
     let occurrences = collect_recipe_occurrences(&body);
 
     if occurrences.is_empty() {
+        log::info!("shopping_list.empty_plan plan_id={plan_id}");
         return Ok(ConsolidationResult {
             consolidated_lines: vec![],
             baseline_lines: vec![],
@@ -144,49 +202,52 @@ pub async fn execute(
         });
     }
 
-    let baseline = exact_merge(&sections);
-    let baseline_lines: Vec<MergedLine> = baseline.lines.clone();
+    let fallback_baseline = exact_merge(&sections);
+    let mut baseline_lines: Vec<MergedLine> = fallback_baseline.lines.clone();
 
-    let (consolidated_lines, changes, polish_status) = match openrouter_key {
-        Some(key) => {
-            let context = build_consolidation_context(&sections);
-            let key_clone = key.clone();
-            let polish_result = spawn_blocking(move || call_openrouter_polish(&key_clone, &context))
-                .await
-                .map_err(|e| AppError::internal(format!("spawn error: {e}")))?;
+    let polish_configured = polish.is_configured();
+    let (consolidated_lines, changes, polish_status) = if !polish_configured {
+        log::info!("shopping_list.polish_skipped plan_id={plan_id} reason=missing_api_key");
+        warnings.push(AI_REQUIRED_WARNING.to_string());
+        (vec![], vec![], PolishStatus::AiSkipped)
+    } else {
+        let context = build_consolidation_context(&sections);
+        let source_baseline = build_source_baseline(&context);
+        let polish_port = polish.clone();
+        let polish_result = spawn_blocking(move || polish_port.polish(&context))
+            .await
+            .map_err(|e| AppError::internal(format!("spawn error: {e}")))?;
 
-            match polish_result {
-                Ok(polish) => {
-                    let polished_lines: Vec<MergedLine> = polish
-                        .lines
-                        .into_iter()
-                        .map(|pl| MergedLine {
-                            id: pl.id.clone(),
-                            name: pl.name,
-                            quantity: pl.quantity,
-                            unit: pl.unit,
-                            provenance: baseline_lines
-                                .iter()
-                                .find(|b| b.id == pl.id)
-                                .map(|b| b.provenance.clone())
-                                .unwrap_or_default(),
-                            aisle_category: Some(coerce_aisle_category(&pl.aisle_category).to_string()),
-                        })
-                        .collect();
-                    let changes: Vec<PolishResponseChange> = polish.changes.unwrap_or_default();
-                    (polished_lines, changes, PolishStatus::Polished)
-                }
-                Err(e) => {
-                    log::warn!("openrouter.polish_error plan_id={plan_id} error={e}");
-                    warnings.push(
-                        "AI polish failed; returning baseline shopping list.".to_string(),
-                    );
-                    (baseline_lines.clone(), vec![], PolishStatus::BaselineFallback)
-                }
+        match polish_result {
+            Ok(polish) => {
+                let consolidated_lines =
+                    attach_provenance_to_lines(&polish.response, &source_baseline.lines);
+                let changes: Vec<PolishResponseChange> = polish.response.changes.unwrap_or_default();
+                baseline_lines = source_baseline.lines;
+                log::info!(
+                    "shopping_list.polish_pending_review plan_id={plan_id} consolidated_line_count={}",
+                    consolidated_lines.len()
+                );
+                (
+                    consolidated_lines,
+                    changes,
+                    PolishStatus::PendingReview,
+                )
+            }
+            Err(e) => {
+                log::warn!("shopping_list.polish_failed plan_id={plan_id} polish_status=baseline_fallback error={e}");
+                warnings.push(format!("AI polish failed. {AI_REQUIRED_WARNING}"));
+                (vec![], vec![], PolishStatus::BaselineFallback)
             }
         }
-        None => (baseline_lines.clone(), vec![], PolishStatus::AiSkipped),
     };
+
+    log::info!(
+        "shopping_list.consolidate_complete plan_id={plan_id} baseline_line_count={} consolidated_line_count={} polish_status={}",
+        baseline_lines.len(),
+        consolidated_lines.len(),
+        polish_status.as_str()
+    );
 
     Ok(ConsolidationResult {
         consolidated_lines,

@@ -7,6 +7,8 @@
 
 use serde_json::{json, Value};
 
+use crate::shadow_server::platform::redact_sensitive_text;
+
 use super::models::{ConsolidationContext, PolishResponse};
 
 // ---------------------------------------------------------------------------
@@ -55,9 +57,17 @@ const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions
 const OPENROUTER_REFERER: &str = "https://mealpreppers.app";
 const OPENROUTER_TITLE: &str = "Mealpreppers";
 
-fn default_model() -> String {
+pub fn default_model() -> String {
     std::env::var("OPENROUTER_SHOPPING_LIST_MODEL")
         .unwrap_or_else(|_| "openai/gpt-4o-mini".to_string())
+}
+
+pub fn default_timeout_ms() -> u64 {
+    std::env::var("OPENROUTER_SHOPPING_LIST_TIMEOUT_MS")
+        .ok()
+        .and_then(|raw| raw.parse::<u64>().ok())
+        .filter(|&ms| ms > 0)
+        .unwrap_or(60_000)
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +85,9 @@ impl std::fmt::Display for OpenRouterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             OpenRouterError::Network(e) => write!(f, "network: {e}"),
-            OpenRouterError::BadStatus(code, msg) => write!(f, "HTTP {code}: {msg}"),
+            OpenRouterError::BadStatus(code, msg) => {
+                write!(f, "HTTP {code}: {}", redact_sensitive_text(msg))
+            }
             OpenRouterError::Parse(e) => write!(f, "parse: {e}"),
         }
     }

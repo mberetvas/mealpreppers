@@ -21,8 +21,10 @@ use crate::shadow_server::{
     },
     routes::AppState,
     shopping_list::{
-        infrastructure::SqliteConsolidatedShoppingListRepository,
-        ports::{ConsolidatedShoppingListRepository, WeekplanForConsolidationReader},
+        infrastructure::{
+            OpenRouterShoppingListPolishPort, SqliteConsolidatedShoppingListRepository,
+        },
+        ports::{ConsolidatedShoppingListRepository, ShoppingListPolishPort, WeekplanForConsolidationReader},
     },
 };
 
@@ -62,7 +64,10 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
         Arc::new(SqliteSavedWeekplanReader::new(db_path.clone()));
 
     let weekplan_for_consolidation: Arc<dyn WeekplanForConsolidationReader> =
-        Arc::new(SqliteWeekplanForConsolidationReader::new(db_path));
+        Arc::new(SqliteWeekplanForConsolidationReader::new(db_path.clone()));
+
+    let shopping_list_polish: Arc<dyn ShoppingListPolishPort> =
+        Arc::new(OpenRouterShoppingListPolishPort::new());
 
     match phase {
         WirePhase::Phase0 => {}
@@ -76,6 +81,7 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
         consolidated_shopping_lists,
         saved_weekplan_reader,
         weekplan_for_consolidation,
+        shopping_list_polish,
         ..state
     }
 }

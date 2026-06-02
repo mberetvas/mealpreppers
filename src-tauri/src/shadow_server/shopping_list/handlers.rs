@@ -40,14 +40,14 @@ pub async fn consolidate_shopping_list_handler(
     let user_id = ctx.planning_principal.user_id;
     let weekplan_reader = state.weekplan_for_consolidation.clone();
     let recipes = state.recipes.clone();
-    let openrouter_key = crate::keychain::read_openrouter_key();
+    let polish = state.shopping_list_polish.clone();
 
     let result = consolidate_shopping_list(
         weekplan_reader,
         recipes,
+        polish,
         &id,
         &user_id,
-        openrouter_key,
     )
     .await?;
 

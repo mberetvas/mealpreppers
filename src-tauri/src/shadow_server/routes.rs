@@ -78,7 +78,7 @@ use crate::shadow_server::{
     },
     recipe_catalog::ports::{RecipeImageStore, RecipeRepository},
     planning::ports::SavedWeekplanReader,
-    shopping_list::ports::{ConsolidatedShoppingListRepository, WeekplanForConsolidationReader},
+    shopping_list::ports::{ConsolidatedShoppingListRepository, ShoppingListPolishPort, WeekplanForConsolidationReader},
     wire::{self, WirePhase},
 };
 
@@ -102,6 +102,8 @@ pub struct AppState {
     pub saved_weekplan_reader: Arc<dyn SavedWeekplanReader>,
     /// Weekplan read port for consolidation POST (wired in [`wire::wire_dependencies`]).
     pub weekplan_for_consolidation: Arc<dyn WeekplanForConsolidationReader>,
+    /// OpenRouter AI polish port for consolidation POST (wired in [`wire::wire_dependencies`]).
+    pub shopping_list_polish: Arc<dyn ShoppingListPolishPort>,
 }
 
 impl AppState {

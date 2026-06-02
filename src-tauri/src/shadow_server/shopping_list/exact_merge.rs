@@ -164,6 +164,33 @@ pub fn build_consolidation_context(sections: &[ShoppingListSection]) -> Consolid
     ConsolidationContext { sections: context_sections }
 }
 
+/// Flat source snapshot for harness validation (one line per recipe ingredient, stable ids).
+/// Mirrors `buildSourceBaseline` in `exactMerge.ts`.
+pub fn build_source_baseline(context: &ConsolidationContext) -> PolishBaseline {
+    let lines: Vec<MergedLine> = context
+        .sections
+        .iter()
+        .flat_map(|section| {
+            section.ingredients.iter().map(|ingredient| MergedLine {
+                id: ingredient.id.clone(),
+                name: ingredient.name.clone(),
+                quantity: ingredient.quantity,
+                unit: ingredient.unit.clone(),
+                provenance: vec![RecipeProvenance {
+                    recipe_id: section.recipe_id.clone(),
+                    recipe_title: section.recipe_title.clone(),
+                }],
+                aisle_category: None,
+            })
+        })
+        .collect();
+
+    PolishBaseline {
+        lines,
+        next_id: 0,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Unit tests
 // ---------------------------------------------------------------------------
