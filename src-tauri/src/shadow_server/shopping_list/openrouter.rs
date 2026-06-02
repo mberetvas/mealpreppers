@@ -5,7 +5,10 @@
 //!
 //! Intended to run inside `tokio::task::spawn_blocking`.
 
+use std::time::Duration;
+
 use serde_json::{json, Value};
+use ureq::Error as UreqError;
 
 use crate::shadow_server::platform::redact_sensitive_text;
 
@@ -84,13 +87,34 @@ pub enum OpenRouterError {
 impl std::fmt::Display for OpenRouterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OpenRouterError::Network(e) => write!(f, "network: {e}"),
+            OpenRouterError::Network(e) => {
+                write!(f, "network: {}", redact_sensitive_text(e))
+            }
             OpenRouterError::BadStatus(code, msg) => {
                 write!(f, "HTTP {code}: {}", redact_sensitive_text(msg))
             }
             OpenRouterError::Parse(e) => write!(f, "parse: {e}"),
         }
     }
+}
+
+/// True when the OpenRouter call was aborted by a configured timeout.
+/// Mirrors `isPolishAbortTimeout` in `polishChainFactory.ts`.
+pub fn is_polish_abort_timeout(err: &OpenRouterError) -> bool {
+    match err {
+        OpenRouterError::Network(msg) => {
+            let lower = msg.to_ascii_lowercase();
+            lower.contains("timeout") || lower.contains("aborted")
+        }
+        _ => false,
+    }
+}
+
+fn map_ureq_error(err: UreqError) -> OpenRouterError {
+    if matches!(err, UreqError::Timeout(_)) {
+        return OpenRouterError::Network("request timeout".into());
+    }
+    OpenRouterError::Network(redact_sensitive_text(&err.to_string()))
 }
 
 /// Calls OpenRouter chat completions API and returns parsed polish response.
@@ -114,13 +138,18 @@ pub fn call_openrouter_polish(
     let body_bytes = serde_json::to_vec(&request_body)
         .map_err(|e| OpenRouterError::Parse(format!("serialize body: {e}")))?;
 
+    let timeout = Duration::from_millis(default_timeout_ms());
+
     let resp = ureq::post(OPENROUTER_ENDPOINT)
+        .config()
+        .timeout_global(Some(timeout))
+        .build()
         .header("content-type", "application/json")
         .header("authorization", &format!("Bearer {key}"))
         .header("http-referer", OPENROUTER_REFERER)
         .header("x-title", OPENROUTER_TITLE)
         .send(&body_bytes[..])
-        .map_err(|e| OpenRouterError::Network(e.to_string()))?;
+        .map_err(map_ureq_error)?;
 
     let status = resp.status().as_u16();
     if status != 200 {
@@ -133,7 +162,7 @@ pub fn call_openrouter_polish(
     let response_body = resp
         .body_mut()
         .read_to_string()
-        .map_err(|e| OpenRouterError::Network(format!("read body: {e}")))?;
+        .map_err(map_ureq_error)?;
 
     let root: Value = serde_json::from_str(&response_body)
         .map_err(|e| OpenRouterError::Parse(format!("parse root: {e}")))?;
@@ -146,4 +175,36 @@ pub fn call_openrouter_polish(
         .map_err(|e| OpenRouterError::Parse(format!("parse polish response: {e}")))?;
 
     Ok(polish)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_polish_abort_timeout_detects_timeout_and_aborted_messages() {
+        assert!(is_polish_abort_timeout(&OpenRouterError::Network(
+            "request timeout".into()
+        )));
+        assert!(is_polish_abort_timeout(&OpenRouterError::Network(
+            "The operation was aborted due to timeout".into()
+        )));
+        assert!(!is_polish_abort_timeout(&OpenRouterError::Network(
+            "rate limit".into()
+        )));
+        assert!(!is_polish_abort_timeout(&OpenRouterError::BadStatus(
+            429,
+            "too many requests".into()
+        )));
+    }
+
+    #[test]
+    fn display_redacts_bearer_tokens_in_network_errors() {
+        let err = OpenRouterError::Network(
+            "auth failed Bearer sk-or-v1-secret-key".into(),
+        );
+        let formatted = err.to_string();
+        assert!(formatted.contains("Bearer [REDACTED]"));
+        assert!(!formatted.contains("sk-or-v1-secret-key"));
+    }
 }

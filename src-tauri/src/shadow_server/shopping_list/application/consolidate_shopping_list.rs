@@ -18,12 +18,13 @@ use crate::shadow_server::{
     },
     shopping_list::{
         exact_merge::{build_consolidation_context, build_source_baseline, exact_merge},
+        openrouter::is_polish_abort_timeout,
         internal::{ShoppingListIngredient, ShoppingListSection},
         models::{
             coerce_aisle_category, ConsolidationResult, MergedLine, PolishResponse,
             PolishResponseChange, PolishStatus,
         },
-        ports::{ShoppingListPolishPort, WeekplanForConsolidationReader},
+        ports::{PolishPortError, ShoppingListPolishPort, WeekplanForConsolidationReader},
     },
 };
 
@@ -235,8 +236,21 @@ pub async fn execute(
                 )
             }
             Err(e) => {
-                log::warn!("shopping_list.polish_failed plan_id={plan_id} polish_status=baseline_fallback error={e}");
-                warnings.push(format!("AI polish failed. {AI_REQUIRED_WARNING}"));
+                let aborted_due_to_timeout = matches!(
+                    &e,
+                    PolishPortError::OpenRouter(openrouter_err)
+                        if is_polish_abort_timeout(openrouter_err)
+                );
+                log::warn!(
+                    "shopping_list.polish_failed plan_id={plan_id} polish_status=baseline_fallback aborted_due_to_timeout={aborted_due_to_timeout} error={e}"
+                );
+                warnings.push(if aborted_due_to_timeout {
+                    format!(
+                        "AI polish timed out. {AI_REQUIRED_WARNING} Try increasing OPENROUTER_SHOPPING_LIST_TIMEOUT_MS."
+                    )
+                } else {
+                    format!("AI polish failed. {AI_REQUIRED_WARNING}")
+                });
                 (vec![], vec![], PolishStatus::BaselineFallback)
             }
         }
