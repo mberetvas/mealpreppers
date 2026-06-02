@@ -82,6 +82,15 @@ impl AppError {
         }
     }
 
+    pub fn conflict(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            status_message: "Conflict",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
     /// `400` with `data.missingRecipeIds` — used when a weekplan/month-plan references unknown recipes.
     pub fn missing_recipe_ids(missing: Vec<String>) -> Self {
         Self {
@@ -141,6 +150,7 @@ impl AppError {
             RepoError::NotFound(msg) => AppError::not_found(msg),
             RepoError::Forbidden(msg) => AppError::forbidden(msg),
             RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
+            RepoError::DeprecatedList(msg) => AppError::conflict(msg),
             RepoError::Storage(msg) => AppError::internal(msg),
         }
     }
@@ -151,6 +161,7 @@ impl AppError {
             RepoError::NotFound(msg) => AppError::not_found(msg),
             RepoError::Forbidden(msg) => AppError::forbidden(msg),
             RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
+            RepoError::DeprecatedList(msg) => AppError::conflict(msg),
             RepoError::Storage(_) => {
                 let error_id = Uuid::new_v4().to_string();
                 AppError::planning_unexpected(error_id)
@@ -164,6 +175,7 @@ impl AppError {
             RepoError::NotFound(m) => AppError::not_found(m),
             RepoError::Forbidden(m) => AppError::forbidden(m),
             RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
+            RepoError::DeprecatedList(m) => AppError::conflict(m),
             RepoError::Storage(_) => AppError::internal("Unexpected database error."),
         }
     }

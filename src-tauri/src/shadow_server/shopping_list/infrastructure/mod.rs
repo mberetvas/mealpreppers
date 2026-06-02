@@ -1,0 +1,3 @@
+pub mod sqlite_consolidated_shopping_list_repository;
+
+pub use sqlite_consolidated_shopping_list_repository::SqliteConsolidatedShoppingListRepository;

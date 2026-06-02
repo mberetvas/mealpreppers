@@ -95,12 +95,20 @@ pub fn start(
                 token: token_owned,
                 port,
                 recipes: Arc::new(
-                    recipe_catalog::infrastructure::SqliteRecipeRepository::new(db_path),
+                    recipe_catalog::infrastructure::SqliteRecipeRepository::new(db_path.clone()),
                 ),
                 recipe_images: Arc::new(
                     recipe_catalog::infrastructure::FsRecipeImageStore::new(
                         data_dir_owned.join("recipe-images"),
                     ),
+                ),
+                consolidated_shopping_lists: Arc::new(
+                    shopping_list::infrastructure::SqliteConsolidatedShoppingListRepository::new(
+                        db_path.clone(),
+                    ),
+                ),
+                saved_weekplan_reader: Arc::new(
+                    planning::infrastructure::SqliteSavedWeekplanReader::new(db_path),
                 ),
             };
             let router = routes::build_router(app_state);

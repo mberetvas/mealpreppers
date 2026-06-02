@@ -823,6 +823,30 @@ fn minimal_weekplan_payload(name: &str) -> serde_json::Value {
     })
 }
 
+/// Server-computed fingerprint for [`minimal_weekplan_payload`] bodies (TS parity).
+fn minimal_weekplan_source_fingerprint() -> String {
+    use mealprepper::shadow_server::planning::{
+        models::{DayMeals, RecipeIdSlot, WeekPlanV1},
+        repository::compute_source_fingerprint,
+    };
+    use std::collections::HashMap;
+
+    let empty_slot = || RecipeIdSlot { recipe_id: None };
+    let empty_day = || DayMeals {
+        breakfast: empty_slot(),
+        lunch: empty_slot(),
+        dinner: empty_slot(),
+    };
+    let mut days = HashMap::new();
+    for day in ["1", "2", "3", "4", "5", "6", "7"] {
+        days.insert(day.to_string(), empty_day());
+    }
+    compute_source_fingerprint(&WeekPlanV1 {
+        version: "1".to_string(),
+        days,
+    })
+}
+
 /// Returns a minimal valid create-month-plan JSON payload (no name, no recipe references).
 fn minimal_month_plan_payload() -> serde_json::Value {
     serde_json::json!({
@@ -1480,7 +1504,17 @@ fn put_consolidated_shopping_list_saves_and_returns_200() {
     assert_eq!(json["lines"].as_array().unwrap().len(), 1);
     assert_eq!(json["lines"][0]["id"].as_str().unwrap_or(""), "L1");
     assert_eq!(json["lines"][0]["name"].as_str().unwrap_or(""), "melk");
-    assert_eq!(json["sourceFingerprint"].as_str().unwrap_or(""), "abc123");
+    let expected_fp = minimal_weekplan_source_fingerprint();
+    assert_eq!(
+        json["sourceFingerprint"].as_str().unwrap_or(""),
+        expected_fp,
+        "PUT must server-compute sourceFingerprint from plan body (TS parity)"
+    );
+    assert_ne!(
+        json["sourceFingerprint"].as_str().unwrap_or(""),
+        "abc123",
+        "client-supplied fingerprint must be ignored"
+    );
     assert!(json["confirmedAt"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "confirmedAt should be set");
 }
 
@@ -1514,7 +1548,12 @@ fn put_then_get_consolidated_shopping_list_round_trip() {
     assert_eq!(get_status, 200, "GET after PUT should return 200, body: {get_body}");
     let json: serde_json::Value = serde_json::from_str(&get_body).expect("JSON");
     assert_eq!(json["lines"].as_array().unwrap().len(), 2);
-    assert_eq!(json["sourceFingerprint"].as_str().unwrap_or(""), "fp-test-abc");
+    let expected_fp = minimal_weekplan_source_fingerprint();
+    assert_eq!(
+        json["sourceFingerprint"].as_str().unwrap_or(""),
+        expected_fp,
+        "round-trip must return server-computed fingerprint"
+    );
     assert_eq!(json["lines"][0]["name"].as_str().unwrap_or(""), "eieren");
     assert_eq!(json["lines"][1]["name"].as_str().unwrap_or(""), "bloem");
 }

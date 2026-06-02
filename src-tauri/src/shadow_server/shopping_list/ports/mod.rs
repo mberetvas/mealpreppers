@@ -1,0 +1,3 @@
+pub mod consolidated_shopping_list_repository;
+
+pub use consolidated_shopping_list_repository::ConsolidatedShoppingListRepository;

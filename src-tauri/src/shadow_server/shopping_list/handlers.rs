@@ -13,14 +13,13 @@ use tokio::task::spawn_blocking;
 
 use crate::shadow_server::{
     error::AppError,
-    planning::repository::open_conn,
     request_context::RequestContext,
     routes::AppState,
-};
-use super::{
-    consolidation::consolidate_shopping_list,
-    models::{ConsolidatedShoppingListPutPayload, SavedConsolidatedShoppingListRecord},
-    repository::{get_consolidated_shopping_list, save_consolidated_shopping_list},
+    shopping_list::{
+        application::{get_consolidated_shopping_list, save_consolidated_shopping_list},
+        consolidation::consolidate_shopping_list,
+        models::ConsolidatedShoppingListPutPayload,
+    },
 };
 
 // ---------------------------------------------------------------------------
@@ -57,13 +56,13 @@ pub async fn get_consolidated_shopping_list_handler(
     State(state): State<AppState>,
     Extension(ctx): Extension<RequestContext>,
     Path(id): Path<String>,
-) -> Result<Json<SavedConsolidatedShoppingListRecord>, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let user_id = ctx.planning_principal.user_id;
-    let db_path = state.db_path();
+    let consolidated = state.consolidated_shopping_lists.clone();
 
     let record = spawn_blocking(move || {
-        let conn = open_conn(&db_path).map_err(AppError::from_shopping_list_repo)?;
-        get_consolidated_shopping_list(&conn, &id, &user_id).map_err(AppError::from_shopping_list_repo)
+        get_consolidated_shopping_list(consolidated.as_ref(), &id, &user_id)
+            .map_err(AppError::from_shopping_list_repo)
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))??;
@@ -75,28 +74,46 @@ pub async fn get_consolidated_shopping_list_handler(
 // PUT /:id/consolidated-shopping-list
 // ---------------------------------------------------------------------------
 
+fn validate_put_payload(payload: &ConsolidatedShoppingListPutPayload) -> Result<(), AppError> {
+    if payload.lines.is_empty() {
+        return Err(AppError::bad_request(
+            "Request body must include at least one line.",
+        ));
+    }
+    for line in &payload.lines {
+        if line.id.trim().is_empty() || line.name.trim().is_empty() {
+            return Err(AppError::bad_request("Invalid line shape."));
+        }
+    }
+    Ok(())
+}
+
 /// Saves (creates or replaces) the consolidated shopping list for a weekplan.
+///
+/// Server-computes `sourceFingerprint` from the weekplan body (mirrors TypeScript
+/// `saveConsolidatedShoppingList`); any client-supplied fingerprint is ignored.
 pub async fn put_consolidated_shopping_list_handler(
     State(state): State<AppState>,
     Extension(ctx): Extension<RequestContext>,
     Path(id): Path<String>,
     Json(payload): Json<ConsolidatedShoppingListPutPayload>,
-) -> Result<Json<SavedConsolidatedShoppingListRecord>, AppError> {
-    let user_id = ctx.planning_principal.user_id;
-    let db_path = state.db_path();
+) -> Result<impl IntoResponse, AppError> {
+    validate_put_payload(&payload)?;
 
-    let record = SavedConsolidatedShoppingListRecord {
-        lines: payload.lines,
-        source_fingerprint: payload.source_fingerprint,
-        confirmed_at: chrono::Utc::now()
-            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-            .to_string(),
-    };
+    let user_id = ctx.planning_principal.user_id;
+    let reader = state.saved_weekplan_reader.clone();
+    let consolidated = state.consolidated_shopping_lists.clone();
+    let lines = payload.lines;
 
     let saved = spawn_blocking(move || {
-        let mut conn = open_conn(&db_path).map_err(AppError::from_shopping_list_repo)?;
-        save_consolidated_shopping_list(&mut conn, &id, &user_id, &record)
-            .map_err(AppError::from_shopping_list_repo)
+        save_consolidated_shopping_list(
+            reader.as_ref(),
+            consolidated.as_ref(),
+            &id,
+            &user_id,
+            lines,
+        )
+        .map_err(AppError::from_shopping_list_repo)
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))??;

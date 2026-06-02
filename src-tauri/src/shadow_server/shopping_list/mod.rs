@@ -7,10 +7,13 @@
 //! - CRUD for the **Saved Consolidated Shopping List** SQLite column  
 //! - Axum handlers for all three route groups
 
+pub mod application;
 pub mod consolidation;
 pub mod exact_merge;
 pub mod handlers;
+pub mod infrastructure;
 pub mod internal;
 pub mod models;
 pub mod openrouter;
+pub mod ports;
 pub mod repository;
