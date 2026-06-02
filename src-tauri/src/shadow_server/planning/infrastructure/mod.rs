@@ -1,3 +1,5 @@
 pub mod sqlite_saved_weekplan_reader;
+pub mod sqlite_weekplan_for_consolidation_reader;
 
 pub use sqlite_saved_weekplan_reader::SqliteSavedWeekplanReader;
+pub use sqlite_weekplan_for_consolidation_reader::SqliteWeekplanForConsolidationReader;

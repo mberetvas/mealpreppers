@@ -108,7 +108,10 @@ pub fn start(
                     ),
                 ),
                 saved_weekplan_reader: Arc::new(
-                    planning::infrastructure::SqliteSavedWeekplanReader::new(db_path),
+                    planning::infrastructure::SqliteSavedWeekplanReader::new(db_path.clone()),
+                ),
+                weekplan_for_consolidation: Arc::new(
+                    planning::infrastructure::SqliteWeekplanForConsolidationReader::new(db_path),
                 ),
             };
             let router = routes::build_router(app_state);

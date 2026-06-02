@@ -10,7 +10,9 @@ use std::sync::Arc;
 
 use crate::shadow_server::{
     planning::{
-        infrastructure::SqliteSavedWeekplanReader,
+        infrastructure::{
+            SqliteSavedWeekplanReader, SqliteWeekplanForConsolidationReader,
+        },
         ports::SavedWeekplanReader,
     },
     recipe_catalog::{
@@ -20,7 +22,7 @@ use crate::shadow_server::{
     routes::AppState,
     shopping_list::{
         infrastructure::SqliteConsolidatedShoppingListRepository,
-        ports::ConsolidatedShoppingListRepository,
+        ports::{ConsolidatedShoppingListRepository, WeekplanForConsolidationReader},
     },
 };
 
@@ -37,6 +39,8 @@ pub enum WirePhase {
     Phase1c,
     /// Phase 3a — consolidated shopping list GET/PUT ports.
     Phase3a,
+    /// Phase 3b — consolidate POST application layer and read ports.
+    Phase3b,
 }
 
 /// Wires slice dependencies onto application state before routes are registered.
@@ -55,12 +59,15 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
         Arc::new(SqliteConsolidatedShoppingListRepository::new(db_path.clone()));
 
     let saved_weekplan_reader: Arc<dyn SavedWeekplanReader> =
-        Arc::new(SqliteSavedWeekplanReader::new(db_path));
+        Arc::new(SqliteSavedWeekplanReader::new(db_path.clone()));
+
+    let weekplan_for_consolidation: Arc<dyn WeekplanForConsolidationReader> =
+        Arc::new(SqliteWeekplanForConsolidationReader::new(db_path));
 
     match phase {
         WirePhase::Phase0 => {}
         WirePhase::Phase1a | WirePhase::Phase1b | WirePhase::Phase1c => {}
-        WirePhase::Phase3a => {}
+        WirePhase::Phase3a | WirePhase::Phase3b => {}
     }
 
     AppState {
@@ -68,6 +75,7 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
         recipe_images,
         consolidated_shopping_lists,
         saved_weekplan_reader,
+        weekplan_for_consolidation,
         ..state
     }
 }

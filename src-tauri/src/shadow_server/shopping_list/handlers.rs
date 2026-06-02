@@ -16,8 +16,10 @@ use crate::shadow_server::{
     request_context::RequestContext,
     routes::AppState,
     shopping_list::{
-        application::{get_consolidated_shopping_list, save_consolidated_shopping_list},
-        consolidation::consolidate_shopping_list,
+        application::{
+            consolidate_shopping_list, get_consolidated_shopping_list,
+            save_consolidated_shopping_list,
+        },
         models::ConsolidatedShoppingListPutPayload,
     },
 };
@@ -36,11 +38,18 @@ pub async fn consolidate_shopping_list_handler(
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     let user_id = ctx.planning_principal.user_id;
-    let db_path = state.db_path();
+    let weekplan_reader = state.weekplan_for_consolidation.clone();
+    let recipes = state.recipes.clone();
     let openrouter_key = crate::keychain::read_openrouter_key();
 
-    let result =
-        consolidate_shopping_list(id, user_id, db_path, openrouter_key).await?;
+    let result = consolidate_shopping_list(
+        weekplan_reader,
+        recipes,
+        &id,
+        &user_id,
+        openrouter_key,
+    )
+    .await?;
 
     Ok(Json(result))
 }

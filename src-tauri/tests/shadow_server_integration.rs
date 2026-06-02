@@ -825,7 +825,7 @@ fn minimal_weekplan_payload(name: &str) -> serde_json::Value {
 
 /// Server-computed fingerprint for [`minimal_weekplan_payload`] bodies (TS parity).
 fn minimal_weekplan_source_fingerprint() -> String {
-    use mealprepper::shadow_server::planning::{
+    use mealprepper_lib::shadow_server::planning::{
         models::{DayMeals, RecipeIdSlot, WeekPlanV1},
         repository::compute_source_fingerprint,
     };

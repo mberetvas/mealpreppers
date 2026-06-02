@@ -11,7 +11,6 @@ use crate::shadow_server::{
         repository::open_conn,
     },
     platform::RepoError,
-    shopping_list::models::SavedConsolidatedShoppingListRecord,
 };
 
 /// Install-scoped SQLite adapter for Saved Weekplan reads used by shopping list writes.
