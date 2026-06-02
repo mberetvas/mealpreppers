@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const isStaticDesktopClientBuild = process.env.MEALPREPPER_STATIC_CLIENT_BUILD === '1'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   /**
@@ -33,6 +35,12 @@ export default defineNuxtConfig({
   nitro: {
     externals: {
       traceInclude: ['better-sqlite3', 'bindings'],
+    },
+    prerender: {
+      crawlLinks: false,
+      /** SPA shell only — Tauri loads `index.html`; no Nitro/SQLite during prerender. */
+      routes: [],
+      ...(isStaticDesktopClientBuild ? { failOnError: false } : {}),
     },
   },
 

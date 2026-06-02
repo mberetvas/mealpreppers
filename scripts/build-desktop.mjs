@@ -14,7 +14,12 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const result = spawnSync('bun', ['x', 'nuxt', 'generate'], {
   cwd: repoRoot,
-  env: { ...process.env, NUXT_SSR: 'false' },
+  env: {
+    ...process.env,
+    NUXT_SSR: 'false',
+    /** Skip Nitro SQLite init; packaged app uses the Rust Desktop Local API. */
+    MEALPREPPER_STATIC_CLIENT_BUILD: '1',
+  },
   stdio: 'inherit',
   shell: process.platform === 'win32',
 })

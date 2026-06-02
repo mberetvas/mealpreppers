@@ -15,9 +15,14 @@ export default defineNuxtPlugin((nuxtApp) => {
   }
 
   const desktopFetch = $fetch.create({
-    baseURL: bootstrap.apiBase,
     onRequest({ request, options }) {
       const requestUrl = typeof request === 'string' ? request : request.url
+      // Only loopback API paths — do not set a global baseURL or Nuxt payload/asset
+      // fetches are sent to the Rust server and the app never mounts (white screen).
+      if (requestUrl.startsWith('/api/')) {
+        options.baseURL = bootstrap.apiBase
+      }
+
       if (!shouldAttachDesktopToken(requestUrl, bootstrap)) {
         return
       }
