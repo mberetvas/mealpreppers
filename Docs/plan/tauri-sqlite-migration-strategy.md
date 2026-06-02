@@ -92,6 +92,9 @@ Context**, structured logging, trace IDs, Vitest, Bun for dev/build.
 
 **Tauri (Rust) + in-process Axum API + Nuxt static client.**
 
+When **`MEALPREPPER_SIDECAR=1`** (dev loop B) or in the **packaged app**, all `/api/v1` traffic is
+served by the in-process **Rust Axum** server only — no Node/Nitro child process.
+
 ```
 +------------------------------------------------------------------+
 | Tauri application (Windows v1)                                    |
@@ -108,7 +111,7 @@ Context**, structured logging, trace IDs, Vitest, Bun for dev/build.
 |        v                              |                           |
 |  Axum server (127.0.0.1:PORT)         WebView (Nuxt static)       |
 |   - /api/v1/** all routes              - frontendDist index.html  |
-|   - Drizzle → SQLite                  - $fetch → localhost        |
+|   - Rust/sqlx → SQLite                - $fetch → localhost        |
 |   - local recipe-images route         - X-Desktop-Token on API   |
 |   - /health                           - /settings for secrets UX |
 +------------------------------------------------------------------+
@@ -117,7 +120,9 @@ Context**, structured logging, trace IDs, Vitest, Bun for dev/build.
 **Rationale**
 
 - Single Rust binary — no Node runtime bundled, no child process lifecycle to manage.
-- Axum serves all `/api/v1` routes with the same request shape as Nitro.
+- Axum serves all `/api/v1` routes with the same request shape as Nitro; persistence is
+  **Rust/sqlx against SQLite**, not Drizzle (Drizzle remains in the TypeScript `server/` tree for
+  dev/Nitro paths only).
 - Static client (`nuxt generate`, `ssr: false`) removes Nitro's node-server preset from the build.
 - OpenRouter and file validation still live in TypeScript for dev/server code; Axum re-implements these endpoints natively.
 

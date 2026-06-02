@@ -49,7 +49,7 @@ param(
     [Parameter(Mandatory)]
     [string] $IssuesFolder,
 
-    [string] $Model = 'composer-2.5',
+    [string] $Model = 'composer-2.5-fast',
 
     [string] $Workspace = (Get-Location).Path,
 
