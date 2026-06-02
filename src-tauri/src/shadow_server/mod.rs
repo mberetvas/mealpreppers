@@ -16,8 +16,10 @@ pub mod error;
 pub mod middleware;
 pub mod planning;
 pub mod recipe_catalog;
+pub mod recipe_ingestion;
 pub mod request_context;
 pub mod routes;
+pub mod shopping_list;
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;

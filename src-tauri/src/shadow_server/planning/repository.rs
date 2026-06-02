@@ -70,7 +70,7 @@ fn now_iso() -> String {
 /// Mirrors `computeSourceFingerprint` in `sourceFingerprint.ts`:
 /// iterates days 1–7 × breakfast/lunch/dinner in fixed order, builds
 /// `"d.meal=recipeId|..."`, then SHA-256 hex-encodes.
-fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
+pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
     let mut parts: Vec<String> = Vec::with_capacity(21);
     for day in ["1", "2", "3", "4", "5", "6", "7"] {
         let empty = DayMeals {

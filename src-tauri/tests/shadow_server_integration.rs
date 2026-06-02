@@ -1328,125 +1328,81 @@ fn primary_server_health_reachable_via_api_base() {
 }
 
 // ---------------------------------------------------------------------------
-// Cutover feature gates — deferred Desktop Local API routes (issue 0025)
-//
-// These routes are registered but return 501 + `desktop.api.not_implemented`
-// during the planner-safe cutover phase. They will be implemented in
-// Desktop backend phase 2 (issue 0027).
+// Desktop backend phase 2 — recipe preview and shopping-list consolidation
+// (issue 0027)
 // ---------------------------------------------------------------------------
 
-/// Helper: asserts that a response has HTTP 501 and the H3 error body contains
-/// `statusCode: 501` and `data.code: "desktop.api.not_implemented"`.
-fn assert_not_implemented(status: u16, body: &str, route_label: &str) {
-    assert_eq!(
-        status, 501,
-        "{route_label}: expected 501 Not Implemented, body: {body}"
-    );
-    let json: serde_json::Value =
-        serde_json::from_str(body).expect("deferred route body should be JSON");
-    assert_eq!(
-        json["statusCode"], 501,
-        "{route_label}: H3 statusCode should be 501"
-    );
-    assert_eq!(
-        json["statusMessage"].as_str().unwrap_or(""),
-        "Not Implemented",
-        "{route_label}: H3 statusMessage should be 'Not Implemented'"
-    );
-    assert_eq!(
-        json["data"]["code"].as_str().unwrap_or(""),
-        "desktop.api.not_implemented",
-        "{route_label}: data.code should be 'desktop.api.not_implemented'"
-    );
-}
+// --- Recipe URL preview ---
 
 #[test]
-fn recipe_preview_returns_501_not_implemented() {
+fn recipe_preview_unsupported_url_returns_400() {
     let srv = TestServer::start(None);
     let (status, body) = http_post_json(
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "https://example.com/recipe" }),
     );
-    assert_not_implemented(status, &body, "POST /api/v1/recipes/preview");
+    assert_eq!(status, 400, "unsupported host should return 400, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
+    assert_eq!(json["statusCode"], 400);
+    assert!(
+        json["message"].as_str().unwrap_or("").to_lowercase().contains("not supported"),
+        "message should mention 'not supported', got: {}",
+        json["message"]
+    );
 }
 
 #[test]
-fn consolidate_shopping_list_returns_501_not_implemented() {
+fn recipe_preview_missing_url_returns_400() {
     let srv = TestServer::start(None);
-
-    // Create a weekplan so the ID path looks plausible — the deferred handler must
-    // return 501 regardless of whether the plan exists.
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Gate Test"));
-    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
-    let id = created["id"].as_str().expect("id");
-
     let (status, body) = http_post_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidate-shopping-list")),
+        &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({}),
     );
-    assert_not_implemented(
-        status,
-        &body,
-        "POST /api/v1/saved-weekplans/:id/consolidate-shopping-list",
-    );
+    assert_eq!(status, 400, "missing url should return 400, body: {body}");
 }
 
 #[test]
-fn get_consolidated_shopping_list_returns_501_not_implemented() {
+fn recipe_preview_non_https_url_returns_400() {
     let srv = TestServer::start(None);
-
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Gate Test 2"));
-    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
-    let id = created["id"].as_str().expect("id");
-
-    let (status, body) = http_get(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
-        &[],
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/recipes/preview"),
+        &serde_json::json!({ "url": "http://colruyt.be/recipe/test" }),
     );
-    assert_not_implemented(
-        status,
-        &body,
-        "GET /api/v1/saved-weekplans/:id/consolidated-shopping-list",
-    );
+    assert_eq!(status, 400, "http (non-https) URL should return 400, body: {body}");
 }
 
+/// Fetches a real recipe page — requires internet access.
+/// Tagged #[ignore] so it only runs when explicitly requested with `-- --ignored`.
 #[test]
-fn put_consolidated_shopping_list_returns_501_not_implemented() {
+#[ignore]
+fn recipe_preview_supported_url_returns_200_with_draft() {
     let srv = TestServer::start(None);
-
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Gate Test 3"));
-    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
-    let id = created["id"].as_str().expect("id");
-
-    let (status, body) = http_put_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
-        &serde_json::json!({ "lines": [] }),
+    // Use a stable colruyt URL — if this changes, update the URL.
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/recipes/preview"),
+        &serde_json::json!({ "url": "https://www.colruyt.be/nl/recepten/pasta-carbonara" }),
     );
-    assert_not_implemented(
-        status,
-        &body,
-        "PUT /api/v1/saved-weekplans/:id/consolidated-shopping-list",
-    );
+    assert_eq!(status, 200, "real colruyt URL should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
+    assert!(json["draft"].is_object(), "response should have 'draft' object");
+    assert!(json["draft"]["title"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "draft.title must be non-empty");
+    assert!(json["warnings"].is_array(), "response should have 'warnings' array");
 }
 
+// --- Consolidated shopping list: token gate ---
+
 #[test]
-fn deferred_routes_still_require_desktop_token_when_enforced() {
+fn phase2_routes_require_desktop_token_when_enforced() {
     let srv = TestServer::start(Some("gate-token"));
 
-    // Without token — should get 401, not 501 (token gate fires first).
+    // Without token — 401 (token gate fires first, before route logic).
     let (status, _body) = http_post_json(
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "https://example.com" }),
     );
-    assert_eq!(
-        status, 401,
-        "deferred routes must still enforce the desktop token"
-    );
+    assert_eq!(status, 401, "phase-2 routes must enforce desktop token; expected 401");
 
-    // With correct token — now the deferred 501 should be returned.
+    // With correct token — now the route runs, unsupported URL → 400 (not 501).
     let (status, body) = {
         let json_bytes = serde_json::to_vec(&serde_json::json!({ "url": "https://example.com" }))
             .expect("JSON serialization");
@@ -1464,5 +1420,232 @@ fn deferred_routes_still_require_desktop_token_when_enforced() {
         let b = resp.body_mut().read_to_string().unwrap_or_default();
         (s, b)
     };
-    assert_not_implemented(status, &body, "POST /api/v1/recipes/preview with correct token");
+    assert_eq!(
+        status, 400,
+        "with correct token and unsupported URL, expected 400, body: {body}"
+    );
+    let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
+    assert_eq!(json["statusCode"], 400, "H3 statusCode should be 400, body: {body}");
+}
+
+// --- Consolidated shopping list: CRUD ---
+
+#[test]
+fn get_consolidated_shopping_list_not_found_returns_404() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("CSL Test"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let (status, body) = http_get(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &[],
+    );
+    assert_eq!(status, 404, "no saved list → 404, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+    assert_eq!(json["statusCode"], 404);
+}
+
+#[test]
+fn put_consolidated_shopping_list_saves_and_returns_200() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("CSL Save"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let payload = serde_json::json!({
+        "lines": [
+            {
+                "id": "L1",
+                "name": "melk",
+                "quantity": 1.0,
+                "unit": "l",
+                "aisleCategory": "dairy"
+            }
+        ],
+        "sourceFingerprint": "abc123"
+    });
+
+    let (status, body) = http_put_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &payload,
+    );
+    assert_eq!(status, 200, "PUT should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+    assert!(json["lines"].is_array(), "response should have lines array");
+    assert_eq!(json["lines"].as_array().unwrap().len(), 1);
+    assert_eq!(json["lines"][0]["id"].as_str().unwrap_or(""), "L1");
+    assert_eq!(json["lines"][0]["name"].as_str().unwrap_or(""), "melk");
+    assert_eq!(json["sourceFingerprint"].as_str().unwrap_or(""), "abc123");
+    assert!(json["confirmedAt"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "confirmedAt should be set");
+}
+
+#[test]
+fn put_then_get_consolidated_shopping_list_round_trip() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("CSL Round Trip"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let payload = serde_json::json!({
+        "lines": [
+            { "id": "L1", "name": "eieren", "quantity": 6.0, "unit": null, "aisleCategory": "dairy" },
+            { "id": "L2", "name": "bloem", "quantity": 200.0, "unit": "g", "aisleCategory": "dry_goods" }
+        ],
+        "sourceFingerprint": "fp-test-abc"
+    });
+
+    let (put_status, _) = http_put_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &payload,
+    );
+    assert_eq!(put_status, 200, "PUT should succeed");
+
+    let (get_status, get_body) = http_get(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &[],
+    );
+    assert_eq!(get_status, 200, "GET after PUT should return 200, body: {get_body}");
+    let json: serde_json::Value = serde_json::from_str(&get_body).expect("JSON");
+    assert_eq!(json["lines"].as_array().unwrap().len(), 2);
+    assert_eq!(json["sourceFingerprint"].as_str().unwrap_or(""), "fp-test-abc");
+    assert_eq!(json["lines"][0]["name"].as_str().unwrap_or(""), "eieren");
+    assert_eq!(json["lines"][1]["name"].as_str().unwrap_or(""), "bloem");
+}
+
+#[test]
+fn consolidated_shopping_list_respects_principal_scoping() {
+    let srv = TestServer::start(None);
+    srv.set_user_id("user-A");
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("User A Plan"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    // User A saves a consolidated list.
+    let payload = serde_json::json!({
+        "lines": [{ "id": "L1", "name": "kaas", "quantity": 150.0, "unit": "g", "aisleCategory": "dairy" }],
+        "sourceFingerprint": "fp-user-a"
+    });
+    let (put_status, _) = http_put_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &payload,
+    );
+    assert_eq!(put_status, 200);
+
+    // User B cannot read User A's weekplan (403 from weekplan scoping).
+    srv.set_user_id("user-B");
+    let (get_status, _) = http_get(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &[],
+    );
+    assert!(
+        get_status == 403 || get_status == 404,
+        "User B should not see User A's consolidated list, got {get_status}"
+    );
+}
+
+// --- Shopping list consolidation: POST ---
+
+#[test]
+fn consolidate_shopping_list_empty_plan_returns_ai_skipped() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Empty Plan"));
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let (status, body) = http_post_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidate-shopping-list")),
+        &serde_json::json!({}),
+    );
+    assert_eq!(status, 200, "empty plan consolidation should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+    assert_eq!(
+        json["polishStatus"].as_str().unwrap_or(""),
+        "ai_skipped",
+        "empty plan → polishStatus=ai_skipped"
+    );
+    assert!(json["consolidatedLines"].is_array());
+    assert!(json["baselineLines"].is_array());
+    assert!(json["warnings"].is_array());
+    // No desktop.api.not_implemented code in the response.
+    assert!(json["data"]["code"].is_null() || json["data"].is_null(),
+        "must not return not_implemented code, got: {json}");
+}
+
+#[test]
+fn consolidate_shopping_list_unknown_plan_returns_404() {
+    let srv = TestServer::start(None);
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans/nonexistent-id/consolidate-shopping-list"),
+        &serde_json::json!({}),
+    );
+    assert_eq!(status, 404, "unknown weekplan should return 404, body: {body}");
+}
+
+#[test]
+fn consolidate_shopping_list_with_recipe_returns_baseline_lines() {
+    let srv = TestServer::start(None);
+
+    // Create a recipe with known ingredients.
+    let (recipe_status, recipe_body) = http_post_json(
+        &srv.url("/api/v1/recipes"),
+        &serde_json::json!({
+            "title": "Test Soep",
+            "ingredients": [
+                { "rawText": "200 g wortelen", "name": "wortelen", "quantity": 200.0, "unit": "g" },
+                { "rawText": "1 ui", "name": "ui" }
+            ]
+        }),
+    );
+    assert_eq!(recipe_status, 200, "recipe create should return 200, body: {recipe_body}");
+    let recipe: serde_json::Value = serde_json::from_str(&recipe_body).expect("JSON");
+    let recipe_id = recipe["id"].as_str().expect("recipe id");
+
+    // Create a weekplan with the recipe in day 1 dinner.
+    let weekplan_payload = serde_json::json!({
+        "name": "Plan with recipe",
+        "body": {
+            "version": "1",
+            "days": {
+                "1": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": recipe_id } },
+                "2": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": null } },
+                "3": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": null } },
+                "4": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": null } },
+                "5": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": null } },
+                "6": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": null } },
+                "7": { "breakfast": { "recipeId": null }, "lunch": { "recipeId": null }, "dinner": { "recipeId": null } }
+            }
+        }
+    });
+    let (plan_status, plan_body) = http_post_json(&srv.url("/api/v1/saved-weekplans"), &weekplan_payload);
+    assert_eq!(plan_status, 200, "weekplan create should return 200, body: {plan_body}");
+    let plan: serde_json::Value = serde_json::from_str(&plan_body).expect("JSON");
+    let plan_id = plan["id"].as_str().expect("plan id");
+
+    let (status, body) = http_post_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{plan_id}/consolidate-shopping-list")),
+        &serde_json::json!({}),
+    );
+    assert_eq!(status, 200, "consolidate with recipe should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+    assert_eq!(json["polishStatus"].as_str().unwrap_or(""), "ai_skipped",
+        "no OpenRouter key in test → ai_skipped");
+    let baseline = json["baselineLines"].as_array().expect("baselineLines array");
+    assert_eq!(baseline.len(), 2, "expected 2 baseline lines (wortelen + ui), got: {baseline:?}");
+    let names: Vec<&str> = baseline.iter()
+        .filter_map(|l| l["name"].as_str())
+        .collect();
+    assert!(names.contains(&"wortelen"), "baselineLines should contain 'wortelen', got: {names:?}");
+    assert!(names.contains(&"ui"), "baselineLines should contain 'ui', got: {names:?}");
+    assert_ne!(json["sourceFingerprint"].as_str().unwrap_or(""), "", "sourceFingerprint should be set");
 }

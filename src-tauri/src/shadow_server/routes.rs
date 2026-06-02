@@ -61,7 +61,12 @@ use crate::shadow_server::{
         },
         image::{serve_image_handler, upload_image_handler},
     },
+    recipe_ingestion::handlers::preview_recipe_handler,
     request_context::RequestContext,
+    shopping_list::handlers::{
+        consolidate_shopping_list_handler, get_consolidated_shopping_list_handler,
+        put_consolidated_shopping_list_handler,
+    },
 };
 
 /// Shared application state threaded through the Axum router.
@@ -137,17 +142,16 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(patch_month_plan_handler)
                 .delete(delete_month_plan_handler),
         )
-        // Cutover feature gates — deferred (Desktop backend phase 2).
+        // Cutover feature gates — Desktop backend phase 2 (now implemented).
         // Static sub-paths before parameterised routes to satisfy matchit ordering.
-        // These return 501 + desktop.api.not_implemented until phase 2 ships.
-        .route("/v1/recipes/preview", post(not_implemented_handler))
+        .route("/v1/recipes/preview", post(preview_recipe_handler))
         .route(
             "/v1/saved-weekplans/:id/consolidate-shopping-list",
-            post(not_implemented_handler),
+            post(consolidate_shopping_list_handler),
         )
         .route(
             "/v1/saved-weekplans/:id/consolidated-shopping-list",
-            get(not_implemented_handler).put(not_implemented_handler),
+            get(get_consolidated_shopping_list_handler).put(put_consolidated_shopping_list_handler),
         )
         .route_layer(middleware::from_fn_with_state(state.clone(), token_gate));
 
@@ -181,12 +185,4 @@ async fn stub_handler(
         "traceId": ctx.trace_id,
         "planningUserId": ctx.planning_principal.user_id,
     })))
-}
-
-/// Deferred route handler — returns `501 Not Implemented` with `desktop.api.not_implemented`
-/// for cutover feature gates that are not yet available in Desktop backend phase 1.
-///
-/// Used by: recipe URL import preview, shopping-list consolidation (read + write).
-async fn not_implemented_handler() -> Result<Json<Value>, AppError> {
-    Err(AppError::not_implemented())
 }

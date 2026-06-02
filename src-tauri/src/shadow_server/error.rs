@@ -99,6 +99,26 @@ impl AppError {
         }
     }
 
+    /// `422` — publisher returned a login/SSO wall instead of recipe content.
+    pub fn unprocessable(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::UNPROCESSABLE_ENTITY,
+            status_message: "Unprocessable Entity",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
+    /// `502` — upstream HTTP fetch failed (network or remote server error).
+    pub fn bad_gateway(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_GATEWAY,
+            status_message: "Bad Gateway",
+            message: Some(message.into()),
+            data: None,
+        }
+    }
+
     /// `501` with `data.code = "desktop.api.not_implemented"` per the cutover feature gate contract.
     #[allow(dead_code)]
     pub fn not_implemented() -> Self {

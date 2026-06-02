@@ -54,7 +54,7 @@ export function useNetworkFeatureState(): NetworkFeatureState {
   const missingApiKey = computed(() => isDesktopShell() && !hasOpenRouterKey.value)
   const onlineReady = computed(() => isOnline.value && !missingApiKey.value)
   // Desktop phase-1 cutover: consolidated shopping and recipe URL import are deferred.
-  const desktopCutover = computed(() => isDesktopShell())
+  const desktopCutover = computed(() => false)
 
   return {
     isOnline,
