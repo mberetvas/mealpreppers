@@ -36,7 +36,7 @@ pub async fn preview_recipe_handler(
     }
 
     let url_clone = url.clone();
-    let (html, final_url) = spawn_blocking(move || {
+    let fetch_result = spawn_blocking(move || {
         super::fetch::fetch_recipe_page_html(&url_clone)
     })
     .await
@@ -44,8 +44,14 @@ pub async fn preview_recipe_handler(
     .map_err(|e| {
         log::warn!("recipe_preview.fetch_error url={url} error={e}");
         AppError::bad_gateway("The recipe page could not be fetched.")
-    })
-    .map(|r| (r.html, r.final_url))?;
+    })?;
+
+    if !(200..300).contains(&fetch_result.status) {
+        return Err(AppError::bad_gateway("The recipe page could not be fetched."));
+    }
+
+    let html = fetch_result.html;
+    let final_url = fetch_result.final_url;
 
     // Auth wall detection.
     if super::fetch::detect_publisher_auth_wall(&html, &final_url) {
@@ -60,7 +66,14 @@ pub async fn preview_recipe_handler(
     let result = spawn_blocking(move || super::scraper::parse_recipe_html(&html, &url_clone2))
         .await
         .map_err(|e| AppError::internal(format!("spawn error: {e}")))?
-        .map_err(|e| AppError::internal(format!("parse error: {e}")))?;
+        .map_err(|e| AppError::bad_request(e))?;
+
+    if result.draft.title.trim().is_empty() && result.draft.ingredients.is_empty() {
+        return Err(AppError::unprocessable(
+            "The recipe could not be parsed from this page. The page may not contain recipe data, \
+            or the site layout may have changed. Try manual entry or another source.",
+        ));
+    }
 
     log::info!(
         "recipe_preview.scraped url={url} title={:?} ingredients={}",

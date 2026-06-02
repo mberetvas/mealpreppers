@@ -183,9 +183,15 @@ impl AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        // Match H3 / ofetch: `statusMessage` is the user-facing copy (Nitro uses it the same way).
+        let status_message = self
+            .message
+            .clone()
+            .filter(|m| !m.is_empty())
+            .unwrap_or_else(|| self.status_message.to_string());
         let body = H3ErrorBody {
             status_code: self.status.as_u16(),
-            status_message: self.status_message.to_string(),
+            status_message,
             message: self.message,
             data: self.data,
         };

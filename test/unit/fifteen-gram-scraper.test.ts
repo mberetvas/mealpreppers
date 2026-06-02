@@ -25,6 +25,18 @@ describe('15gram scraper', () => {
     expect(result.draft.tags).toEqual(['bowl', 'Chef Caroline', 'Foodbag', 'gezond'])
   })
 
+  it('parses Marokkaanse tomatensalade (15gram microdata layout)', async () => {
+    const html = await fixture('15gram_marokkaanse_tomatensalade.html')
+    const result = parseRecipeHtml(html, 'https://15gram.be/recepten/marokkaanse-tomatensalade')
+
+    expect(result.draft.title).toBe('Marokkaanse tomatensalade')
+    expect(result.draft.servings).toBe(4)
+    expect(result.draft.cookTimeMinutes).toBe(15)
+    expect(result.draft.ingredients).toHaveLength(9)
+    expect(result.draft.steps).toHaveLength(3)
+    expect(result.draft.ingredients[0]?.rawText).toContain('tomaten')
+  })
+
   it('maps recipeCategory and recipeCuisine to categories and keywords to tags', () => {
     const html = `
       <div id="recipe-detail" itemscope itemtype="https://schema.org/Recipe">

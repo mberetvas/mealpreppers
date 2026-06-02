@@ -249,7 +249,11 @@ fn token_rejection_returns_h3_error_shape() {
 
     let json: serde_json::Value = serde_json::from_str(&body).expect("error body is JSON");
     assert_eq!(json["statusCode"], 401, "H3 statusCode field");
-    assert_eq!(json["statusMessage"], "Unauthorized", "H3 statusMessage field");
+    assert_eq!(
+        json["statusMessage"],
+        "Invalid or missing desktop token",
+        "H3 statusMessage should carry the user-facing message"
+    );
     assert!(
         json["message"].as_str().is_some(),
         "H3 message field should be a string"
@@ -1411,6 +1415,32 @@ fn recipe_preview_supported_url_returns_200_with_draft() {
     assert!(json["draft"].is_object(), "response should have 'draft' object");
     assert!(json["draft"]["title"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "draft.title must be non-empty");
     assert!(json["warnings"].is_array(), "response should have 'warnings' array");
+}
+
+/// 15gram uses HTML microdata (not JSON-LD Recipe) — regression for import failures on their pages.
+#[test]
+#[ignore]
+fn recipe_preview_15gram_microdata_url_returns_200_with_draft() {
+    let srv = TestServer::start(None);
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/recipes/preview"),
+        &serde_json::json!({ "url": "https://15gram.be/recepten/marokkaanse-tomatensalade" }),
+    );
+    assert_eq!(status, 200, "15gram microdata URL should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
+    assert_eq!(
+        json["draft"]["title"].as_str(),
+        Some("Marokkaanse tomatensalade"),
+        "draft.title should match page heading, body: {body}"
+    );
+    assert!(
+        json["draft"]["ingredients"].as_array().map(|a| a.len()).unwrap_or(0) >= 1,
+        "draft should include ingredients, body: {body}"
+    );
+    assert!(
+        json["draft"]["steps"].as_array().map(|a| a.len()).unwrap_or(0) >= 1,
+        "draft should include steps, body: {body}"
+    );
 }
 
 // --- Consolidated shopping list: token gate ---

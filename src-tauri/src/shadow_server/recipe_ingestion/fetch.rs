@@ -63,6 +63,13 @@ pub fn detect_publisher_auth_wall(html: &str, final_url: &str) -> bool {
         return false;
     }
 
+    // 15gram.be uses microdata inside #recipe-detail, not JSON-LD Recipe nodes.
+    if html.contains("id=\"recipe-detail\"")
+        && html.contains("itemprop=\"recipeIngredient\"")
+    {
+        return false;
+    }
+
     // Check for "inloggen" in the page title.
     let title = extract_title_from_html(html);
     title.to_lowercase().contains("inloggen")

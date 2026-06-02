@@ -35,15 +35,18 @@ function readFifteenGramTaxonomy(document: CheerioAPI): { categories: string[], 
  * 15gram does not embed JSON-LD; it uses itemprop microdata instead.
  */
 export function parseFifteenGramRecipe(document: CheerioAPI, source: RecipeSource): RecipeDraft {
-  const title = cleanText(document('[itemprop="name"]').first().text())
-  const description = optionalText(document('[itemprop="description"]').first().text())
-  const imageUrl = optionalText(document('[itemprop="image"]').first().attr('src'))
-  const servings = parseServings(document('[itemprop="recipeYield"]').first().text())
-  const cookTimeMinutes = parseRecipeDuration(document('meta[itemprop="cookTime"]').first().attr('content'))
-  const ingredients = document('li[itemprop="recipeIngredient"]')
+  const recipeRoot = document('#recipe-detail')
+  const scoped = recipeRoot.length > 0 ? recipeRoot : document.root()
+
+  const title = cleanText(scoped.find('[itemprop="name"]').first().text())
+  const description = optionalText(scoped.find('[itemprop="description"]').first().text())
+  const imageUrl = optionalText(scoped.find('[itemprop="image"]').first().attr('src'))
+  const servings = parseServings(scoped.find('[itemprop="recipeYield"]').first().text())
+  const cookTimeMinutes = parseRecipeDuration(scoped.find('meta[itemprop="cookTime"]').first().attr('content'))
+  const ingredients = scoped.find('li[itemprop="recipeIngredient"]')
     .toArray()
     .map(element => parseIngredientLine(document(element).text()))
-  const steps = toRecipeSteps(document('li[itemprop="recipeInstructions"]')
+  const steps = toRecipeSteps(scoped.find('li[itemprop="recipeInstructions"]')
     .toArray()
     .map(element => document(element).text()))
   const { categories, tags } = readFifteenGramTaxonomy(document)

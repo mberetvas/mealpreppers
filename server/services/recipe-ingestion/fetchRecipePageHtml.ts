@@ -73,6 +73,11 @@ export function detectPublisherAuthWall(html: string, finalUrl: string): boolean
     return false
   }
 
+  // 15gram.be uses microdata inside #recipe-detail, not JSON-LD Recipe nodes.
+  if (document('#recipe-detail li[itemprop="recipeIngredient"]').length > 0) {
+    return false
+  }
+
   if (LOGIN_TITLE_PATTERN.test(title)) {
     return true
   }

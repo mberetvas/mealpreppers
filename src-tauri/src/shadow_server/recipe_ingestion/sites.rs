@@ -49,13 +49,24 @@ fn read_fifteen_gram_taxonomy(document: &Html) -> (Vec<String>, Vec<String>) {
 /// Parses a 15gram.be recipe page using HTML microdata (itemprop).
 /// 15gram does not use JSON-LD — all recipe data is in microdata attributes.
 pub fn parse_fifteen_gram_recipe(document: &Html, source: RecipeSource) -> RecipeDraft {
-    let name_sel = Selector::parse(r#"[itemprop="name"]"#).unwrap();
-    let desc_sel = Selector::parse(r#"[itemprop="description"]"#).unwrap();
-    let image_sel = Selector::parse(r#"[itemprop="image"]"#).unwrap();
-    let yield_sel = Selector::parse(r#"[itemprop="recipeYield"]"#).unwrap();
-    let cook_time_sel = Selector::parse(r#"meta[itemprop="cookTime"]"#).unwrap();
-    let ingredient_sel = Selector::parse(r#"li[itemprop="recipeIngredient"]"#).unwrap();
-    let step_sel = Selector::parse(r#"li[itemprop="recipeInstructions"]"#).unwrap();
+    let name_sel = Selector::parse(r#"#recipe-detail [itemprop="name"], [itemprop="name"]"#).unwrap();
+    let desc_sel =
+        Selector::parse(r#"#recipe-detail [itemprop="description"], [itemprop="description"]"#).unwrap();
+    let image_sel = Selector::parse(r#"#recipe-detail [itemprop="image"], [itemprop="image"]"#).unwrap();
+    let yield_sel =
+        Selector::parse(r#"#recipe-detail [itemprop="recipeYield"], [itemprop="recipeYield"]"#).unwrap();
+    let cook_time_sel = Selector::parse(
+        r#"#recipe-detail meta[itemprop="cookTime"], meta[itemprop="cookTime"]"#,
+    )
+    .unwrap();
+    let ingredient_sel = Selector::parse(
+        r#"#recipe-detail li[itemprop="recipeIngredient"], li[itemprop="recipeIngredient"]"#,
+    )
+    .unwrap();
+    let step_sel = Selector::parse(
+        r#"#recipe-detail li[itemprop="recipeInstructions"], li[itemprop="recipeInstructions"]"#,
+    )
+    .unwrap();
 
     let title = clean_text(
         &document
