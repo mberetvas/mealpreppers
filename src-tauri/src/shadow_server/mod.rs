@@ -14,12 +14,14 @@
 pub mod db;
 pub mod error;
 pub mod middleware;
+pub mod platform;
 pub mod planning;
 pub mod recipe_catalog;
 pub mod recipe_ingestion;
 pub mod request_context;
 pub mod routes;
 pub mod shopping_list;
+pub mod wire;
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;

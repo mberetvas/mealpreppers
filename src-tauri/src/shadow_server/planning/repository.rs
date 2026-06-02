@@ -13,34 +13,12 @@ use rusqlite::{params, Connection};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
+use crate::shadow_server::platform::RepoError;
+
 use super::models::{
     DayMeals, MonthPlanListItem, MonthPlanRow, MonthPlanV1, RecipeIdSlot, SavedWeekplanListItem,
     SavedWeekplanRow, WeekPlanV1,
 };
-
-// ---------------------------------------------------------------------------
-// Error type
-// ---------------------------------------------------------------------------
-
-#[derive(Debug)]
-pub enum RepoError {
-    NotFound(String),
-    Forbidden(String),
-    InvalidRecipeIds { missing: Vec<String> },
-    Storage(String),
-}
-
-impl From<rusqlite::Error> for RepoError {
-    fn from(e: rusqlite::Error) -> Self {
-        RepoError::Storage(e.to_string())
-    }
-}
-
-impl From<serde_json::Error> for RepoError {
-    fn from(e: serde_json::Error) -> Self {
-        RepoError::Storage(format!("json: {e}"))
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -20,29 +20,17 @@ use std::collections::BTreeSet;
 
 use crate::shadow_server::{
     error::AppError,
+    platform::RepoError,
     recipe_catalog::{
         defaults::{DEFAULT_CATEGORIES, DEFAULT_TAGS},
         models::{BulkDeleteRequest, RecipeCreatePayload, RecipeCatalogItem},
         repository::{
             create_recipe, delete_recipes_by_ids, get_recipe_by_id, list_recipes,
-            list_stored_options, open_conn, update_recipe, RepoError,
+            list_stored_options, open_conn, update_recipe,
         },
     },
     routes::AppState,
 };
-
-// ---------------------------------------------------------------------------
-// Error conversion
-// ---------------------------------------------------------------------------
-
-impl From<RepoError> for AppError {
-    fn from(e: RepoError) -> Self {
-        match e {
-            RepoError::NotFound(msg) => AppError::not_found(msg),
-            RepoError::Storage(msg) => AppError::internal(msg),
-        }
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Payload validation
@@ -89,7 +77,7 @@ pub async fn list_recipes_handler(
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok(Json(items))
 }
@@ -108,7 +96,7 @@ pub async fn create_recipe_handler(
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok((StatusCode::OK, Json(item)))
 }
@@ -127,7 +115,7 @@ pub async fn options_handler(
         )
         .await
         .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-        .map_err(AppError::from)?;
+        .map_err(AppError::from_recipe_catalog_repo)?;
 
     // Merge defaults with stored values; BTreeSet gives sorted, deduplicated output.
     let mut categories: BTreeSet<String> =
@@ -172,7 +160,7 @@ pub async fn bulk_delete_handler(
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok(Json(serde_json::json!({ "deleted": deleted })))
 }
@@ -189,7 +177,7 @@ pub async fn get_recipe_handler(
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok(Json(item))
 }
@@ -209,7 +197,7 @@ pub async fn update_recipe_handler(
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok(Json(item))
 }

@@ -13,7 +13,7 @@ use tokio::task::spawn_blocking;
 
 use crate::shadow_server::{
     error::AppError,
-    planning::repository::{open_conn, RepoError},
+    planning::repository::open_conn,
     request_context::RequestContext,
     routes::AppState,
 };
@@ -24,20 +24,7 @@ use super::{
 };
 
 // ---------------------------------------------------------------------------
-// Error helpers
-// ---------------------------------------------------------------------------
-
-fn repo_error_to_app(e: RepoError) -> AppError {
-    match e {
-        RepoError::NotFound(m) => AppError::not_found(m),
-        RepoError::Forbidden(m) => AppError::forbidden(m),
-        RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
-        RepoError::Storage(_) => AppError::internal("Unexpected database error."),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// POST /:id/consolidate-shopping-list
+// Handlers
 // ---------------------------------------------------------------------------
 
 /// Consolidates the shopping list for a saved weekplan.
@@ -75,8 +62,8 @@ pub async fn get_consolidated_shopping_list_handler(
     let db_path = state.db_path();
 
     let record = spawn_blocking(move || {
-        let conn = open_conn(&db_path).map_err(repo_error_to_app)?;
-        get_consolidated_shopping_list(&conn, &id, &user_id).map_err(repo_error_to_app)
+        let conn = open_conn(&db_path).map_err(AppError::from_shopping_list_repo)?;
+        get_consolidated_shopping_list(&conn, &id, &user_id).map_err(AppError::from_shopping_list_repo)
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))??;
@@ -107,9 +94,9 @@ pub async fn put_consolidated_shopping_list_handler(
     };
 
     let saved = spawn_blocking(move || {
-        let mut conn = open_conn(&db_path).map_err(repo_error_to_app)?;
+        let mut conn = open_conn(&db_path).map_err(AppError::from_shopping_list_repo)?;
         save_consolidated_shopping_list(&mut conn, &id, &user_id, &record)
-            .map_err(repo_error_to_app)
+            .map_err(AppError::from_shopping_list_repo)
     })
     .await
     .map_err(|e| AppError::internal(format!("task panicked: {e}")))??;

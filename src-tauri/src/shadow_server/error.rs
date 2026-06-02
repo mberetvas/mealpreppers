@@ -11,6 +11,9 @@ use axum::{
 };
 use serde::Serialize;
 use serde_json::Value;
+use uuid::Uuid;
+
+use crate::shadow_server::platform::RepoError;
 
 /// JSON body shape that mirrors H3 / ofetch error responses.
 #[derive(Serialize)]
@@ -129,6 +132,39 @@ impl AppError {
                 "This endpoint is not yet implemented in the Desktop Local API".to_string(),
             ),
             data: Some(serde_json::json!({ "code": "desktop.api.not_implemented" })),
+        }
+    }
+
+    /// Maps [`RepoError`] from the Recipe Catalog slice to an H3-shaped response.
+    pub fn from_recipe_catalog_repo(e: RepoError) -> Self {
+        match e {
+            RepoError::NotFound(msg) => AppError::not_found(msg),
+            RepoError::Forbidden(msg) => AppError::forbidden(msg),
+            RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
+            RepoError::Storage(msg) => AppError::internal(msg),
+        }
+    }
+
+    /// Maps [`RepoError`] from the Planning slice to an H3-shaped response.
+    pub fn from_planning_repo(e: RepoError) -> Self {
+        match e {
+            RepoError::NotFound(msg) => AppError::not_found(msg),
+            RepoError::Forbidden(msg) => AppError::forbidden(msg),
+            RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
+            RepoError::Storage(_) => {
+                let error_id = Uuid::new_v4().to_string();
+                AppError::planning_unexpected(error_id)
+            }
+        }
+    }
+
+    /// Maps [`RepoError`] from the Shopping List slice to an H3-shaped response.
+    pub fn from_shopping_list_repo(e: RepoError) -> Self {
+        match e {
+            RepoError::NotFound(m) => AppError::not_found(m),
+            RepoError::Forbidden(m) => AppError::forbidden(m),
+            RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
+            RepoError::Storage(_) => AppError::internal("Unexpected database error."),
         }
     }
 }

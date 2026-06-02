@@ -10,29 +10,9 @@
 use rusqlite::{params, Connection};
 use uuid::Uuid;
 
+use crate::shadow_server::platform::RepoError;
+
 use super::models::*;
-
-// ---------------------------------------------------------------------------
-// Error type
-// ---------------------------------------------------------------------------
-
-#[derive(Debug)]
-pub enum RepoError {
-    NotFound(String),
-    Storage(String),
-}
-
-impl From<rusqlite::Error> for RepoError {
-    fn from(e: rusqlite::Error) -> Self {
-        RepoError::Storage(e.to_string())
-    }
-}
-
-impl From<serde_json::Error> for RepoError {
-    fn from(e: serde_json::Error) -> Self {
-        RepoError::Storage(format!("json: {e}"))
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -111,10 +111,10 @@ pub async fn consolidate_shopping_list(
         })?;
         let row = get_saved_weekplan_by_id(&conn, &plan_id_clone, &user_id_clone)
             .map_err(|e| match e {
-                crate::shadow_server::planning::repository::RepoError::NotFound(m) => {
+                crate::shadow_server::platform::RepoError::NotFound(m) => {
                     AppError::not_found(&m)
                 }
-                crate::shadow_server::planning::repository::RepoError::Forbidden(m) => {
+                crate::shadow_server::platform::RepoError::Forbidden(m) => {
                     AppError::forbidden(&m)
                 }
                 other => AppError::internal(format!("db: {other:?}")),

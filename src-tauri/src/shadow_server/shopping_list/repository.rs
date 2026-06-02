@@ -8,7 +8,7 @@
 
 use rusqlite::{params, Connection};
 
-use crate::shadow_server::planning::repository::RepoError;
+use crate::shadow_server::platform::RepoError;
 use super::models::SavedConsolidatedShoppingListRecord;
 
 // ---------------------------------------------------------------------------

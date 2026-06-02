@@ -1,12 +1,19 @@
 //! Axum routes for the Desktop Local API shadow server.
 //!
-//! Phase 1 (platform milestone) exposes:
-//! - `GET /health` — unauthenticated liveness probe (same contract as Nitro's `/health`).
-//! - `GET /api/v1/stub` — authenticated test-only route that logs **Trace ID** and
-//!   **Planning Principal** using `domain.action` **Log Event Names** and returns them in the
-//!   response body for integration-test assertions.
+//! # Phase legend
 //!
-//! Phase 2 (Recipe Catalog) adds:
+//! Comment **Phase N** groups below are **route-milestone** labels from the original desktop
+//! port (platform plumbing → Recipe Catalog → Planning → Shopping List / Recipe Ingestion).
+//! They are **not** the same as **Plan Phase N** in the DDD hardening sequence
+//! (`Docs/issues/0028`–`0039`, `wire::WirePhase`).
+//!
+//! # Live routes (as registered in `build_router`)
+//!
+//! **Platform**
+//! - `GET /health` — unauthenticated liveness probe
+//! - `GET /api/v1/stub` — authenticated test route (Trace ID + Planning Principal)
+//!
+//! **Recipe Catalog**
 //! - `GET  /api/v1/recipes`              — list recipes
 //! - `POST /api/v1/recipes`              — create recipe
 //! - `GET  /api/v1/recipes/options`      — categories + tags (defaults merged with stored)
@@ -16,7 +23,7 @@
 //! - `PUT  /api/v1/recipes/:id`          — update recipe
 //! - `GET  /recipe-images/:filename`     — serve stored image (unauthenticated)
 //!
-//! Phase 3 (Planning) adds:
+//! **Planning**
 //! - `GET    /api/v1/saved-weekplans`          — list saved weekplans (principal-scoped)
 //! - `POST   /api/v1/saved-weekplans`          — create saved weekplan
 //! - `GET    /api/v1/saved-weekplans/:id`      — get saved weekplan
@@ -28,11 +35,13 @@
 //! - `PATCH  /api/v1/planning/month-plans/:id` — patch month plan
 //! - `DELETE /api/v1/planning/month-plans/:id` — delete month plan
 //!
-//! Cutover feature gates (deferred — Desktop backend phase 2):
-//! - `POST /api/v1/recipes/preview`                                    — recipe URL import (501)
-//! - `POST /api/v1/saved-weekplans/:id/consolidate-shopping-list`      — consolidation (501)
-//! - `GET  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — saved list read (501)
-//! - `PUT  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — saved list write (501)
+//! **Recipe Ingestion**
+//! - `POST /api/v1/recipes/preview` — recipe URL import preview
+//!
+//! **Shopping List**
+//! - `POST /api/v1/saved-weekplans/:id/consolidate-shopping-list`      — consolidate + optional AI polish
+//! - `GET  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — read saved consolidated list
+//! - `PUT  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — write saved consolidated list
 
 use std::path::PathBuf;
 
@@ -67,6 +76,7 @@ use crate::shadow_server::{
         consolidate_shopping_list_handler, get_consolidated_shopping_list_handler,
         put_consolidated_shopping_list_handler,
     },
+    wire::{self, WirePhase},
 };
 
 /// Shared application state threaded through the Axum router.
@@ -105,6 +115,8 @@ impl AppState {
 
 /// Assembles the full Axum router with all middleware layers.
 pub fn build_router(state: AppState) -> Router {
+    let state = wire::wire_dependencies(state, WirePhase::Phase0);
+
     // `/api/**` routes — token-gated via route_layer so /health and /recipe-images are unaffected
     let api_routes = Router::new()
         .route("/v1/stub", get(stub_handler))
@@ -142,8 +154,7 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(patch_month_plan_handler)
                 .delete(delete_month_plan_handler),
         )
-        // Cutover feature gates — Desktop backend phase 2 (now implemented).
-        // Static sub-paths before parameterised routes to satisfy matchit ordering.
+        // Recipe Ingestion + Shopping List — static sub-paths before parameterised routes
         .route("/v1/recipes/preview", post(preview_recipe_handler))
         .route(
             "/v1/saved-weekplans/:id/consolidate-shopping-list",

@@ -20,7 +20,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use uuid::Uuid;
 
 use crate::shadow_server::{
     error::AppError,
@@ -34,30 +33,11 @@ use crate::shadow_server::{
             collect_recipe_ids_from_week_plan, delete_month_plan, delete_saved_weekplan,
             get_month_plan_by_id, get_saved_weekplan_by_id, list_month_plans,
             list_saved_weekplans, open_conn, update_month_plan, update_saved_weekplan,
-            RepoError,
         },
     },
     request_context::RequestContext,
     routes::AppState,
 };
-
-// ---------------------------------------------------------------------------
-// Error conversion
-// ---------------------------------------------------------------------------
-
-impl From<RepoError> for AppError {
-    fn from(e: RepoError) -> Self {
-        match e {
-            RepoError::NotFound(msg) => AppError::not_found(msg),
-            RepoError::Forbidden(msg) => AppError::forbidden(msg),
-            RepoError::InvalidRecipeIds { missing } => AppError::missing_recipe_ids(missing),
-            RepoError::Storage(_) => {
-                let error_id = Uuid::new_v4().to_string();
-                AppError::planning_unexpected(error_id)
-            }
-        }
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Saved Weekplans handlers
@@ -77,7 +57,7 @@ pub async fn list_saved_weekplans_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(items))
 }
@@ -107,7 +87,7 @@ pub async fn create_saved_weekplan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok((StatusCode::OK, Json(item)))
 }
@@ -132,7 +112,7 @@ pub async fn get_saved_weekplan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(item))
 }
@@ -174,7 +154,7 @@ pub async fn patch_saved_weekplan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(item))
 }
@@ -199,7 +179,7 @@ pub async fn delete_saved_weekplan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(serde_json::json!({ "ok": true })))
 }
@@ -220,7 +200,7 @@ pub async fn list_month_plans_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(items))
 }
@@ -245,7 +225,7 @@ pub async fn create_month_plan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok((StatusCode::OK, Json(item)))
 }
@@ -268,7 +248,7 @@ pub async fn get_month_plan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(item))
 }
@@ -304,7 +284,7 @@ pub async fn patch_month_plan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(item))
 }
@@ -327,7 +307,7 @@ pub async fn delete_month_plan_handler(
     })
     .await
     .map_err(|e| AppError::planning_unexpected(format!("task panicked: {e}")))?
-    .map_err(AppError::from)?;
+    .map_err(AppError::from_planning_repo)?;
 
     Ok(Json(serde_json::json!({ "ok": true })))
 }
