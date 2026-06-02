@@ -76,7 +76,7 @@ use crate::shadow_server::{
         consolidate_shopping_list_handler, get_consolidated_shopping_list_handler,
         put_consolidated_shopping_list_handler,
     },
-    recipe_catalog::ports::RecipeRepository,
+    recipe_catalog::ports::{RecipeImageStore, RecipeRepository},
     wire::{self, WirePhase},
 };
 
@@ -92,6 +92,8 @@ pub struct AppState {
     pub port: u16,
     /// Recipe Catalog persistence port (wired in [`wire::wire_dependencies`]).
     pub recipes: Arc<dyn RecipeRepository>,
+    /// Recipe Catalog image filesystem port (wired in [`wire::wire_dependencies`]).
+    pub recipe_images: Arc<dyn RecipeImageStore>,
 }
 
 impl AppState {
@@ -118,7 +120,7 @@ impl AppState {
 
 /// Assembles the full Axum router with all middleware layers.
 pub fn build_router(state: AppState) -> Router {
-    let state = wire::wire_dependencies(state, WirePhase::Phase1b);
+    let state = wire::wire_dependencies(state, WirePhase::Phase1c);
 
     // `/api/**` routes — token-gated via route_layer so /health and /recipe-images are unaffected
     let api_routes = Router::new()

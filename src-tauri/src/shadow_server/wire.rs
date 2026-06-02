@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use crate::shadow_server::{
     recipe_catalog::{
-        infrastructure::SqliteRecipeRepository,
-        ports::RecipeRepository,
+        infrastructure::{FsRecipeImageStore, SqliteRecipeRepository},
+        ports::{RecipeImageStore, RecipeRepository},
     },
     routes::AppState,
 };
@@ -25,6 +25,8 @@ pub enum WirePhase {
     Phase1a,
     /// Phase 1b — Recipe Catalog write path (create/update/bulk-delete on [`RecipeRepository`]).
     Phase1b,
+    /// Phase 1c — Recipe Catalog image store (`RecipeImageStore` on [`AppState`]).
+    Phase1c,
 }
 
 /// Wires slice dependencies onto application state before routes are registered.
@@ -34,10 +36,18 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
     let recipes: Arc<dyn RecipeRepository> =
         Arc::new(SqliteRecipeRepository::new(state.db_path()));
 
+    let recipe_images: Arc<dyn RecipeImageStore> = Arc::new(FsRecipeImageStore::new(
+        state.recipe_images_dir(),
+    ));
+
     match phase {
         WirePhase::Phase0 => {}
-        WirePhase::Phase1a | WirePhase::Phase1b => {}
+        WirePhase::Phase1a | WirePhase::Phase1b | WirePhase::Phase1c => {}
     }
 
-    AppState { recipes, ..state }
+    AppState {
+        recipes,
+        recipe_images,
+        ..state
+    }
 }

@@ -91,11 +91,16 @@ pub fn start(
 
             let db_path = resolve_db_path(&data_dir_owned);
             let app_state = routes::AppState {
-                data_dir: data_dir_owned,
+                data_dir: data_dir_owned.clone(),
                 token: token_owned,
                 port,
                 recipes: Arc::new(
                     recipe_catalog::infrastructure::SqliteRecipeRepository::new(db_path),
+                ),
+                recipe_images: Arc::new(
+                    recipe_catalog::infrastructure::FsRecipeImageStore::new(
+                        data_dir_owned.join("recipe-images"),
+                    ),
                 ),
             };
             let router = routes::build_router(app_state);

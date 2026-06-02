@@ -1,13 +1,7 @@
 //! Recipe image upload and serve handlers.
 //!
-//! - `POST /api/v1/recipes/upload-image` — accepts `multipart/form-data` with a `file` field,
-//!   validates MIME type (JPEG/PNG/WebP/GIF) and size (≤ 5 MB), writes to
-//!   `{data_dir}/recipe-images/{uuid}.{ext}`, and returns `{ url }` pointing at the
-//!   loopback serve route.
-//!
-//! - `GET /recipe-images/:filename` — serves the stored image file with the correct
-//!   `Content-Type` and `Cache-Control` headers.  This route is **unauthenticated**
-//!   (mounted outside the token-gated `/api` sub-router).
+//! - `POST /api/v1/recipes/upload-image` — multipart upload via [`RecipeImageStore`]
+//! - `GET /recipe-images/:filename` — unauthenticated serve (outside token-gated `/api`)
 
 use axum::{
     body::Body,
@@ -16,71 +10,29 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use std::path::PathBuf;
-use uuid::Uuid;
 
-use crate::shadow_server::{error::AppError, routes::AppState};
+use crate::shadow_server::{
+    error::AppError,
+    recipe_catalog::application::{
+        serve_recipe_image::{self, ServeRecipeImageError},
+        upload_recipe_image::{self, UploadRecipeImageError},
+    },
+    routes::AppState,
+};
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const MAX_BYTES: usize = 5 * 1024 * 1024;
-
-fn mime_to_ext(mime: &str) -> Option<&'static str> {
-    match mime {
-        "image/jpeg" => Some("jpg"),
-        "image/png" => Some("png"),
-        "image/webp" => Some("webp"),
-        "image/gif" => Some("gif"),
-        _ => None,
+fn map_upload_error(e: UploadRecipeImageError) -> AppError {
+    match e {
+        UploadRecipeImageError::BadRequest(msg) => AppError::bad_request(msg),
+        UploadRecipeImageError::Repo(repo) => AppError::from_recipe_catalog_repo(repo),
     }
 }
 
-fn ext_to_mime(ext: &str) -> Option<&'static str> {
-    match ext {
-        "jpg" | "jpeg" => Some("image/jpeg"),
-        "png" => Some("image/png"),
-        "webp" => Some("image/webp"),
-        "gif" => Some("image/gif"),
-        _ => None,
+fn map_serve_error(e: ServeRecipeImageError) -> AppError {
+    match e {
+        ServeRecipeImageError::BadRequest(msg) => AppError::bad_request(msg),
+        ServeRecipeImageError::Repo(repo) => AppError::from_recipe_catalog_repo(repo),
     }
 }
-
-/// Returns `true` for filenames that match `{uuid}.{ext}` (safe subset only).
-fn is_safe_image_filename(filename: &str) -> bool {
-    let Some((name, ext)) = filename.split_once('.') else {
-        return false;
-    };
-
-    // Extension must be one of the supported image types
-    if ext_to_mime(&ext.to_lowercase()).is_none() {
-        return false;
-    }
-
-    // Name must be a 36-character UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    if name.len() != 36 {
-        return false;
-    }
-
-    let bytes = name.as_bytes();
-    let hyphen_positions = [8usize, 13, 18, 23];
-    for (i, &b) in bytes.iter().enumerate() {
-        if hyphen_positions.contains(&i) {
-            if b != b'-' {
-                return false;
-            }
-        } else if !b.is_ascii_hexdigit() {
-            return false;
-        }
-    }
-
-    true
-}
-
-// ---------------------------------------------------------------------------
-// Upload handler
-// ---------------------------------------------------------------------------
 
 /// `POST /api/v1/recipes/upload-image`
 pub async fn upload_image_handler(
@@ -105,7 +57,7 @@ pub async fn upload_image_handler(
                 .await
                 .map_err(|e| AppError::bad_request(e.to_string()))?;
             file_bytes = Some(bytes.to_vec());
-            break; // only the first `file` field matters
+            break;
         }
     }
 
@@ -113,81 +65,47 @@ pub async fn upload_image_handler(
         .filter(|b| !b.is_empty())
         .ok_or_else(|| AppError::bad_request("Choose an image file to upload."))?;
 
-    if bytes.len() > MAX_BYTES {
-        return Err(AppError::bad_request(
-            "Image must be at most 5MB.",
-        ));
-    }
+    let mime = upload_recipe_image::resolve_mime(
+        content_type_hint.as_deref(),
+        file_name_hint.as_deref(),
+    )
+    .map_err(AppError::bad_request)?;
 
-    // Resolve MIME: prefer the multipart content-type header, fall back to filename extension.
-    let mime = content_type_hint
-        .as_deref()
-        .filter(|m| mime_to_ext(m).is_some())
-        .or_else(|| {
-            file_name_hint
-                .as_deref()
-                .and_then(|n| n.rsplit('.').next())
-                .and_then(|ext| {
-                    let lower = ext.to_lowercase();
-                    ext_to_mime(lower.as_str())
-                })
-        })
-        .ok_or_else(|| {
-            AppError::bad_request("Use a JPEG, PNG, WebP, or GIF image.")
-        })?;
+    let images = state.recipe_images.clone();
+    let stored = tokio::task::spawn_blocking(move || {
+        upload_recipe_image::execute(images.as_ref(), bytes, &mime)
+    })
+    .await
+    .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
+    .map_err(map_upload_error)?;
 
-    let ext = mime_to_ext(mime).expect("mime already validated");
-    let filename = format!("{}.{ext}", Uuid::new_v4());
-
-    // Ensure the images directory exists
-    let images_dir = state.recipe_images_dir();
-    tokio::fs::create_dir_all(&images_dir)
-        .await
-        .map_err(|e| AppError::internal(format!("create images dir: {e}")))?;
-
-    let file_path = images_dir.join(&filename);
-    tokio::fs::write(&file_path, &bytes)
-        .await
-        .map_err(|e| AppError::internal(format!("write image: {e}")))?;
-
-    // Derive the loopback origin from the Host header (matches TypeScript behaviour).
     let origin = headers
         .get(header::HOST)
         .and_then(|v| v.to_str().ok())
         .map(|host| format!("http://{host}"))
         .unwrap_or_else(|| format!("http://127.0.0.1:{}", state.port));
 
-    let url = format!("{origin}/recipe-images/{filename}");
+    let url = format!("{origin}/recipe-images/{}", stored.filename);
     Ok(Json(serde_json::json!({ "url": url })))
 }
-
-// ---------------------------------------------------------------------------
-// Serve handler
-// ---------------------------------------------------------------------------
 
 /// `GET /recipe-images/:filename` — serves a stored recipe image (unauthenticated).
 pub async fn serve_image_handler(
     State(state): State<AppState>,
     Path(filename): Path<String>,
 ) -> Result<Response, AppError> {
-    if !is_safe_image_filename(&filename) {
-        return Err(AppError::bad_request("Invalid image filename."));
-    }
-
-    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
-    let content_type =
-        ext_to_mime(&ext).ok_or_else(|| AppError::bad_request("Unsupported image type."))?;
-
-    let file_path: PathBuf = state.recipe_images_dir().join(&filename);
-
-    let bytes = tokio::fs::read(&file_path)
-        .await
-        .map_err(|_| AppError::not_found("Image not found."))?;
+    let images = state.recipe_images.clone();
+    let payload = tokio::task::spawn_blocking(move || {
+        serve_recipe_image::execute(images.as_ref(), &filename)
+    })
+    .await
+    .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
+    .map_err(map_serve_error)?;
 
     let response = Response::builder()
-        .header(header::CONTENT_TYPE, content_type)
+        .header(header::CONTENT_TYPE, payload.content_type)
         .header(header::CACHE_CONTROL, "public, max-age=86400")
-        .body(Body::from(bytes))
+        .body(Body::from(payload.bytes))
         .map_err(|e| AppError::internal(format!("build response: {e}")))?;
 
     Ok(response)

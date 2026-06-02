@@ -44,7 +44,8 @@ Filled in as each Plan Phase lands. Route shapes match `routes.rs`.
 | `POST /api/v1/recipes` | `application/create_recipe` | `RecipeRepository` (Phase 1b) |
 | `PUT /api/v1/recipes/:id` | `application/update_recipe` | `RecipeRepository` (Phase 1b) |
 | `POST /api/v1/recipes/bulk-delete` | `application/bulk_delete_recipes` | `RecipeRepository` (Phase 1b) |
-| `POST /api/v1/recipes/upload-image` | — | image port (TBD) |
+| `POST /api/v1/recipes/upload-image` | `application/upload_recipe_image` | `RecipeImageStore` (Phase 1c) |
+| `GET /recipe-images/:filename` | `application/serve_recipe_image` | `RecipeImageStore` (Phase 1c) |
 
 ### Planning
 
@@ -71,7 +72,7 @@ Filled in as each Plan Phase lands. Route shapes match `routes.rs`.
 ## Platform (Phase 0 — done)
 
 - Unified `platform::RepoError` for all slices
-- `wire_dependencies` invoked from `build_router` (`WirePhase::Phase1b` for catalog CRUD)
+- `wire_dependencies` invoked from `build_router` (`WirePhase::Phase1c` for catalog + images)
 
 ## Recipe Catalog reads (Phase 1a — done)
 
@@ -82,3 +83,9 @@ Filled in as each Plan Phase lands. Route shapes match `routes.rs`.
 
 - `RecipeRepository` extended with create, update, bulk-delete
 - Write handlers use `state.recipes` only (no `open_conn` on POST/PUT/bulk-delete paths)
+
+## Recipe Catalog images (Phase 1c — done)
+
+- `ports/recipe_image_store.rs` + `infrastructure/fs_recipe_image_store.rs`
+- Image handlers use `state.recipe_images` only (no `open_conn` in catalog handlers)
+- `planning/ports/recipe_catalog_reader.rs` trait stub (impl in Phase 2a)

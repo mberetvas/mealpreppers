@@ -19,11 +19,11 @@ Review image validation vs **`app/utils/recipeImageValidation.ts`**; fix gaps if
 
 ## Acceptance criteria
 
-- [ ] Integration filters green: `upload_image`, `serve_recipe_image`, `recipe_images_are_unauthenticated`.
-- [ ] **Full Phase 1 gate** green (all nine catalog prefixes from plan: read + write + image filters).
-- [ ] No catalog handler **`open_conn`** anywhere in **`recipe_catalog/handlers.rs`**.
+- [x] Integration filters green: `upload_image`, `serve_recipe_image`, `recipe_images_are_unauthenticated`.
+- [x] **Full Phase 1 gate** green (all nine catalog prefixes from plan: read + write + image filters).
+- [x] No catalog handler **`open_conn`** anywhere in **`recipe_catalog/handlers.rs`**.
 - [ ] Optional smoke: recipes page with **`MEALPREPPER_SIDECAR=1`**.
-- [ ] **`recipe_catalog_reader`** trait file exists under **`planning/ports/`** (stub; no impl).
+- [x] **`recipe_catalog_reader`** trait file exists under **`planning/ports/`** (stub; no impl).
 
 ## Blocked by
 

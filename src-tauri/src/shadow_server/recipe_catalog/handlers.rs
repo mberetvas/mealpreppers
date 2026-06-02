@@ -1,7 +1,6 @@
 //! Axum route handlers for the Recipe Catalog endpoints.
 //!
-//! Every handler opens a fresh SQLite connection inside `tokio::task::spawn_blocking`
-//! to keep blocking I/O off the async executor thread.
+//! Handlers delegate to `application/` use cases via wired ports on [`AppState`].
 //!
 //! # Routes
 //! - `GET  /api/v1/recipes`            — list all recipes
