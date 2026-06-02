@@ -106,19 +106,9 @@ pub async fn consolidate_shopping_list(
     let db_path_clone = db_path.clone();
 
     let (body, source_fingerprint) = spawn_blocking(move || {
-        let conn = open_conn(&db_path_clone).map_err(|e| {
-            AppError::internal(format!("db open: {e:?}"))
-        })?;
+        let conn = open_conn(&db_path_clone).map_err(AppError::from_planning_repo)?;
         let row = get_saved_weekplan_by_id(&conn, &plan_id_clone, &user_id_clone)
-            .map_err(|e| match e {
-                crate::shadow_server::platform::RepoError::NotFound(m) => {
-                    AppError::not_found(&m)
-                }
-                crate::shadow_server::platform::RepoError::Forbidden(m) => {
-                    AppError::forbidden(&m)
-                }
-                other => AppError::internal(format!("db: {other:?}")),
-            })?;
+            .map_err(AppError::from_planning_repo)?;
         let fp = compute_source_fingerprint(&row.body);
         Ok::<_, AppError>((row.body, fp))
     })

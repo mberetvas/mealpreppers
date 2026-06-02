@@ -38,12 +38,12 @@ Filled in as each Plan Phase lands. Route shapes match `routes.rs`.
 
 | Route | Use case (planned) | Port (planned) |
 |-------|-------------------|----------------|
-| `GET /api/v1/recipes` | — | `RecipeRepository` |
-| `GET /api/v1/recipes/:id` | — | `RecipeRepository` |
-| `GET /api/v1/recipes/options` | — | `RecipeRepository` |
-| `POST /api/v1/recipes` | — | `RecipeRepository` |
-| `PUT /api/v1/recipes/:id` | — | `RecipeRepository` |
-| `POST /api/v1/recipes/bulk-delete` | — | `RecipeRepository` |
+| `GET /api/v1/recipes` | `application/list_recipes` | `RecipeRepository` (Phase 1a) |
+| `GET /api/v1/recipes/:id` | `application/get_recipe` | `RecipeRepository` (Phase 1a) |
+| `GET /api/v1/recipes/options` | `application/recipe_options` | `RecipeRepository` (Phase 1a) |
+| `POST /api/v1/recipes` | `application/create_recipe` | `RecipeRepository` (Phase 1b) |
+| `PUT /api/v1/recipes/:id` | `application/update_recipe` | `RecipeRepository` (Phase 1b) |
+| `POST /api/v1/recipes/bulk-delete` | `application/bulk_delete_recipes` | `RecipeRepository` (Phase 1b) |
 | `POST /api/v1/recipes/upload-image` | — | image port (TBD) |
 
 ### Planning
@@ -71,4 +71,14 @@ Filled in as each Plan Phase lands. Route shapes match `routes.rs`.
 ## Platform (Phase 0 — done)
 
 - Unified `platform::RepoError` for all slices
-- Stub `wire_dependencies(WirePhase::Phase0)` invoked from `build_router`
+- `wire_dependencies` invoked from `build_router` (`WirePhase::Phase1b` for catalog CRUD)
+
+## Recipe Catalog reads (Phase 1a — done)
+
+- `ports/recipe_repository.rs` + `infrastructure/sqlite_recipe_repository.rs`
+- Read handlers use `state.recipes` only (no `open_conn` on list/get/options paths)
+
+## Recipe Catalog writes (Phase 1b — done)
+
+- `RecipeRepository` extended with create, update, bulk-delete
+- Write handlers use `state.recipes` only (no `open_conn` on POST/PUT/bulk-delete paths)

@@ -25,23 +25,21 @@ Runs `tauri dev` → `bun run dev` (Nuxt on `http://localhost:3000`) → Tauri W
 local SQLite (`.data/mealprepper.db` by default) and optional `.env` OpenRouter key. No bundled
 sidecar or desktop token in this loop.
 
-## Dev loop B — bundled sidecar (integration)
+## Dev loop B — Rust primary API (integration)
 
-Prepare resources once (Nitro `node-server` build + pinned Node runtime):
-
-```powershell
-bun run build:desktop
-```
-
-Run Tauri against the sidecar only (no Nuxt dev server):
+Run Tauri against the static client with the in-process Rust API (no Nuxt dev server):
 
 ```powershell
 bun run desktop:dev:sidecar
 ```
 
-Uses `MEALPREPPER_SIDECAR=1` and `src-tauri/tauri.sidecar.conf.json` (skips
-`beforeDevCommand` and `tauri dev`’s frontend wait). The shell opens a visible main window on
-`about:blank` with `window.__MEALPREPPER_DESKTOP__` (API base + per-launch token), spawns Nitro on a random `127.0.0.1` port, waits for `GET /health`, then navigates the main WebView to the sidecar origin.
+Uses `MEALPREPPER_SIDECAR=1` and `src-tauri/tauri.sidecar.conf.json`. The shell starts the
+in-process **Axum** server, waits for `GET /health`, then opens the WebView on the static
+`index.html` bundle with `window.__MEALPREPPER_DESKTOP__` (API base + per-launch token).
+
+**API runtime:** `MEALPREPPER_SIDECAR=1` and the packaged app use **Rust Axum only** for
+`/api/v1` — not Nitro/Drizzle. See [desktop-domain-layers.md](./architecture/desktop-domain-layers.md)
+for the dev matrix and layer map.
 
 ## Production-like build
 

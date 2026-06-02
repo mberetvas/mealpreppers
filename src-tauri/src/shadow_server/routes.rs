@@ -43,7 +43,7 @@
 //! - `GET  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — read saved consolidated list
 //! - `PUT  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — write saved consolidated list
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use axum::{
     extract::Extension,
@@ -76,6 +76,7 @@ use crate::shadow_server::{
         consolidate_shopping_list_handler, get_consolidated_shopping_list_handler,
         put_consolidated_shopping_list_handler,
     },
+    recipe_catalog::ports::RecipeRepository,
     wire::{self, WirePhase},
 };
 
@@ -89,6 +90,8 @@ pub struct AppState {
     pub token: Option<String>,
     /// Loopback port the server is listening on — used in image upload response URLs.
     pub port: u16,
+    /// Recipe Catalog persistence port (wired in [`wire::wire_dependencies`]).
+    pub recipes: Arc<dyn RecipeRepository>,
 }
 
 impl AppState {
@@ -115,7 +118,7 @@ impl AppState {
 
 /// Assembles the full Axum router with all middleware layers.
 pub fn build_router(state: AppState) -> Router {
-    let state = wire::wire_dependencies(state, WirePhase::Phase0);
+    let state = wire::wire_dependencies(state, WirePhase::Phase1b);
 
     // `/api/**` routes — token-gated via route_layer so /health and /recipe-images are unaffected
     let api_routes = Router::new()

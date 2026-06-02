@@ -24,7 +24,7 @@ pub mod shopping_list;
 pub mod wire;
 
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use std::time::Duration;
 
 /// Handle for the running shadow server. Dropping this stops the server gracefully.
@@ -89,10 +89,14 @@ pub fn start(
                 }
             };
 
+            let db_path = resolve_db_path(&data_dir_owned);
             let app_state = routes::AppState {
                 data_dir: data_dir_owned,
                 token: token_owned,
                 port,
+                recipes: Arc::new(
+                    recipe_catalog::infrastructure::SqliteRecipeRepository::new(db_path),
+                ),
             };
             let router = routes::build_router(app_state);
 
