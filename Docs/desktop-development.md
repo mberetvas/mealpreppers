@@ -58,6 +58,7 @@ sidecar stderr:
 |--------|-------------|
 | `bun run desktop:build:console` | Rebuild with a terminal always attached (Cargo feature `console`). |
 | `$env:MEALPREPPER_CONSOLE='1'; .\mealprepper.exe` | Same diagnostics on an existing release exe (no rebuild). |
+| `just desktop-run-console` / `bun run desktop:run:prod -- --console` | Run release binary from repo with console attached. |
 | `bun run desktop:dev:sidecar` | Sidecar integration with live Node output in the terminal. |
 
 When diagnostics are on, a failed startup waits for Enter before exiting so Explorer
