@@ -12,6 +12,11 @@ format:
 test:
 	bun run test
 
+# Full Tauri release build: static Nuxt client (`build:desktop`) then `tauri build`.
+# Usage: `just desktop-build`
+desktop-build:
+	bun run desktop:build
+
 # Bump semver in package.json, commit, and create an annotated git tag.
 bump level='patch':
 	bun pm version {{level}}
