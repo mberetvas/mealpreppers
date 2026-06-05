@@ -47,12 +47,14 @@ use std::{path::PathBuf, sync::Arc};
 
 use axum::{
     extract::Extension,
+    http::{HeaderName, Method},
     middleware,
     response::Json,
     routing::{get, post},
     Router,
 };
 use serde_json::{json, Value};
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 
 use crate::shadow_server::{
     error::AppError,
@@ -128,6 +130,25 @@ impl AppState {
     }
 }
 
+/// CORS for the Tauri WebView (`https://tauri.localhost`, etc.) calling the loopback API.
+fn desktop_webview_cors_layer() -> CorsLayer {
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::mirror_request())
+        .allow_methods(AllowMethods::list([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ]))
+        .allow_headers(AllowHeaders::list([
+            HeaderName::from_static("content-type"),
+            HeaderName::from_static("x-desktop-token"),
+            HeaderName::from_static("x-trace-id"),
+        ]))
+}
+
 /// Assembles the full Axum router with all middleware layers.
 pub fn build_router(state: AppState) -> Router {
     let state = wire::wire_dependencies(state, WirePhase::Phase3b);
@@ -188,6 +209,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api", api_routes)
         // request_context_layer runs on every route (including /health) so Trace ID is always set
         .layer(middleware::from_fn_with_state(state.clone(), request_context_layer))
+        .layer(desktop_webview_cors_layer())
         .with_state(state)
 }
 

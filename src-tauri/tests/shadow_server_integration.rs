@@ -1362,6 +1362,35 @@ fn primary_server_health_reachable_via_api_base() {
 
 // --- Recipe URL preview ---
 
+/// Tauri WebView origins must receive CORS headers on API responses (cross-origin loopback fetch).
+#[test]
+fn recipe_preview_post_includes_cors_for_tauri_webview_origin() {
+    let srv = TestServer::start(Some("cors-token"));
+    let json_bytes = serde_json::to_vec(&serde_json::json!({ "url": "https://example.com" }))
+        .expect("JSON serialization");
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .build()
+        .into();
+    let mut resp = agent
+        .post(&srv.url("/api/v1/recipes/preview"))
+        .header("content-type", "application/json")
+        .header("x-desktop-token", "cors-token")
+        .header("Origin", "https://tauri.localhost")
+        .send(json_bytes.as_slice())
+        .expect("no transport error");
+    let allow_origin = resp
+        .headers()
+        .get("access-control-allow-origin")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    assert_eq!(
+        allow_origin, "https://tauri.localhost",
+        "must echo Origin for WebView fetch"
+    );
+}
+
 #[test]
 fn recipe_preview_unsupported_url_returns_400() {
     let srv = TestServer::start(None);
@@ -1415,6 +1444,26 @@ fn recipe_preview_supported_url_returns_200_with_draft() {
     assert!(json["draft"].is_object(), "response should have 'draft' object");
     assert!(json["draft"]["title"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "draft.title must be non-empty");
     assert!(json["warnings"].is_array(), "response should have 'warnings' array");
+}
+
+/// Regression for the reported gelakte-kip 15gram import URL.
+#[test]
+#[ignore]
+fn recipe_preview_15gram_gelakte_kip_url_returns_200_with_draft() {
+    let srv = TestServer::start(None);
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/recipes/preview"),
+        &serde_json::json!({
+            "url": "https://15gram.be/recepten/gelakte-kip-met-rode-curry-noedels-en-oesterzwammen"
+        }),
+    );
+    assert_eq!(status, 200, "gelakte-kip URL should return 200, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
+    assert_eq!(
+        json["draft"]["title"].as_str(),
+        Some("Gelakte kip met rode curry, noedels en oesterzwammen"),
+        "draft.title should match page heading, body: {body}"
+    );
 }
 
 /// 15gram uses HTML microdata (not JSON-LD Recipe) — regression for import failures on their pages.
