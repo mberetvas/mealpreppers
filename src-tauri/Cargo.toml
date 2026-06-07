@@ -34,7 +34,7 @@ keyring = "3"
 open = "5"
 url = "2"
 # Desktop Local API shadow server
-axum = { version = "0.7", features = ["multipart"] }
+axum = { version = "0.8", features = ["multipart"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 subtle = "2"
