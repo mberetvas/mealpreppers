@@ -19,6 +19,11 @@ description = "Enables the has_openrouter_key command."
 commands.allow = ["has_openrouter_key"]
 
 [[permission]]
+identifier = "allow-get-openrouter-key-hint"
+description = "Enables the get_openrouter_key_hint command."
+commands.allow = ["get_openrouter_key_hint"]
+
+[[permission]]
 identifier = "allow-get-app-version"
 description = "Enables the get_app_version command."
 commands.allow = ["get_app_version"]
@@ -46,6 +51,7 @@ permissions = [
   "allow-set-openrouter-key",
   "allow-clear-openrouter-key",
   "allow-has-openrouter-key",
+  "allow-get-openrouter-key-hint",
   "allow-get-app-version",
   "allow-get-data-dir",
   "allow-open-data-folder",

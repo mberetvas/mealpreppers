@@ -463,6 +463,7 @@ function setupCutoverGateMocks(query: Record<string, string>) {
     desktopCutover: computed(() => true),
     isOnline: ref(true),
     hasOpenRouterKey: ref(false),
+    openRouterKeyHint: ref(null),
     refreshOpenRouterKeyState: vi.fn(),
   }))
   return result

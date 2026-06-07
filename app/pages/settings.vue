@@ -17,6 +17,7 @@ const isDesktop = isDesktopShell()
 const {
   isOnline,
   hasOpenRouterKey,
+  openRouterKeyHint,
   offline,
   missingApiKey,
   onlineReady,
@@ -48,11 +49,23 @@ const aiStatusSummary = computed(() => {
 })
 
 const apiKeyStatusLabel = computed(() =>
-  hasOpenRouterKey.value ? 'Configured' : 'Not set',
+  hasOpenRouterKey.value ? 'Saved in keychain' : 'Not set',
+)
+
+const apiKeyStatusBadgeClasses = computed(() =>
+  hasOpenRouterKey.value
+    ? 'bg-atelier-mint-success text-atelier-success-foreground'
+    : 'bg-atelier-chip text-atelier-neutral-action',
 )
 
 const internetStatusLabel = computed(() =>
   isOnline.value ? 'Online' : 'Offline',
+)
+
+const internetStatusBadgeClasses = computed(() =>
+  isOnline.value
+    ? 'bg-atelier-mint-success text-atelier-success-foreground'
+    : 'bg-atelier-cream-warning text-atelier-warning-foreground',
 )
 
 async function loadInstallSettings(): Promise<void> {
@@ -109,7 +122,11 @@ async function saveApiKey(): Promise<void> {
     await invokeDesktopCommand('set_openrouter_key', { key: normalized })
     apiKeyInput.value = ''
     await refreshOpenRouterKeyState()
-    statusMessage.value = 'OpenRouter key saved. Restart the app for AI polish to use the new key.'
+    if (!hasOpenRouterKey.value) {
+      errorMessage.value = 'The key could not be stored in the OS keychain. Try saving again.'
+      return
+    }
+    statusMessage.value = 'OpenRouter key saved. AI shopping-list polish is ready to use.'
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Key could not be saved.'
@@ -230,16 +247,39 @@ onMounted(() => {
           <dt class="font-medium text-stone-600 dark:text-stone-400">
             API key
           </dt>
-          <dd class="font-semibold text-stone-900 dark:text-stone-100">
-            {{ apiKeyStatusLabel }}
+          <dd class="flex flex-col items-end gap-1">
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-semibold"
+              :class="apiKeyStatusBadgeClasses"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                class="material-symbols-outlined text-sm"
+                aria-hidden="true"
+              >{{ hasOpenRouterKey ? 'key' : 'key_off' }}</span>
+              {{ apiKeyStatusLabel }}
+            </span>
+            <span
+              v-if="hasOpenRouterKey && openRouterKeyHint"
+              class="font-mono text-xs text-stone-600 dark:text-stone-400"
+            >
+              {{ openRouterKeyHint }}
+            </span>
           </dd>
         </div>
         <div class="flex items-center justify-between gap-4">
           <dt class="font-medium text-stone-600 dark:text-stone-400">
             Internet
           </dt>
-          <dd class="font-semibold text-stone-900 dark:text-stone-100">
-            {{ internetStatusLabel }}
+          <dd>
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-semibold"
+              :class="internetStatusBadgeClasses"
+              role="status"
+            >
+              {{ internetStatusLabel }}
+            </span>
           </dd>
         </div>
         <div class="flex items-center justify-between gap-4">
@@ -256,8 +296,23 @@ onMounted(() => {
       </dl>
 
       <template v-if="isDesktop">
+        <p
+          v-if="hasOpenRouterKey"
+          class="text-sm text-stone-600 dark:text-stone-400"
+        >
+          A key is stored securely in the OS keychain
+          <span v-if="openRouterKeyHint" class="font-mono text-stone-800 dark:text-stone-200">({{ openRouterKeyHint }})</span>.
+          Enter a new key below to replace it.
+        </p>
+        <p
+          v-else
+          class="text-sm text-stone-600 dark:text-stone-400"
+        >
+          No key is stored yet. Paste your OpenRouter key below.
+        </p>
+
         <label class="grid gap-2 text-sm font-medium text-stone-800 dark:text-stone-200">
-          API key
+          {{ hasOpenRouterKey ? 'Replace API key' : 'API key' }}
           <input
             v-model="apiKeyInput"
             type="password"

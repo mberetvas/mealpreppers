@@ -5,6 +5,8 @@ import { invokeDesktopCommand } from '../utils/tauriDesktop'
 export interface NetworkFeatureState {
   isOnline: Readonly<Ref<boolean>>
   hasOpenRouterKey: Readonly<Ref<boolean>>
+  /** Masked preview of the stored key (desktop only), e.g. `sk-or-v••••7890`. */
+  openRouterKeyHint: Readonly<Ref<string | null>>
   offline: ComputedRef<boolean>
   missingApiKey: ComputedRef<boolean>
   onlineReady: ComputedRef<boolean>
@@ -20,15 +22,21 @@ export interface NetworkFeatureState {
 export function useNetworkFeatureState(): NetworkFeatureState {
   const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
   const hasOpenRouterKey = ref(false)
+  const openRouterKeyHint = ref<string | null>(null)
 
   async function refreshOpenRouterKeyState(): Promise<void> {
     if (!isDesktopShell()) {
       hasOpenRouterKey.value = true
+      openRouterKeyHint.value = null
       return
     }
 
-    const configured = await invokeDesktopCommand<boolean>('has_openrouter_key')
+    const [configured, hint] = await Promise.all([
+      invokeDesktopCommand<boolean>('has_openrouter_key'),
+      invokeDesktopCommand<string | null>('get_openrouter_key_hint'),
+    ])
     hasOpenRouterKey.value = configured === true
+    openRouterKeyHint.value = configured === true ? (hint ?? null) : null
   }
 
   function handleOnline(): void {
@@ -59,6 +67,7 @@ export function useNetworkFeatureState(): NetworkFeatureState {
   return {
     isOnline,
     hasOpenRouterKey,
+    openRouterKeyHint,
     offline,
     missingApiKey,
     onlineReady,

@@ -7,8 +7,9 @@ mod startup;
 pub use diagnostics::{maybe_attach_console, pause_on_fatal_error};
 
 use keychain::{
-    clear_openrouter_key, get_app_version, get_data_dir, get_openrouter_key, has_openrouter_key,
-    open_data_folder, open_external_url, set_openrouter_key,
+    clear_openrouter_key, get_app_version, get_data_dir, get_openrouter_key,
+    get_openrouter_key_hint, has_openrouter_key, open_data_folder, open_external_url,
+    set_openrouter_key,
 };
 use sidecar::should_run_sidecar;
 use startup::StartupTiming;
@@ -24,6 +25,7 @@ pub fn run() {
             set_openrouter_key,
             clear_openrouter_key,
             has_openrouter_key,
+            get_openrouter_key_hint,
             get_app_version,
             get_data_dir,
             open_data_folder,
