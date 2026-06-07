@@ -30,7 +30,7 @@ tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
 ureq = { version = "3", default-features = false, features = ["rustls"] }
 uuid = { version = "1", features = ["v4"] }
-keyring = "3"
+keyring = "4"
 open = "5"
 url = "2"
 # Desktop Local API shadow server
