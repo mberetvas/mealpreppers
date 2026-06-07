@@ -5,6 +5,7 @@ export default defineConfig({
   schema: [
     './server/db/schema/recipeCatalog.ts',
     './server/db/schema/planning.ts',
+    './server/db/schema/installSettings.ts',
   ],
   out: './server/db/migrations',
   dbCredentials: {

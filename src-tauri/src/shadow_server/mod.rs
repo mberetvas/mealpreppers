@@ -20,6 +20,7 @@ pub mod recipe_catalog;
 pub mod recipe_ingestion;
 pub mod request_context;
 pub mod routes;
+pub mod settings;
 pub mod shopping_list;
 pub mod wire;
 
@@ -116,7 +117,9 @@ pub fn start(
                     ),
                 ),
                 shopping_list_polish: Arc::new(
-                    shopping_list::infrastructure::OpenRouterShoppingListPolishPort::new(),
+                    shopping_list::infrastructure::OpenRouterShoppingListPolishPort::new(
+                        db_path.clone(),
+                    ),
                 ),
             };
             let router = routes::build_router(app_state);

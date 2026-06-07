@@ -67,7 +67,7 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
         Arc::new(SqliteWeekplanForConsolidationReader::new(db_path.clone()));
 
     let shopping_list_polish: Arc<dyn ShoppingListPolishPort> =
-        Arc::new(OpenRouterShoppingListPolishPort::new());
+        Arc::new(OpenRouterShoppingListPolishPort::new(db_path.clone()));
 
     match phase {
         WirePhase::Phase0 => {}

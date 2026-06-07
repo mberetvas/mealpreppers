@@ -2,10 +2,11 @@ import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import * as recipeCatalogSchema from './schema/recipeCatalog'
 import * as planningSchema from './schema/planning'
+import * as installSettingsSchema from './schema/installSettings'
 import { resolveDatabasePath } from './paths'
 import { runMigrations } from './migrate'
 
-const schema = { ...recipeCatalogSchema, ...planningSchema }
+const schema = { ...recipeCatalogSchema, ...planningSchema, ...installSettingsSchema }
 
 export type AppDb = BetterSQLite3Database<typeof schema>
 /** @deprecated Use `AppDb` — alias kept for recipe-catalog call sites. */

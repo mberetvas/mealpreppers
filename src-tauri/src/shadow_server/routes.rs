@@ -38,6 +38,10 @@
 //! **Recipe Ingestion**
 //! - `POST /api/v1/recipes/preview` — recipe URL import preview
 //!
+//! **Settings**
+//! - `GET   /api/v1/settings` — read install-scoped settings
+//! - `PATCH /api/v1/settings` — update OpenRouter shopping-list polish model
+//!
 //! **Shopping List**
 //! - `POST /api/v1/saved-weekplans/:id/consolidate-shopping-list`      — consolidate + optional AI polish
 //! - `GET  /api/v1/saved-weekplans/:id/consolidated-shopping-list`     — read saved consolidated list
@@ -74,6 +78,7 @@ use crate::shadow_server::{
     },
     recipe_ingestion::handlers::preview_recipe_handler,
     request_context::RequestContext,
+    settings::handlers::{get_settings_handler, patch_settings_handler},
     shopping_list::handlers::{
         consolidate_shopping_list_handler, get_consolidated_shopping_list_handler,
         put_consolidated_shopping_list_handler,
@@ -189,6 +194,11 @@ pub fn build_router(state: AppState) -> Router {
             get(get_month_plan_handler)
                 .patch(patch_month_plan_handler)
                 .delete(delete_month_plan_handler),
+        )
+        // Install settings
+        .route(
+            "/v1/settings",
+            get(get_settings_handler).patch(patch_settings_handler),
         )
         // Recipe Ingestion + Shopping List — static sub-paths before parameterised routes
         .route("/v1/recipes/preview", post(preview_recipe_handler))

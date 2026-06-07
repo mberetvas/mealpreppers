@@ -5,8 +5,9 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type * as recipeCatalogSchema from './schema/recipeCatalog'
 import type * as planningSchema from './schema/planning'
+import type * as installSettingsSchema from './schema/installSettings'
 
-type AppSchema = typeof recipeCatalogSchema & typeof planningSchema
+type AppSchema = typeof recipeCatalogSchema & typeof planningSchema & typeof installSettingsSchema
 
 function resolveMigrationsFolder(): string {
   const candidates = [

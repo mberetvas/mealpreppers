@@ -60,9 +60,15 @@ const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions
 const OPENROUTER_REFERER: &str = "https://mealpreppers.app";
 const OPENROUTER_TITLE: &str = "Mealpreppers";
 
+pub const DEFAULT_SHOPPING_LIST_MODEL: &str = "deepseek/deepseek-v4-flash";
+
 pub fn default_model() -> String {
-    std::env::var("OPENROUTER_SHOPPING_LIST_MODEL")
-        .unwrap_or_else(|_| "openai/gpt-4o-mini".to_string())
+    crate::shadow_server::settings::repository::resolve_shopping_list_model_from_env()
+}
+
+/// Resolves the shopping-list polish model from the install settings row.
+pub fn resolve_model_from_db(conn: &rusqlite::Connection) -> String {
+    crate::shadow_server::settings::repository::resolve_shopping_list_model(conn)
 }
 
 pub fn default_timeout_ms() -> u64 {
@@ -121,13 +127,14 @@ fn map_ureq_error(err: UreqError) -> OpenRouterError {
 /// Intended to run inside `tokio::task::spawn_blocking`.
 pub fn call_openrouter_polish(
     key: &str,
+    model: &str,
     context: &ConsolidationContext,
 ) -> Result<PolishResponse, OpenRouterError> {
     let user_content = serde_json::to_string(context)
         .map_err(|e| OpenRouterError::Parse(format!("serialize context: {e}")))?;
 
     let request_body = json!({
-        "model": default_model(),
+        "model": model,
         "messages": [
             { "role": "system", "content": SYSTEM_PROMPT.trim() },
             { "role": "user", "content": user_content }

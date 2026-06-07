@@ -1,5 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
+import { getDb } from '../../../../db/sqlite'
 import { withPlanningHandler } from '../../../../services/planning/planningRequestContext'
+import { getInstallSettings } from '../../../../services/settings/installSettingsRepository'
 import { consolidateShoppingList } from '../../../../services/shopping-list/consolidationService'
 import { createShoppingListPolishChain, LangChainShoppingListPolishPort } from '../../../../services/shopping-list/polishChainFactory'
 
@@ -14,13 +16,14 @@ export default defineEventHandler(
 
       const config = useRuntimeConfig()
       const openrouterApiKey = config.openrouterApiKey || undefined
+      const { openrouterShoppingListModel } = getInstallSettings(getDb())
 
       // Build production polish port when API key is configured
       let polishPort = null
       if (openrouterApiKey) {
         const chain = createShoppingListPolishChain({
           openrouterApiKey,
-          openrouterShoppingListModel: config.openrouterShoppingListModel,
+          openrouterShoppingListModel,
           openrouterShoppingListTimeoutMs: config.openrouterShoppingListTimeoutMs,
           openrouterAppUrl: config.openrouterAppUrl,
           openrouterAppTitle: config.openrouterAppTitle,

@@ -1,20 +1,27 @@
 //! Production [`ShoppingListPolishPort`] using OpenRouter and the OS keychain.
 
+use std::path::PathBuf;
+
 use crate::{
     keychain,
-    shadow_server::shopping_list::{
-        models::ConsolidationContext,
-        openrouter::{call_openrouter_polish, default_model, default_timeout_ms},
-        ports::{PolishPortError, PolishPortResult, ShoppingListPolishPort},
+    shadow_server::{
+        planning::repository::open_conn,
+        shopping_list::{
+            models::ConsolidationContext,
+            openrouter::{call_openrouter_polish, default_timeout_ms, resolve_model_from_db},
+            ports::{PolishPortError, PolishPortResult, ShoppingListPolishPort},
+        },
     },
 };
 
 /// OpenRouter-backed polish port; reads the API key from the desktop keychain.
-pub struct OpenRouterShoppingListPolishPort;
+pub struct OpenRouterShoppingListPolishPort {
+    db_path: PathBuf,
+}
 
 impl OpenRouterShoppingListPolishPort {
-    pub fn new() -> Self {
-        Self
+    pub fn new(db_path: PathBuf) -> Self {
+        Self { db_path }
     }
 
     fn read_api_key() -> Option<String> {
@@ -32,12 +39,6 @@ impl OpenRouterShoppingListPolishPort {
     }
 }
 
-impl Default for OpenRouterShoppingListPolishPort {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl ShoppingListPolishPort for OpenRouterShoppingListPolishPort {
     fn is_configured(&self) -> bool {
         Self::read_api_key().is_some()
@@ -52,7 +53,14 @@ impl ShoppingListPolishPort for OpenRouterShoppingListPolishPort {
             )
         })?;
 
-        let model = default_model();
+        let conn = open_conn(&self.db_path).map_err(|e| {
+            PolishPortError::OpenRouter(
+                crate::shadow_server::shopping_list::openrouter::OpenRouterError::Network(
+                    format!("open db for model resolution: {e:?}"),
+                ),
+            )
+        })?;
+        let model = resolve_model_from_db(&conn);
         let timeout_ms = default_timeout_ms();
         let line_count = Self::line_count(context);
 
@@ -61,7 +69,7 @@ impl ShoppingListPolishPort for OpenRouterShoppingListPolishPort {
         );
 
         let start = std::time::Instant::now();
-        let response = call_openrouter_polish(&api_key, context)?;
+        let response = call_openrouter_polish(&api_key, &model, context)?;
         let latency_ms = start.elapsed().as_millis();
 
         log::info!(

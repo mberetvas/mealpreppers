@@ -1767,3 +1767,76 @@ fn consolidate_shopping_list_with_recipe_returns_baseline_lines() {
     assert!(names.contains(&"ui"), "baselineLines should contain 'ui', got: {names:?}");
     assert_ne!(json["sourceFingerprint"].as_str().unwrap_or(""), "", "sourceFingerprint should be set");
 }
+
+// ---------------------------------------------------------------------------
+// Install settings
+// ---------------------------------------------------------------------------
+
+#[test]
+fn settings_get_returns_default_model_on_fresh_database() {
+    let srv = TestServer::start(None);
+    let (status, body) = http_get(&srv.url("/api/v1/settings"), &[]);
+    assert_eq!(status, 200, "GET settings should return 200, body: {body}");
+
+    let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+    assert_eq!(
+        json["openrouterShoppingListModel"].as_str(),
+        Some("deepseek/deepseek-v4-flash"),
+        "fresh install should expose canonical default model"
+    );
+}
+
+#[test]
+fn settings_patch_persists_model_and_get_reflects_it() {
+    let srv = TestServer::start(None);
+
+    let (patch_status, patch_body) = http_patch_json(
+        &srv.url("/api/v1/settings"),
+        &serde_json::json!({ "openrouterShoppingListModel": "anthropic/claude-3.5-sonnet" }),
+    );
+    assert_eq!(patch_status, 200, "PATCH settings should return 200, body: {patch_body}");
+    let patched: serde_json::Value = serde_json::from_str(&patch_body).expect("JSON");
+    assert_eq!(
+        patched["openrouterShoppingListModel"].as_str(),
+        Some("anthropic/claude-3.5-sonnet")
+    );
+
+    let (get_status, get_body) = http_get(&srv.url("/api/v1/settings"), &[]);
+    assert_eq!(get_status, 200, "GET settings should return 200 after patch, body: {get_body}");
+    let json: serde_json::Value = serde_json::from_str(&get_body).expect("JSON");
+    assert_eq!(
+        json["openrouterShoppingListModel"].as_str(),
+        Some("anthropic/claude-3.5-sonnet")
+    );
+}
+
+#[test]
+fn settings_patch_rejects_invalid_model_slug() {
+    let srv = TestServer::start(None);
+    let (status, body) = http_patch_json(
+        &srv.url("/api/v1/settings"),
+        &serde_json::json!({ "openrouterShoppingListModel": "not-a-valid-slug" }),
+    );
+    assert_eq!(status, 400, "invalid model should return 400, body: {body}");
+    let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+    assert_eq!(json["statusCode"], 400);
+}
+
+#[test]
+fn migrations_create_install_settings_table() {
+    let temp = tempfile::TempDir::new().expect("tempdir");
+    let db_path = temp.path().join("install-settings.db");
+
+    mealprepper_lib::shadow_server::db::open_and_migrate(&db_path)
+        .expect("migrations should succeed");
+
+    let conn = rusqlite::Connection::open(&db_path).expect("open after migrate");
+    let model: String = conn
+        .query_row(
+            "SELECT openrouter_shopping_list_model FROM install_settings WHERE id = 1",
+            [],
+            |row| row.get(0),
+        )
+        .expect("install_settings singleton row should exist");
+    assert_eq!(model, "deepseek/deepseek-v4-flash");
+}

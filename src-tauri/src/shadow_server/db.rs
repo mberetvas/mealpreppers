@@ -15,10 +15,16 @@ struct Migration {
     sql: &'static str,
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: "V1__initial_schema",
-    sql: include_str!("../../migrations/V1__initial_schema.sql"),
-}];
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: "V1__initial_schema",
+        sql: include_str!("../../migrations/V1__initial_schema.sql"),
+    },
+    Migration {
+        version: "V2__install_settings",
+        sql: include_str!("../../migrations/V2__install_settings.sql"),
+    },
+];
 
 /// Opens SQLite with WAL + FK, creates the migrations table, and applies all pending migrations.
 pub fn open_and_migrate(path: &Path) -> Result<(), String> {

@@ -69,6 +69,12 @@ vi.mock('../../server/services/recipe-catalog/recipeRepository', async (importOr
   }
 })
 
+vi.mock('../../server/services/settings/installSettingsRepository', () => ({
+  getInstallSettings: vi.fn(() => ({
+    openrouterShoppingListModel: 'deepseek/deepseek-v4-flash',
+  })),
+}))
+
 // --- Test helpers ---
 
 const SESSION_UUID = '550e8400-e29b-41d4-a716-446655440000'
