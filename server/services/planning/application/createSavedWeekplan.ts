@@ -30,8 +30,9 @@ function storageError(message: string | undefined, fallback: string): PlanningFa
 }
 
 /**
- * Creates a Saved Weekplan and atomically copies a matching consolidated list when found.
- * Create rolls back when copy-on-match storage fails.
+ * Creates a Saved Weekplan and copies a matching consolidated list when found.
+ * Copy-on-match storage failures are non-fatal: the plan is still created and
+ * `shoppingListCopiedFromMatch` is false (same contract as the legacy handler).
  */
 export function executeCreateSavedWeekplan(
   deps: CreateSavedWeekplanDeps,
@@ -53,13 +54,11 @@ export function executeCreateSavedWeekplan(
         principal,
         fingerprint,
       )
-      if (!copyResult.ok) {
-        throw new PlanningTransactionAbort(copyResult)
-      }
+      const shoppingListCopiedFromMatch = copyResult.ok && copyResult.value.copied
 
       return ok({
         ...createResult.value,
-        shoppingListCopiedFromMatch: copyResult.value.copied,
+        shoppingListCopiedFromMatch,
       })
     })
   }

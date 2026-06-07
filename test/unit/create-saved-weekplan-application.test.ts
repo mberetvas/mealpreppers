@@ -66,7 +66,7 @@ describe('executeCreateSavedWeekplan', () => {
     expect(row?.consolidatedShoppingList).toBeNull()
   })
 
-  it('rolls back create when copy port fails', () => {
+  it('still creates the plan when copy port fails (non-fatal copy-on-match)', () => {
     const body = emptyWeekPlan()
     const failingCopyPort: ConsolidatedShoppingListCopyPort = {
       copyFromMatchingPlan: vi.fn(() => fail({
@@ -79,11 +79,16 @@ describe('executeCreateSavedWeekplan', () => {
     const result = executeCreateSavedWeekplan(
       { db: ctx.db, copyPort: failingCopyPort },
       principal,
-      { name: 'Should rollback', body },
+      { name: 'Copy failed but plan saved', body },
     )
 
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.shoppingListCopiedFromMatch).toBe(false)
     const afterCount = ctx.db.select({ id: mealWeekTemplates.id }).from(mealWeekTemplates).all().length
-    expect(afterCount).toBe(beforeCount)
+    expect(afterCount).toBe(beforeCount + 1)
+    const row = ctx.db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, result.value.id)).get()
+    expect(row?.name).toBe('Copy failed but plan saved')
+    expect(row?.consolidatedShoppingList).toBeNull()
   })
 })
