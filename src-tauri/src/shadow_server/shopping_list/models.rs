@@ -211,6 +211,21 @@ pub struct SavedConsolidatedShoppingListRecord {
 #[serde(rename_all = "camelCase")]
 pub struct ConsolidatedShoppingListPutPayload {
     pub lines: Vec<SavedShoppingListLine>,
-    /// Source fingerprint of the week plan at the time of confirmation.
+    /// Optional client hint; server recomputes fingerprint from the plan body (TS parity).
+    #[serde(default)]
     pub source_fingerprint: String,
+}
+
+#[cfg(test)]
+mod put_payload_tests {
+    use super::ConsolidatedShoppingListPutPayload;
+
+    #[test]
+    fn deserializes_lines_only_body_from_client() {
+        let json = r#"{"lines":[{"id":"L1","name":"basilicum","quantity":1.0,"unit":"tak","aisleCategory":"produce"}]}"#;
+        let payload: ConsolidatedShoppingListPutPayload =
+            serde_json::from_str(json).expect("client sends lines only");
+        assert_eq!(payload.lines.len(), 1);
+        assert_eq!(payload.source_fingerprint, "");
+    }
 }
