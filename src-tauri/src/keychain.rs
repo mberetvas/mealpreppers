@@ -90,7 +90,10 @@ pub fn open_data_folder(app: AppHandle) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{clear_openrouter_key, has_openrouter_key, openrouter_key_hint, read_openrouter_key, set_openrouter_key};
+    use super::{
+        clear_openrouter_key, has_openrouter_key, openrouter_key_hint, read_openrouter_key,
+        set_openrouter_key,
+    };
 
     #[test]
     fn openrouter_key_roundtrip_persists_in_os_store() {
