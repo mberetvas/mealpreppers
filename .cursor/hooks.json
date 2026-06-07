@@ -4,6 +4,9 @@
     "afterFileEdit": [
       {
         "command": "pwsh -NoProfile -File .cursor/hooks/cargo-fmt-after-rust-edit.ps1"
+      },
+      {
+        "command": "pwsh -NoProfile -File .cursor/hooks/eslint-fix-after-frontend-edit.ps1"
       }
     ]
   }
