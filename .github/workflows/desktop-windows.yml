@@ -106,7 +106,7 @@ jobs:
           & signtool sign /f $certPath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr $timestamp /td sha256 /fd sha256 "${{ steps.installer.outputs.path }}"
 
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mealprepper-windows-installer
           path: ${{ steps.installer.outputs.path }}
