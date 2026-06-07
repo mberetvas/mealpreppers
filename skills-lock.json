@@ -19,6 +19,12 @@
       "skillPath": "plugins/gh-cli/skills/gh-cli/SKILL.md",
       "computedHash": "7cb5110cf661f49ecbf229b61f390d90e8b5bda862ef83d04726570ef009cc1d"
     },
+    "github-actions-docs": {
+      "source": "xixu-me/skills",
+      "sourceType": "github",
+      "skillPath": "skills/github-actions-docs/SKILL.md",
+      "computedHash": "ead3fa2aff18e829c468dee593e1dc897aa95dc7a07d9ff8ff9f30c296b19af8"
+    },
     "grill-me": {
       "source": "mattpocock/skills",
       "sourceType": "github",
