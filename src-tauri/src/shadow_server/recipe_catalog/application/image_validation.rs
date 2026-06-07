@@ -71,10 +71,7 @@ mod tests {
 
     #[test]
     fn validate_upload_matches_frontend_rules() {
-        assert_eq!(
-            validate_upload("image/png", 0),
-            Err("Image file is empty.")
-        );
+        assert_eq!(validate_upload("image/png", 0), Err("Image file is empty."));
         assert_eq!(
             validate_upload("image/png", MAX_BYTES + 1),
             Err("Image must be at most 5MB.")
@@ -90,8 +87,6 @@ mod tests {
     fn is_safe_filename_rejects_traversal_and_malformed_names() {
         assert!(!is_safe_filename("../../../etc/passwd"));
         assert!(!is_safe_filename("not-a-uuid.png"));
-        assert!(is_safe_filename(
-            "a1b2c3d4-e5f6-7890-abcd-ef1234567890.png"
-        ));
+        assert!(is_safe_filename("a1b2c3d4-e5f6-7890-abcd-ef1234567890.png"));
     }
 }

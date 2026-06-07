@@ -32,7 +32,8 @@ pub fn open_and_migrate(path: &Path) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| format!("create data dir: {e}"))?;
     }
 
-    let conn = Connection::open(path).map_err(|e| format!("open database {}: {e}", path.display()))?;
+    let conn =
+        Connection::open(path).map_err(|e| format!("open database {}: {e}", path.display()))?;
 
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
@@ -55,9 +56,7 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
     for migration in MIGRATIONS {
         let applied: bool = conn
             .query_row(
-                &format!(
-                    "SELECT COUNT(*) > 0 FROM {MIGRATIONS_TABLE} WHERE version = ?1"
-                ),
+                &format!("SELECT COUNT(*) > 0 FROM {MIGRATIONS_TABLE} WHERE version = ?1"),
                 [migration.version],
                 |row| row.get(0),
             )
@@ -67,9 +66,7 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
             conn.execute_batch(migration.sql)
                 .map_err(|e| format!("run migration {}: {e}", migration.version))?;
             conn.execute(
-                &format!(
-                    "INSERT INTO {MIGRATIONS_TABLE} (version) VALUES (?1)"
-                ),
+                &format!("INSERT INTO {MIGRATIONS_TABLE} (version) VALUES (?1)"),
                 [migration.version],
             )
             .map_err(|e| format!("record migration {}: {e}", migration.version))?;

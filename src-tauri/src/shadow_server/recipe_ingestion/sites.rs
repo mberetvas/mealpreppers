@@ -8,11 +8,13 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 
 use super::models::{RecipeDraft, RecipeIngredientDraft, RecipeSource, RecipeStepDraft};
-use super::normalizers::{clean_text, parse_ingredient_line, parse_localized_number, parse_recipe_duration, parse_servings};
+use super::normalizers::{
+    clean_text, parse_ingredient_line, parse_localized_number, parse_recipe_duration,
+    parse_servings,
+};
 use super::scraper::{
-    find_recipe_json_ld, first_text, meta_content,
-    optional_text, parse_json_ld_recipe, parse_json_ld_recipe_from_doc, safe_json_parse,
-    split_list, unique_strings,
+    find_recipe_json_ld, first_text, meta_content, optional_text, parse_json_ld_recipe,
+    parse_json_ld_recipe_from_doc, safe_json_parse, split_list, unique_strings,
 };
 
 // ---------------------------------------------------------------------------
@@ -23,10 +25,8 @@ fn read_fifteen_gram_taxonomy(document: &Html) -> (Vec<String>, Vec<String>) {
     // Try sidebar tags container: #recipe-detail #tags, then #recipe-detail .tags-elements
     let scoped_sel = Selector::parse("#recipe-detail #tags, #recipe-detail .tags-elements").ok();
 
-    let category_sel = Selector::parse(
-        r#"[itemprop="recipeCategory"], [itemprop="recipeCuisine"]"#,
-    )
-    .unwrap();
+    let category_sel =
+        Selector::parse(r#"[itemprop="recipeCategory"], [itemprop="recipeCuisine"]"#).unwrap();
     let keyword_sel = Selector::parse(r#"[itemprop="keywords"]"#).unwrap();
 
     // Helper to collect text from selector within a scope
@@ -49,16 +49,19 @@ fn read_fifteen_gram_taxonomy(document: &Html) -> (Vec<String>, Vec<String>) {
 /// Parses a 15gram.be recipe page using HTML microdata (itemprop).
 /// 15gram does not use JSON-LD — all recipe data is in microdata attributes.
 pub fn parse_fifteen_gram_recipe(document: &Html, source: RecipeSource) -> RecipeDraft {
-    let name_sel = Selector::parse(r#"#recipe-detail [itemprop="name"], [itemprop="name"]"#).unwrap();
+    let name_sel =
+        Selector::parse(r#"#recipe-detail [itemprop="name"], [itemprop="name"]"#).unwrap();
     let desc_sel =
-        Selector::parse(r#"#recipe-detail [itemprop="description"], [itemprop="description"]"#).unwrap();
-    let image_sel = Selector::parse(r#"#recipe-detail [itemprop="image"], [itemprop="image"]"#).unwrap();
+        Selector::parse(r#"#recipe-detail [itemprop="description"], [itemprop="description"]"#)
+            .unwrap();
+    let image_sel =
+        Selector::parse(r#"#recipe-detail [itemprop="image"], [itemprop="image"]"#).unwrap();
     let yield_sel =
-        Selector::parse(r#"#recipe-detail [itemprop="recipeYield"], [itemprop="recipeYield"]"#).unwrap();
-    let cook_time_sel = Selector::parse(
-        r#"#recipe-detail meta[itemprop="cookTime"], meta[itemprop="cookTime"]"#,
-    )
-    .unwrap();
+        Selector::parse(r#"#recipe-detail [itemprop="recipeYield"], [itemprop="recipeYield"]"#)
+            .unwrap();
+    let cook_time_sel =
+        Selector::parse(r#"#recipe-detail meta[itemprop="cookTime"], meta[itemprop="cookTime"]"#)
+            .unwrap();
     let ingredient_sel = Selector::parse(
         r#"#recipe-detail li[itemprop="recipeIngredient"], li[itemprop="recipeIngredient"]"#,
     )
@@ -191,7 +194,9 @@ pub fn parse_dagelijksekost_recipe(document: &Html, source: RecipeSource) -> Rec
 
 fn find_record_by_typename<'a>(value: &'a Value, typename: &str) -> Option<&'a Value> {
     match value {
-        Value::Array(arr) => arr.iter().find_map(|v| find_record_by_typename(v, typename)),
+        Value::Array(arr) => arr
+            .iter()
+            .find_map(|v| find_record_by_typename(v, typename)),
         Value::Object(map) => {
             if map.get("__typename").and_then(|v| v.as_str()) == Some(typename)
                 && map.contains_key("title")
@@ -250,9 +255,7 @@ fn merge_delhaize_embedded_data(document: &Html, draft: RecipeDraft) -> RecipeDr
             .map(|e| e.text().collect::<String>())
     });
 
-    let next_data = next_data_text
-        .as_deref()
-        .and_then(|t| safe_json_parse(t));
+    let next_data = next_data_text.as_deref().and_then(safe_json_parse);
     let recipe_data = next_data
         .as_ref()
         .and_then(|d| find_record_by_typename(d, "RecipeEssentialData"));
@@ -261,10 +264,7 @@ fn merge_delhaize_embedded_data(document: &Html, draft: RecipeDraft) -> RecipeDr
         return draft;
     };
 
-    let title = rd["title"]
-        .as_str()
-        .map(|s| clean_text(s))
-        .unwrap_or(draft.title);
+    let title = rd["title"].as_str().map(clean_text).unwrap_or(draft.title);
     let servings = rd["servings"]
         .as_str()
         .and_then(parse_localized_number)
@@ -274,16 +274,24 @@ fn merge_delhaize_embedded_data(document: &Html, draft: RecipeDraft) -> RecipeDr
         .as_str()
         .and_then(|s| optional_text(Some(s)))
         .or(draft.difficulty);
-    let prep_time_minutes = draft
-        .prep_time_minutes
-        .or_else(|| rd["preparationTimeName"].as_str().and_then(parse_recipe_duration));
+    let prep_time_minutes = draft.prep_time_minutes.or_else(|| {
+        rd["preparationTimeName"]
+            .as_str()
+            .and_then(parse_recipe_duration)
+    });
     let extra_categories = unique_strings(
         split_list(rd.get("courseName"))
             .into_iter()
             .chain(split_list(rd.get("cuisine")))
             .collect(),
     );
-    let categories = unique_strings(draft.categories.into_iter().chain(extra_categories).collect());
+    let categories = unique_strings(
+        draft
+            .categories
+            .into_iter()
+            .chain(extra_categories)
+            .collect(),
+    );
     let ingredients_from_data = parse_delhaize_ingredients(rd);
     let ingredients = if ingredients_from_data.is_empty() {
         draft.ingredients
@@ -368,7 +376,11 @@ fn parse_libelle_structured_ingredients(document: &Html) -> Vec<RecipeIngredient
             let raw_text = clean_text(&raw_parts.join(" "));
 
             Some(RecipeIngredientDraft {
-                raw_text: if raw_text.is_empty() { name.clone() } else { raw_text },
+                raw_text: if raw_text.is_empty() {
+                    name.clone()
+                } else {
+                    raw_text
+                },
                 name,
                 quantity: quantity.filter(|&q| q > 0.0),
                 unit,

@@ -23,7 +23,7 @@ use crate::shadow_server::{
             bulk_delete_recipes, create_recipe, get_recipe, list_recipes, recipe_options,
             update_recipe,
         },
-        models::{BulkDeleteRequest, RecipeCreatePayload, RecipeCatalogItem},
+        models::{BulkDeleteRequest, RecipeCatalogItem, RecipeCreatePayload},
     },
     routes::AppState,
 };
@@ -46,9 +46,7 @@ fn validate_create_payload(payload: &RecipeCreatePayload) -> Result<(), AppError
 
 fn validate_bulk_delete(req: &BulkDeleteRequest) -> Result<(), AppError> {
     if req.ids.is_empty() {
-        return Err(AppError::bad_request(
-            "At least one recipe ID is required.",
-        ));
+        return Err(AppError::bad_request("At least one recipe ID is required."));
     }
     if req.ids.len() > 200 {
         return Err(AppError::bad_request(
@@ -83,18 +81,17 @@ pub async fn create_recipe_handler(
     validate_create_payload(&payload)?;
 
     let recipes = state.recipes.clone();
-    let item = tokio::task::spawn_blocking(move || create_recipe::execute(recipes.as_ref(), payload))
-        .await
-        .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-        .map_err(AppError::from_recipe_catalog_repo)?;
+    let item =
+        tokio::task::spawn_blocking(move || create_recipe::execute(recipes.as_ref(), payload))
+            .await
+            .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
+            .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok((StatusCode::OK, Json(item)))
 }
 
 /// `GET /api/v1/recipes/options` — distinct categories and tags merged with defaults.
-pub async fn options_handler(
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppError> {
+pub async fn options_handler(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let recipes = state.recipes.clone();
     let body = tokio::task::spawn_blocking(move || recipe_options::execute(recipes.as_ref()))
         .await
@@ -121,11 +118,12 @@ pub async fn bulk_delete_handler(
     };
 
     let recipes = state.recipes.clone();
-    let deleted =
-        tokio::task::spawn_blocking(move || bulk_delete_recipes::execute(recipes.as_ref(), &unique_ids))
-            .await
-            .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-            .map_err(AppError::from_recipe_catalog_repo)?;
+    let deleted = tokio::task::spawn_blocking(move || {
+        bulk_delete_recipes::execute(recipes.as_ref(), &unique_ids)
+    })
+    .await
+    .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
+    .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok(Json(serde_json::json!({ "deleted": deleted })))
 }
@@ -153,12 +151,11 @@ pub async fn update_recipe_handler(
     validate_create_payload(&payload)?;
 
     let recipes = state.recipes.clone();
-    let item = tokio::task::spawn_blocking(move || {
-        update_recipe::execute(recipes.as_ref(), &id, payload)
-    })
-    .await
-    .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
-    .map_err(AppError::from_recipe_catalog_repo)?;
+    let item =
+        tokio::task::spawn_blocking(move || update_recipe::execute(recipes.as_ref(), &id, payload))
+            .await
+            .map_err(|e| AppError::internal(format!("task panicked: {e}")))?
+            .map_err(AppError::from_recipe_catalog_repo)?;
 
     Ok(Json(item))
 }

@@ -14,7 +14,9 @@ use subtle::ConstantTimeEq;
 
 use crate::shadow_server::{
     error::AppError,
-    request_context::{resolve_planning_user_id, resolve_trace_id, PlanningPrincipal, RequestContext},
+    request_context::{
+        resolve_planning_user_id, resolve_trace_id, PlanningPrincipal, RequestContext,
+    },
     routes::AppState,
 };
 

@@ -1,8 +1,7 @@
 //! Persistence port for the saved consolidated shopping list column.
 
 use crate::shadow_server::{
-    platform::RepoError,
-    shopping_list::models::SavedConsolidatedShoppingListRecord,
+    platform::RepoError, shopping_list::models::SavedConsolidatedShoppingListRecord,
 };
 
 /// Persistence port for the **Saved Consolidated Shopping List** JSON column.

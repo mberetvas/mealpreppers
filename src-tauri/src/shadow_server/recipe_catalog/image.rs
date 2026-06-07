@@ -65,11 +65,9 @@ pub async fn upload_image_handler(
         .filter(|b| !b.is_empty())
         .ok_or_else(|| AppError::bad_request("Choose an image file to upload."))?;
 
-    let mime = upload_recipe_image::resolve_mime(
-        content_type_hint.as_deref(),
-        file_name_hint.as_deref(),
-    )
-    .map_err(AppError::bad_request)?;
+    let mime =
+        upload_recipe_image::resolve_mime(content_type_hint.as_deref(), file_name_hint.as_deref())
+            .map_err(AppError::bad_request)?;
 
     let images = state.recipe_images.clone();
     let stored = tokio::task::spawn_blocking(move || {

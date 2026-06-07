@@ -55,9 +55,9 @@ impl ShoppingListPolishPort for OpenRouterShoppingListPolishPort {
 
         let conn = open_conn(&self.db_path).map_err(|e| {
             PolishPortError::OpenRouter(
-                crate::shadow_server::shopping_list::openrouter::OpenRouterError::Network(
-                    format!("open db for model resolution: {e:?}"),
-                ),
+                crate::shadow_server::shopping_list::openrouter::OpenRouterError::Network(format!(
+                    "open db for model resolution: {e:?}"
+                )),
             )
         })?;
         let model = resolve_model_from_db(&conn);

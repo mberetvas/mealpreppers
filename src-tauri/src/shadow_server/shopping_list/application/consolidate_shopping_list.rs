@@ -12,18 +12,15 @@ use tokio::task::spawn_blocking;
 use crate::shadow_server::{
     error::AppError,
     planning::models::WeekPlanV1,
-    recipe_catalog::{
-        models::RecipeCatalogItem,
-        ports::RecipeRepository,
-    },
+    recipe_catalog::{models::RecipeCatalogItem, ports::RecipeRepository},
     shopping_list::{
         exact_merge::{build_consolidation_context, build_source_baseline, exact_merge},
-        openrouter::is_polish_abort_timeout,
         internal::{ShoppingListIngredient, ShoppingListSection},
         models::{
             coerce_aisle_category, ConsolidationResult, MergedLine, PolishResponse,
             PolishResponseChange, PolishStatus,
         },
+        openrouter::is_polish_abort_timeout,
         ports::{PolishPortError, ShoppingListPolishPort, WeekplanForConsolidationReader},
     },
 };
@@ -99,9 +96,11 @@ fn attach_provenance_to_lines(
         .iter()
         .map(|line| {
             let mut source_ids = vec![line.id.as_str()];
-            if let Some(change) = response.changes.as_ref().and_then(|changes| {
-                changes.iter().find(|c| c.id == line.id)
-            }) {
+            if let Some(change) = response
+                .changes
+                .as_ref()
+                .and_then(|changes| changes.iter().find(|c| c.id == line.id))
+            {
                 if let Some(absorbed) = &change.absorbed_ids {
                     for id in absorbed {
                         source_ids.push(id.as_str());
@@ -166,9 +165,7 @@ pub async fn execute(
             baseline_lines: vec![],
             changes: vec![],
             polish_status: PolishStatus::AiSkipped,
-            warnings: vec![
-                "This week plan has no recipes — nothing to consolidate.".to_string(),
-            ],
+            warnings: vec!["This week plan has no recipes — nothing to consolidate.".to_string()],
             source_fingerprint: Some(source_fingerprint),
         });
     }
@@ -182,10 +179,8 @@ pub async fn execute(
     .await
     .map_err(|e| AppError::internal(format!("spawn error: {e}")))??;
 
-    let recipes_by_id: HashMap<String, _> = recipes_all
-        .into_iter()
-        .map(|r| (r.id.clone(), r))
-        .collect();
+    let recipes_by_id: HashMap<String, _> =
+        recipes_all.into_iter().map(|r| (r.id.clone(), r)).collect();
 
     let (sections, mut warnings) = build_shopping_sections(&occurrences, &recipes_by_id);
 
@@ -223,17 +218,14 @@ pub async fn execute(
             Ok(polish) => {
                 let consolidated_lines =
                     attach_provenance_to_lines(&polish.response, &source_baseline.lines);
-                let changes: Vec<PolishResponseChange> = polish.response.changes.unwrap_or_default();
+                let changes: Vec<PolishResponseChange> =
+                    polish.response.changes.unwrap_or_default();
                 baseline_lines = source_baseline.lines;
                 log::info!(
                     "shopping_list.polish_pending_review plan_id={plan_id} consolidated_line_count={}",
                     consolidated_lines.len()
                 );
-                (
-                    consolidated_lines,
-                    changes,
-                    PolishStatus::PendingReview,
-                )
+                (consolidated_lines, changes, PolishStatus::PendingReview)
             }
             Err(e) => {
                 let aborted_due_to_timeout = matches!(

@@ -1,8 +1,7 @@
 //! Read port for Saved Weekplan ownership and body (used by consolidated list writes).
 
 use crate::shadow_server::{
-    planning::models::WeekPlanV1,
-    platform::RepoError,
+    planning::models::WeekPlanV1, platform::RepoError,
     shopping_list::models::SavedConsolidatedShoppingListRecord,
 };
 

@@ -4,9 +4,7 @@ use crate::shadow_server::{
     platform::RepoError,
     recipe_catalog::{
         application::image_validation::{ext_for_mime, mime_for_ext, validate_upload},
-        ports::{
-            recipe_image_store::{RecipeImageStore, StoredRecipeImage},
-        },
+        ports::recipe_image_store::{RecipeImageStore, StoredRecipeImage},
     },
 };
 

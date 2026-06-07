@@ -14,7 +14,9 @@ use crate::shadow_server::{
     error::AppError,
     planning::repository::open_conn,
     routes::AppState,
-    settings::repository::{get_install_settings, update_shopping_list_model, validate_shopping_list_model},
+    settings::repository::{
+        get_install_settings, update_shopping_list_model, validate_shopping_list_model,
+    },
 };
 
 #[derive(Deserialize)]
@@ -24,7 +26,9 @@ pub struct InstallSettingsPatchBody {
 }
 
 /// `GET /api/v1/settings` — returns install-scoped settings.
-pub async fn get_settings_handler(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+pub async fn get_settings_handler(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AppError> {
     let db_path = state.db_path();
 
     let settings = tokio::task::spawn_blocking(move || {
