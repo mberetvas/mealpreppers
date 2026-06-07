@@ -138,7 +138,10 @@ fn simple_regex_match_iso_duration(normalized: &str) -> Option<u32> {
     };
 
     let hours = if let Some(h_pos) = after_d.find('h') {
-        let h_str: String = after_d[..h_pos].chars().filter(|c| c.is_ascii_digit()).collect();
+        let h_str: String = after_d[..h_pos]
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect();
         h_str.parse::<u32>().unwrap_or(0)
     } else {
         0
@@ -150,7 +153,10 @@ fn simple_regex_match_iso_duration(normalized: &str) -> Option<u32> {
         after_d
     };
     let minutes = if let Some(m_pos) = after_h.find('m') {
-        let m_str: String = after_h[..m_pos].chars().filter(|c| c.is_ascii_digit()).collect();
+        let m_str: String = after_h[..m_pos]
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect();
         m_str.parse::<u32>().unwrap_or(0)
     } else {
         0
@@ -170,7 +176,7 @@ fn parse_range_minutes(normalized: &str) -> Option<u32> {
         return None;
     }
     // Find pattern: digits (sep) digits
-    let parts: Vec<&str> = normalized.split(|c: char| c == '-' || c == '–').collect();
+    let parts: Vec<&str> = normalized.split(['-', '–']).collect();
     if parts.len() < 2 {
         return None;
     }
@@ -184,7 +190,11 @@ fn parse_hour_minute(normalized: &str) -> Option<u32> {
     if !has_hour {
         return None;
     }
-    let hour_sep = if normalized.contains("uur") { "uur" } else { "u" };
+    let hour_sep = if normalized.contains("uur") {
+        "uur"
+    } else {
+        "u"
+    };
     let parts: Vec<&str> = normalized.splitn(2, hour_sep).collect();
     if parts.len() < 2 {
         return None;
@@ -229,7 +239,11 @@ pub fn parse_servings(value: &str) -> Option<u32> {
         .split_whitespace()
         .find_map(|word| {
             let d: String = word.chars().filter(|c| c.is_ascii_digit()).collect();
-            if d.is_empty() { None } else { Some(d) }
+            if d.is_empty() {
+                None
+            } else {
+                Some(d)
+            }
         })
         .unwrap_or_default();
     first.parse::<u32>().ok()
@@ -248,7 +262,11 @@ pub fn parse_ingredient_line(value: &str) -> RecipeIngredientDraft {
             if let Some(normalized_unit) = unit_alias(&first_token) {
                 let name_part = tokens.get(1).unwrap_or(&"");
                 let name = clean_text(name_part);
-                let final_name = if name.is_empty() { remainder.to_string() } else { name };
+                let final_name = if name.is_empty() {
+                    remainder.to_string()
+                } else {
+                    name
+                };
                 return RecipeIngredientDraft {
                     raw_text,
                     name: final_name,
@@ -330,8 +348,7 @@ fn extract_leading_quantity(text: &str) -> Option<(f64, String)> {
     };
 
     // Calculate remainder: skip past the matched prefix + space
-    let prefix_len = num_str.len()
-        + if slash_mode { 1 + slash_denom.len() } else { 0 };
+    let prefix_len = num_str.len() + if slash_mode { 1 + slash_denom.len() } else { 0 };
     let remainder = text
         .chars()
         .skip(prefix_len)

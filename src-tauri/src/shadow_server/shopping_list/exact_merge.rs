@@ -10,8 +10,11 @@
 
 use indexmap::IndexMap;
 
-use super::models::{ConsolidationContext, ConsolidationContextIngredient, ConsolidationContextSection, MergedLine, RecipeProvenance};
 use super::internal::{PolishBaseline, ShoppingListSection};
+use super::models::{
+    ConsolidationContext, ConsolidationContextIngredient, ConsolidationContextSection, MergedLine,
+    RecipeProvenance,
+};
 
 // ---------------------------------------------------------------------------
 // Unit normalisation
@@ -52,8 +55,7 @@ pub fn canonical_display_name(name: &str) -> String {
 /// Merge key: `canonical_name::canonical_unit`.
 fn merge_key(name: &str, unit: Option<&str>) -> String {
     let n = canonical_display_name(name);
-    let u = normalise_unit(unit)
-        .unwrap_or_default();
+    let u = normalise_unit(unit).unwrap_or_default();
     format!("{n}::{u}")
 }
 
@@ -161,7 +163,9 @@ pub fn build_consolidation_context(sections: &[ShoppingListSection]) -> Consolid
         })
         .collect();
 
-    ConsolidationContext { sections: context_sections }
+    ConsolidationContext {
+        sections: context_sections,
+    }
 }
 
 /// Flat source snapshot for harness validation (one line per recipe ingredient, stable ids).
@@ -185,10 +189,7 @@ pub fn build_source_baseline(context: &ConsolidationContext) -> PolishBaseline {
         })
         .collect();
 
-    PolishBaseline {
-        lines,
-        next_id: 0,
-    }
+    PolishBaseline { lines, next_id: 0 }
 }
 
 // ---------------------------------------------------------------------------
@@ -197,10 +198,13 @@ pub fn build_source_baseline(context: &ConsolidationContext) -> PolishBaseline {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::internal::{ShoppingListIngredient, ShoppingListSection};
+    use super::*;
 
-    fn section(recipe_id: &str, ingredients: Vec<(&str, Option<f64>, Option<&str>)>) -> ShoppingListSection {
+    fn section(
+        recipe_id: &str,
+        ingredients: Vec<(&str, Option<f64>, Option<&str>)>,
+    ) -> ShoppingListSection {
         ShoppingListSection {
             recipe_id: recipe_id.to_string(),
             recipe_title: recipe_id.to_string(),

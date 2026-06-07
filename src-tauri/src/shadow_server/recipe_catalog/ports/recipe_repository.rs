@@ -17,10 +17,7 @@ pub trait RecipeRepository: Send + Sync {
     fn list_stored_options(&self) -> Result<(Vec<String>, Vec<String>), RepoError>;
 
     /// Creates a recipe with ingredients and steps; returns the persisted item.
-    fn create_recipe(
-        &self,
-        payload: RecipeCreatePayload,
-    ) -> Result<RecipeCatalogItem, RepoError>;
+    fn create_recipe(&self, payload: RecipeCreatePayload) -> Result<RecipeCatalogItem, RepoError>;
 
     /// Replaces a recipe or returns [`RepoError::NotFound`].
     fn update_recipe(

@@ -39,7 +39,10 @@ pub fn get_install_settings(conn: &Connection) -> Result<InstallSettings, RepoEr
 }
 
 /// Updates the OpenRouter shopping-list polish model on the singleton row.
-pub fn update_shopping_list_model(conn: &mut Connection, model: &str) -> Result<InstallSettings, RepoError> {
+pub fn update_shopping_list_model(
+    conn: &mut Connection,
+    model: &str,
+) -> Result<InstallSettings, RepoError> {
     conn.execute(
         "INSERT INTO install_settings (id, openrouter_shopping_list_model)
          VALUES (?1, ?2)
@@ -142,8 +145,8 @@ mod tests {
         crate::shadow_server::db::open_and_migrate(&db_path).expect("migrate");
 
         let mut conn = open_conn(&db_path).expect("open");
-        let updated = update_shopping_list_model(&mut conn, "anthropic/claude-3.5-sonnet")
-            .expect("update");
+        let updated =
+            update_shopping_list_model(&mut conn, "anthropic/claude-3.5-sonnet").expect("update");
         assert_eq!(
             updated.openrouter_shopping_list_model,
             "anthropic/claude-3.5-sonnet"

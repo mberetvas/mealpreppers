@@ -1,10 +1,7 @@
 //! Save a confirmed consolidated shopping list for a weekplan.
 
 use crate::shadow_server::{
-    planning::{
-        ports::SavedWeekplanReader,
-        repository::compute_source_fingerprint,
-    },
+    planning::{ports::SavedWeekplanReader, repository::compute_source_fingerprint},
     platform::RepoError,
     shopping_list::{
         models::{SavedConsolidatedShoppingListRecord, SavedShoppingListLine},

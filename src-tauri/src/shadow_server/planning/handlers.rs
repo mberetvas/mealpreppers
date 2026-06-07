@@ -31,8 +31,8 @@ use crate::shadow_server::{
         repository::{
             self, assert_recipe_ids_exist, collect_recipe_ids_from_month_plan,
             collect_recipe_ids_from_week_plan, delete_month_plan, delete_saved_weekplan,
-            get_month_plan_by_id, get_saved_weekplan_by_id, list_month_plans,
-            list_saved_weekplans, open_conn, update_month_plan, update_saved_weekplan,
+            get_month_plan_by_id, get_saved_weekplan_by_id, list_month_plans, list_saved_weekplans,
+            open_conn, update_month_plan, update_saved_weekplan,
         },
     },
     request_context::RequestContext,
@@ -135,7 +135,9 @@ pub async fn patch_saved_weekplan_handler(
     }
     if let Some(ref n) = payload.name {
         if n.trim().is_empty() {
-            return Err(AppError::bad_request("Saved weekplan name cannot be empty."));
+            return Err(AppError::bad_request(
+                "Saved weekplan name cannot be empty.",
+            ));
         }
     }
 

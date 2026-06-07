@@ -12,6 +12,30 @@ format:
 test:
 	bun run test
 
+# Local pre-push CI (mirrors .github/workflows/). Usage: `just ci` | `just ci-full`
+#
+# `ci`       — quality gate from ci.yml (every PR/push to main)
+# `ci-full`  — quality gate + desktop-windows build + rust-integration tests
+# `ci-desktop` / `ci-rust-integration` — path-filtered workflows, run standalone
+
+ci:
+	bun install --frozen-lockfile
+	bun run lint
+	cargo fmt --all --check --manifest-path src-tauri/Cargo.toml
+	cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+	cargo test --manifest-path src-tauri/Cargo.toml --lib
+	bun run test:unit
+	bun run test:component
+
+ci-desktop:
+	bun install --frozen-lockfile
+	bun run desktop:build
+
+ci-rust-integration:
+	cargo test --manifest-path src-tauri/Cargo.toml --test shadow_server_integration
+
+ci-full: ci ci-desktop ci-rust-integration
+
 # Full Tauri release build: static Nuxt client (`build:desktop`) then `tauri build`.
 # Usage: `just desktop-build`
 desktop-build:

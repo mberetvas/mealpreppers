@@ -42,14 +42,7 @@ pub async fn consolidate_shopping_list_handler(
     let recipes = state.recipes.clone();
     let polish = state.shopping_list_polish.clone();
 
-    let result = consolidate_shopping_list(
-        weekplan_reader,
-        recipes,
-        polish,
-        &id,
-        &user_id,
-    )
-    .await?;
+    let result = consolidate_shopping_list(weekplan_reader, recipes, polish, &id, &user_id).await?;
 
     Ok(Json(result))
 }

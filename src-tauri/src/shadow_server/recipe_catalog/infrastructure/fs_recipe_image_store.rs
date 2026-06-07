@@ -8,9 +8,7 @@ use crate::shadow_server::{
     platform::RepoError,
     recipe_catalog::{
         application::image_validation::{ext_for_mime, mime_for_ext},
-        ports::{
-            recipe_image_store::{RecipeImagePayload, RecipeImageStore, StoredRecipeImage},
-        },
+        ports::recipe_image_store::{RecipeImagePayload, RecipeImageStore, StoredRecipeImage},
     },
 };
 
@@ -27,9 +25,8 @@ impl FsRecipeImageStore {
 
 impl RecipeImageStore for FsRecipeImageStore {
     fn store_image(&self, bytes: &[u8], mime: &str) -> Result<StoredRecipeImage, RepoError> {
-        let ext = ext_for_mime(mime).ok_or_else(|| {
-            RepoError::Storage(format!("unsupported mime for store: {mime}"))
-        })?;
+        let ext = ext_for_mime(mime)
+            .ok_or_else(|| RepoError::Storage(format!("unsupported mime for store: {mime}")))?;
 
         fs::create_dir_all(&self.images_dir).map_err(|e| RepoError::Storage(e.to_string()))?;
 
@@ -41,11 +38,7 @@ impl RecipeImageStore for FsRecipeImageStore {
     }
 
     fn read_image(&self, filename: &str) -> Result<RecipeImagePayload, RepoError> {
-        let ext = filename
-            .rsplit('.')
-            .next()
-            .unwrap_or("")
-            .to_lowercase();
+        let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
         let content_type = mime_for_ext(&ext)
             .ok_or_else(|| RepoError::Storage("unsupported image extension".to_string()))?
             .to_string();

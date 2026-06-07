@@ -93,7 +93,10 @@ mod tests {
         data.insert("plan_id".to_string(), "plan-1".to_string());
 
         let redacted = redact_map(&data);
-        assert_eq!(redacted.get("openrouter_api_key"), Some(&"[REDACTED]".to_string()));
+        assert_eq!(
+            redacted.get("openrouter_api_key"),
+            Some(&"[REDACTED]".to_string())
+        );
         assert_eq!(redacted.get("plan_id"), Some(&"plan-1".to_string()));
     }
 
@@ -108,10 +111,8 @@ mod tests {
 
     #[test]
     fn redact_log_fields_masks_authorization() {
-        let line = redact_log_fields(&[
-            ("authorization", "Bearer sk-live-key"),
-            ("plan_id", "abc"),
-        ]);
+        let line =
+            redact_log_fields(&[("authorization", "Bearer sk-live-key"), ("plan_id", "abc")]);
         assert!(line.contains("authorization=[REDACTED]"));
         assert!(line.contains("plan_id=abc"));
         assert!(!line.contains("sk-live-key"));

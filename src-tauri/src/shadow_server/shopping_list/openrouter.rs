@@ -166,10 +166,7 @@ pub fn call_openrouter_polish(
     }
 
     let mut resp = resp;
-    let response_body = resp
-        .body_mut()
-        .read_to_string()
-        .map_err(map_ureq_error)?;
+    let response_body = resp.body_mut().read_to_string().map_err(map_ureq_error)?;
 
     let root: Value = serde_json::from_str(&response_body)
         .map_err(|e| OpenRouterError::Parse(format!("parse root: {e}")))?;
@@ -207,9 +204,7 @@ mod tests {
 
     #[test]
     fn display_redacts_bearer_tokens_in_network_errors() {
-        let err = OpenRouterError::Network(
-            "auth failed Bearer sk-or-v1-secret-key".into(),
-        );
+        let err = OpenRouterError::Network("auth failed Bearer sk-or-v1-secret-key".into());
         let formatted = err.to_string();
         assert!(formatted.contains("Bearer [REDACTED]"));
         assert!(!formatted.contains("sk-or-v1-secret-key"));

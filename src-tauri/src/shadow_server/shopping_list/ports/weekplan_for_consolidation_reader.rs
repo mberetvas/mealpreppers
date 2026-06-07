@@ -1,9 +1,6 @@
 //! Planning read port for shopping-list consolidation (implemented by the Planning slice).
 
-use crate::shadow_server::{
-    planning::models::WeekPlanV1,
-    platform::RepoError,
-};
+use crate::shadow_server::{planning::models::WeekPlanV1, platform::RepoError};
 
 /// Weekplan body and fingerprint required to consolidate a shopping list.
 pub struct WeekplanForConsolidation {

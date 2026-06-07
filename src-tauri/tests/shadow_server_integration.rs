@@ -40,8 +40,7 @@ impl TestServer {
     /// Planning Principal. The change takes effect immediately because each request
     /// reads the file fresh.
     fn set_user_id(&self, user_id: &str) {
-        std::fs::write(self.data_dir.join("local-user-id"), user_id)
-            .expect("write local-user-id");
+        std::fs::write(self.data_dir.join("local-user-id"), user_id).expect("write local-user-id");
     }
 }
 
@@ -78,7 +77,9 @@ fn http_post_json(url: &str, body: &serde_json::Value) -> (u16, String) {
 
     let mut req = agent.post(url);
     req = req.header("content-type", "application/json");
-    let mut resp = req.send(json_bytes.as_slice()).expect("no transport error expected");
+    let mut resp = req
+        .send(json_bytes.as_slice())
+        .expect("no transport error expected");
     let status = resp.status().as_u16();
     let body_str = resp.body_mut().read_to_string().unwrap_or_default();
     (status, body_str)
@@ -94,7 +95,9 @@ fn http_put_json(url: &str, body: &serde_json::Value) -> (u16, String) {
 
     let mut req = agent.put(url);
     req = req.header("content-type", "application/json");
-    let mut resp = req.send(json_bytes.as_slice()).expect("no transport error expected");
+    let mut resp = req
+        .send(json_bytes.as_slice())
+        .expect("no transport error expected");
     let status = resp.status().as_u16();
     let body_str = resp.body_mut().read_to_string().unwrap_or_default();
     (status, body_str)
@@ -108,10 +111,10 @@ fn http_patch_json(url: &str, body: &serde_json::Value) -> (u16, String) {
         .build()
         .into();
 
-    let req = agent
-        .patch(url)
-        .header("content-type", "application/json");
-    let mut resp = req.send(json_bytes.as_slice()).expect("no transport error expected");
+    let req = agent.patch(url).header("content-type", "application/json");
+    let mut resp = req
+        .send(json_bytes.as_slice())
+        .expect("no transport error expected");
     let status = resp.status().as_u16();
     let body_str = resp.body_mut().read_to_string().unwrap_or_default();
     (status, body_str)
@@ -124,21 +127,31 @@ fn http_delete(url: &str) -> (u16, String) {
         .build()
         .into();
 
-    let mut resp = agent.delete(url).call().expect("no transport error expected");
+    let mut resp = agent
+        .delete(url)
+        .call()
+        .expect("no transport error expected");
     let status = resp.status().as_u16();
     let body_str = resp.body_mut().read_to_string().unwrap_or_default();
     (status, body_str)
 }
 
 /// Builds a multipart/form-data body with a single file field.
-fn build_multipart_body(field_name: &str, filename: &str, content_type: &str, data: &[u8]) -> (Vec<u8>, String) {
+fn build_multipart_body(
+    field_name: &str,
+    filename: &str,
+    content_type: &str,
+    data: &[u8],
+) -> (Vec<u8>, String) {
     let boundary = "UrqTestBoundaryXXXXXXXX1234";
     let mut body: Vec<u8> = Vec::new();
 
     body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
     body.extend_from_slice(
-        format!("Content-Disposition: form-data; name=\"{field_name}\"; filename=\"{filename}\"\r\n")
-            .as_bytes(),
+        format!(
+            "Content-Disposition: form-data; name=\"{field_name}\"; filename=\"{filename}\"\r\n"
+        )
+        .as_bytes(),
     );
     body.extend_from_slice(format!("Content-Type: {content_type}\r\n").as_bytes());
     body.extend_from_slice(b"\r\n");
@@ -159,7 +172,9 @@ fn http_post_multipart(url: &str, filename: &str, data: &[u8], mime: &str) -> (u
 
     let mut req = agent.post(url);
     req = req.header("content-type", &content_type);
-    let mut resp = req.send(body.as_slice()).expect("no transport error expected");
+    let mut resp = req
+        .send(body.as_slice())
+        .expect("no transport error expected");
     let status = resp.status().as_u16();
     let body_str = resp.body_mut().read_to_string().unwrap_or_default();
     (status, body_str)
@@ -211,20 +226,21 @@ fn api_route_rejected_without_token_when_enforced() {
 #[test]
 fn api_route_rejected_with_wrong_token() {
     let srv = TestServer::start(Some("correct-token"));
-    let (status, _body) =
-        http_get(&srv.url("/api/v1/stub"), &[("x-desktop-token", "wrong-token")]);
+    let (status, _body) = http_get(
+        &srv.url("/api/v1/stub"),
+        &[("x-desktop-token", "wrong-token")],
+    );
     assert_eq!(status, 401, "expected 401 for wrong token value");
 }
 
 #[test]
 fn api_route_accepted_with_correct_token() {
     let srv = TestServer::start(Some("correct-token"));
-    let (status, body) =
-        http_get(&srv.url("/api/v1/stub"), &[("x-desktop-token", "correct-token")]);
-    assert_eq!(
-        status, 200,
-        "expected 200 with correct token, body: {body}"
+    let (status, body) = http_get(
+        &srv.url("/api/v1/stub"),
+        &[("x-desktop-token", "correct-token")],
     );
+    assert_eq!(status, 200, "expected 200 with correct token, body: {body}");
 }
 
 #[test]
@@ -250,8 +266,7 @@ fn token_rejection_returns_h3_error_shape() {
     let json: serde_json::Value = serde_json::from_str(&body).expect("error body is JSON");
     assert_eq!(json["statusCode"], 401, "H3 statusCode field");
     assert_eq!(
-        json["statusMessage"],
-        "Invalid or missing desktop token",
+        json["statusMessage"], "Invalid or missing desktop token",
         "H3 statusMessage should carry the user-facing message"
     );
     assert!(
@@ -286,8 +301,7 @@ fn migrations_are_idempotent() {
     let db_path = temp.path().join("idempotent.db");
 
     // Apply twice — should not error
-    mealprepper_lib::shadow_server::db::open_and_migrate(&db_path)
-        .expect("first migration run");
+    mealprepper_lib::shadow_server::db::open_and_migrate(&db_path).expect("first migration run");
     mealprepper_lib::shadow_server::db::open_and_migrate(&db_path)
         .expect("second migration run should be idempotent");
 }
@@ -308,7 +322,9 @@ fn stub_route_returns_trace_id_and_planning_principal() {
         "traceId should be a non-empty string"
     );
     assert!(
-        json["planningUserId"].as_str().is_some_and(|s| !s.is_empty()),
+        json["planningUserId"]
+            .as_str()
+            .is_some_and(|s| !s.is_empty()),
         "planningUserId should be a non-empty string"
     );
 }
@@ -341,7 +357,11 @@ fn list_recipes_returns_empty_array_on_fresh_db() {
     assert_eq!(status, 200, "expected 200 from list recipes, body: {body}");
     let json: serde_json::Value = serde_json::from_str(&body).expect("list body is JSON");
     assert!(json.is_array(), "expected array body");
-    assert_eq!(json.as_array().unwrap().len(), 0, "fresh DB should have no recipes");
+    assert_eq!(
+        json.as_array().unwrap().len(),
+        0,
+        "fresh DB should have no recipes"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -360,10 +380,19 @@ fn create_recipe_returns_200_with_recipe_body() {
         json["id"].as_str().is_some_and(|s| !s.is_empty()),
         "id should be non-empty"
     );
-    assert!(json["ingredients"].is_array(), "ingredients should be array");
+    assert!(
+        json["ingredients"].is_array(),
+        "ingredients should be array"
+    );
     assert_eq!(json["ingredients"].as_array().unwrap().len(), 1);
-    assert!(json["createdAt"].as_str().is_some(), "createdAt should be present");
-    assert!(json["updatedAt"].as_str().is_some(), "updatedAt should be present");
+    assert!(
+        json["createdAt"].as_str().is_some(),
+        "createdAt should be present"
+    );
+    assert!(
+        json["updatedAt"].as_str().is_some(),
+        "updatedAt should be present"
+    );
     assert!(json["categories"].is_array(), "categories should be array");
     assert!(json["tags"].is_array(), "tags should be array");
 }
@@ -435,8 +464,7 @@ fn get_recipe_by_id_returns_200() {
     let srv = TestServer::start(None);
 
     // Create first
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/recipes"), &minimal_recipe_payload());
+    let (_, create_body) = http_post_json(&srv.url("/api/v1/recipes"), &minimal_recipe_payload());
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id field");
 
@@ -470,8 +498,7 @@ fn get_recipe_not_found_returns_404() {
 fn update_recipe_returns_updated_body() {
     let srv = TestServer::start(None);
 
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/recipes"), &minimal_recipe_payload());
+    let (_, create_body) = http_post_json(&srv.url("/api/v1/recipes"), &minimal_recipe_payload());
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id field");
 
@@ -495,7 +522,10 @@ fn update_recipe_not_found_returns_404() {
         &srv.url("/api/v1/recipes/00000000-0000-0000-0000-000000000000"),
         &minimal_recipe_payload(),
     );
-    assert_eq!(status, 404, "expected 404 for update on non-existent id, body: {body}");
+    assert_eq!(
+        status, 404,
+        "expected 404 for update on non-existent id, body: {body}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -692,8 +722,12 @@ const MINIMAL_PNG: &[u8] = &[
 #[test]
 fn upload_image_returns_loopback_url() {
     let srv = TestServer::start(None);
-    let (status, body) =
-        http_post_multipart(&srv.url("/api/v1/recipes/upload-image"), "test.png", MINIMAL_PNG, "image/png");
+    let (status, body) = http_post_multipart(
+        &srv.url("/api/v1/recipes/upload-image"),
+        "test.png",
+        MINIMAL_PNG,
+        "image/png",
+    );
     assert_eq!(status, 200, "expected 200 from upload-image, body: {body}");
 
     let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
@@ -749,8 +783,12 @@ fn uploaded_image_can_be_served() {
     let srv = TestServer::start(None);
 
     // Upload
-    let (upload_status, upload_body) =
-        http_post_multipart(&srv.url("/api/v1/recipes/upload-image"), "photo.png", MINIMAL_PNG, "image/png");
+    let (upload_status, upload_body) = http_post_multipart(
+        &srv.url("/api/v1/recipes/upload-image"),
+        "photo.png",
+        MINIMAL_PNG,
+        "image/png",
+    );
     assert_eq!(upload_status, 200, "upload failed: {upload_body}");
 
     let upload_json: serde_json::Value = serde_json::from_str(&upload_body).expect("JSON");
@@ -765,8 +803,12 @@ fn uploaded_image_can_be_served() {
 fn serve_recipe_image_returns_correct_content_type() {
     let srv = TestServer::start(None);
 
-    let (_, upload_body) =
-        http_post_multipart(&srv.url("/api/v1/recipes/upload-image"), "photo.png", MINIMAL_PNG, "image/png");
+    let (_, upload_body) = http_post_multipart(
+        &srv.url("/api/v1/recipes/upload-image"),
+        "photo.png",
+        MINIMAL_PNG,
+        "image/png",
+    );
     let upload_json: serde_json::Value = serde_json::from_str(&upload_body).expect("JSON");
     let image_url = upload_json["url"].as_str().expect("url");
 
@@ -882,12 +924,17 @@ fn list_saved_weekplans_returns_empty_array_on_fresh_db() {
 #[test]
 fn create_saved_weekplan_returns_200_with_row() {
     let srv = TestServer::start(None);
-    let (status, body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Week A"));
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Week A"),
+    );
     assert_eq!(status, 200, "expected 200, body: {body}");
     let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
     assert_eq!(json["name"], "Week A");
-    assert!(json["id"].as_str().is_some_and(|s| !s.is_empty()), "id present");
+    assert!(
+        json["id"].as_str().is_some_and(|s| !s.is_empty()),
+        "id present"
+    );
     assert!(json["body"].is_object(), "body present");
     assert!(json["createdAt"].as_str().is_some(), "createdAt present");
     assert!(json["updatedAt"].as_str().is_some(), "updatedAt present");
@@ -936,7 +983,9 @@ fn create_saved_weekplan_with_unknown_recipe_returns_400_with_missing_ids() {
         .as_array()
         .expect("missingRecipeIds array");
     assert!(
-        missing.iter().any(|v| v.as_str() == Some("nonexistent-recipe-id")),
+        missing
+            .iter()
+            .any(|v| v.as_str() == Some("nonexistent-recipe-id")),
         "expected unknown id in missingRecipeIds, got: {missing:?}"
     );
 }
@@ -948,8 +997,10 @@ fn create_saved_weekplan_with_unknown_recipe_returns_400_with_missing_ids() {
 #[test]
 fn get_saved_weekplan_returns_200() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Week B"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Week B"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -974,8 +1025,10 @@ fn get_saved_weekplan_not_found_returns_404() {
 #[test]
 fn patch_saved_weekplan_name_returns_updated_row() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Original Name"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Original Name"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -991,8 +1044,10 @@ fn patch_saved_weekplan_name_returns_updated_row() {
 #[test]
 fn patch_saved_weekplan_no_fields_returns_400() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("W"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("W"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1006,8 +1061,10 @@ fn patch_saved_weekplan_no_fields_returns_400() {
 #[test]
 fn patch_saved_weekplan_with_unknown_recipe_returns_400() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Patch Test"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Patch Test"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1023,8 +1080,10 @@ fn patch_saved_weekplan_with_unknown_recipe_returns_400() {
             }
         }
     });
-    let (status, body) =
-        http_patch_json(&srv.url(&format!("/api/v1/saved-weekplans/{id}")), &bad_body);
+    let (status, body) = http_patch_json(
+        &srv.url(&format!("/api/v1/saved-weekplans/{id}")),
+        &bad_body,
+    );
     assert_eq!(status, 400, "body: {body}");
     let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
     assert!(json["data"]["missingRecipeIds"].is_array());
@@ -1037,8 +1096,10 @@ fn patch_saved_weekplan_with_unknown_recipe_returns_400() {
 #[test]
 fn delete_saved_weekplan_returns_ok_and_removes_row() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Delete me"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Delete me"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1068,8 +1129,10 @@ fn saved_weekplan_principal_isolation_other_user_gets_403() {
 
     // Create as user-A
     srv.set_user_id("user-A");
-    let (status, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Private"));
+    let (status, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Private"),
+    );
     assert_eq!(status, 200, "create failed: {create_body}");
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
@@ -1086,8 +1149,14 @@ fn saved_weekplan_list_is_scoped_to_principal() {
 
     // Create two plans as user-X
     srv.set_user_id("user-X");
-    http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Plan X1"));
-    http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Plan X2"));
+    http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Plan X1"),
+    );
+    http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Plan X2"),
+    );
 
     // Switch to user-Y; list should be empty
     srv.set_user_id("user-Y");
@@ -1122,8 +1191,10 @@ fn list_month_plans_returns_empty_array_on_fresh_db() {
 #[test]
 fn create_month_plan_returns_200_with_row() {
     let srv = TestServer::start(None);
-    let (status, body) =
-        http_post_json(&srv.url("/api/v1/planning/month-plans"), &minimal_month_plan_payload());
+    let (status, body) = http_post_json(
+        &srv.url("/api/v1/planning/month-plans"),
+        &minimal_month_plan_payload(),
+    );
     assert_eq!(status, 200, "body: {body}");
     let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
     assert!(json["id"].as_str().is_some_and(|s| !s.is_empty()));
@@ -1181,7 +1252,9 @@ fn create_month_plan_with_unknown_recipe_returns_400_with_missing_ids() {
         .as_array()
         .expect("missingRecipeIds");
     assert!(
-        missing.iter().any(|v| v.as_str() == Some("ghost-month-recipe")),
+        missing
+            .iter()
+            .any(|v| v.as_str() == Some("ghost-month-recipe")),
         "expected ghost-month-recipe in missing, got: {missing:?}"
     );
 }
@@ -1193,8 +1266,10 @@ fn create_month_plan_with_unknown_recipe_returns_400_with_missing_ids() {
 #[test]
 fn get_month_plan_returns_200() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/planning/month-plans"), &minimal_month_plan_payload());
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/planning/month-plans"),
+        &minimal_month_plan_payload(),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1218,8 +1293,10 @@ fn get_month_plan_not_found_returns_404() {
 #[test]
 fn patch_month_plan_name_returns_updated_row() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/planning/month-plans"), &minimal_month_plan_payload());
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/planning/month-plans"),
+        &minimal_month_plan_payload(),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1235,8 +1312,10 @@ fn patch_month_plan_name_returns_updated_row() {
 #[test]
 fn patch_month_plan_no_fields_returns_400() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/planning/month-plans"), &minimal_month_plan_payload());
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/planning/month-plans"),
+        &minimal_month_plan_payload(),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1254,8 +1333,10 @@ fn patch_month_plan_no_fields_returns_400() {
 #[test]
 fn delete_month_plan_returns_ok_and_removes_row() {
     let srv = TestServer::start(None);
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/planning/month-plans"), &minimal_month_plan_payload());
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/planning/month-plans"),
+        &minimal_month_plan_payload(),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1305,7 +1386,10 @@ fn weekplan_with_known_recipe_id_succeeds() {
         }
     });
     let (status, body) = http_post_json(&srv.url("/api/v1/saved-weekplans"), &payload);
-    assert_eq!(status, 200, "weekplan with known recipe should succeed, body: {body}");
+    assert_eq!(
+        status, 200,
+        "weekplan with known recipe should succeed, body: {body}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1319,7 +1403,11 @@ fn primary_server_state_api_base_matches_port() {
     let temp = tempfile::TempDir::new().expect("tempdir");
     let state = shadow_server::start(temp.path(), None).expect("start primary server");
     let expected = format!("http://127.0.0.1:{}", state.port);
-    assert_eq!(state.api_base(), expected, "api_base() should return loopback URL matching port");
+    assert_eq!(
+        state.api_base(),
+        expected,
+        "api_base() should return loopback URL matching port"
+    );
 }
 
 /// When no token is configured, `ShadowServerState.token` should be `None`.
@@ -1327,7 +1415,10 @@ fn primary_server_state_api_base_matches_port() {
 fn primary_server_state_no_token_when_none_configured() {
     let temp = tempfile::TempDir::new().expect("tempdir");
     let state = shadow_server::start(temp.path(), None).expect("start primary server");
-    assert!(state.token.is_none(), "token should be None when not configured");
+    assert!(
+        state.token.is_none(),
+        "token should be None when not configured"
+    );
 }
 
 /// When a token is passed to `start()`, `ShadowServerState.token` should echo it back
@@ -1335,7 +1426,8 @@ fn primary_server_state_no_token_when_none_configured() {
 #[test]
 fn primary_server_state_token_matches_input() {
     let temp = tempfile::TempDir::new().expect("tempdir");
-    let state = shadow_server::start(temp.path(), Some("launch-token-abc")).expect("start primary server");
+    let state =
+        shadow_server::start(temp.path(), Some("launch-token-abc")).expect("start primary server");
     assert_eq!(
         state.token.as_deref(),
         Some("launch-token-abc"),
@@ -1350,7 +1442,10 @@ fn primary_server_health_reachable_via_api_base() {
     let state = shadow_server::start(temp.path(), None).expect("start primary server");
     let health_url = format!("{}/health", state.api_base());
     let (status, body) = http_get(&health_url, &[]);
-    assert_eq!(status, 200, "health at api_base() URL should return 200, body: {body}");
+    assert_eq!(
+        status, 200,
+        "health at api_base() URL should return 200, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("health body is JSON");
     assert_eq!(json["ok"], true);
 }
@@ -1398,11 +1493,18 @@ fn recipe_preview_unsupported_url_returns_400() {
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "https://example.com/recipe" }),
     );
-    assert_eq!(status, 400, "unsupported host should return 400, body: {body}");
+    assert_eq!(
+        status, 400,
+        "unsupported host should return 400, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
     assert_eq!(json["statusCode"], 400);
     assert!(
-        json["message"].as_str().unwrap_or("").to_lowercase().contains("not supported"),
+        json["message"]
+            .as_str()
+            .unwrap_or("")
+            .to_lowercase()
+            .contains("not supported"),
         "message should mention 'not supported', got: {}",
         json["message"]
     );
@@ -1411,10 +1513,8 @@ fn recipe_preview_unsupported_url_returns_400() {
 #[test]
 fn recipe_preview_missing_url_returns_400() {
     let srv = TestServer::start(None);
-    let (status, body) = http_post_json(
-        &srv.url("/api/v1/recipes/preview"),
-        &serde_json::json!({}),
-    );
+    let (status, body) =
+        http_post_json(&srv.url("/api/v1/recipes/preview"), &serde_json::json!({}));
     assert_eq!(status, 400, "missing url should return 400, body: {body}");
 }
 
@@ -1425,7 +1525,10 @@ fn recipe_preview_non_https_url_returns_400() {
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "http://colruyt.be/recipe/test" }),
     );
-    assert_eq!(status, 400, "http (non-https) URL should return 400, body: {body}");
+    assert_eq!(
+        status, 400,
+        "http (non-https) URL should return 400, body: {body}"
+    );
 }
 
 /// Fetches a real recipe page — requires internet access.
@@ -1439,11 +1542,26 @@ fn recipe_preview_supported_url_returns_200_with_draft() {
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "https://www.colruyt.be/nl/recepten/pasta-carbonara" }),
     );
-    assert_eq!(status, 200, "real colruyt URL should return 200, body: {body}");
+    assert_eq!(
+        status, 200,
+        "real colruyt URL should return 200, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
-    assert!(json["draft"].is_object(), "response should have 'draft' object");
-    assert!(json["draft"]["title"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "draft.title must be non-empty");
-    assert!(json["warnings"].is_array(), "response should have 'warnings' array");
+    assert!(
+        json["draft"].is_object(),
+        "response should have 'draft' object"
+    );
+    assert!(
+        json["draft"]["title"]
+            .as_str()
+            .map(|s| !s.is_empty())
+            .unwrap_or(false),
+        "draft.title must be non-empty"
+    );
+    assert!(
+        json["warnings"].is_array(),
+        "response should have 'warnings' array"
+    );
 }
 
 /// Regression for the reported gelakte-kip 15gram import URL.
@@ -1457,7 +1575,10 @@ fn recipe_preview_15gram_gelakte_kip_url_returns_200_with_draft() {
             "url": "https://15gram.be/recepten/gelakte-kip-met-rode-curry-noedels-en-oesterzwammen"
         }),
     );
-    assert_eq!(status, 200, "gelakte-kip URL should return 200, body: {body}");
+    assert_eq!(
+        status, 200,
+        "gelakte-kip URL should return 200, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
     assert_eq!(
         json["draft"]["title"].as_str(),
@@ -1475,7 +1596,10 @@ fn recipe_preview_15gram_microdata_url_returns_200_with_draft() {
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "https://15gram.be/recepten/marokkaanse-tomatensalade" }),
     );
-    assert_eq!(status, 200, "15gram microdata URL should return 200, body: {body}");
+    assert_eq!(
+        status, 200,
+        "15gram microdata URL should return 200, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
     assert_eq!(
         json["draft"]["title"].as_str(),
@@ -1483,11 +1607,19 @@ fn recipe_preview_15gram_microdata_url_returns_200_with_draft() {
         "draft.title should match page heading, body: {body}"
     );
     assert!(
-        json["draft"]["ingredients"].as_array().map(|a| a.len()).unwrap_or(0) >= 1,
+        json["draft"]["ingredients"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0)
+            >= 1,
         "draft should include ingredients, body: {body}"
     );
     assert!(
-        json["draft"]["steps"].as_array().map(|a| a.len()).unwrap_or(0) >= 1,
+        json["draft"]["steps"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0)
+            >= 1,
         "draft should include steps, body: {body}"
     );
 }
@@ -1503,7 +1635,10 @@ fn phase2_routes_require_desktop_token_when_enforced() {
         &srv.url("/api/v1/recipes/preview"),
         &serde_json::json!({ "url": "https://example.com" }),
     );
-    assert_eq!(status, 401, "phase-2 routes must enforce desktop token; expected 401");
+    assert_eq!(
+        status, 401,
+        "phase-2 routes must enforce desktop token; expected 401"
+    );
 
     // With correct token — now the route runs, unsupported URL → 400 (not 501).
     let (status, body) = {
@@ -1528,7 +1663,10 @@ fn phase2_routes_require_desktop_token_when_enforced() {
         "with correct token and unsupported URL, expected 400, body: {body}"
     );
     let json: serde_json::Value = serde_json::from_str(&body).expect("body is JSON");
-    assert_eq!(json["statusCode"], 400, "H3 statusCode should be 400, body: {body}");
+    assert_eq!(
+        json["statusCode"], 400,
+        "H3 statusCode should be 400, body: {body}"
+    );
 }
 
 // --- Consolidated shopping list: CRUD ---
@@ -1537,13 +1675,17 @@ fn phase2_routes_require_desktop_token_when_enforced() {
 fn get_consolidated_shopping_list_not_found_returns_404() {
     let srv = TestServer::start(None);
 
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("CSL Test"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("CSL Test"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
     let (status, body) = http_get(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
         &[],
     );
     assert_eq!(status, 404, "no saved list → 404, body: {body}");
@@ -1555,8 +1697,10 @@ fn get_consolidated_shopping_list_not_found_returns_404() {
 fn put_consolidated_shopping_list_saves_and_returns_200() {
     let srv = TestServer::start(None);
 
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("CSL Save"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("CSL Save"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1574,7 +1718,9 @@ fn put_consolidated_shopping_list_saves_and_returns_200() {
     });
 
     let (status, body) = http_put_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
         &payload,
     );
     assert_eq!(status, 200, "PUT should return 200, body: {body}");
@@ -1594,15 +1740,23 @@ fn put_consolidated_shopping_list_saves_and_returns_200() {
         "abc123",
         "client-supplied fingerprint must be ignored"
     );
-    assert!(json["confirmedAt"].as_str().map(|s| !s.is_empty()).unwrap_or(false), "confirmedAt should be set");
+    assert!(
+        json["confirmedAt"]
+            .as_str()
+            .map(|s| !s.is_empty())
+            .unwrap_or(false),
+        "confirmedAt should be set"
+    );
 }
 
 #[test]
 fn put_then_get_consolidated_shopping_list_round_trip() {
     let srv = TestServer::start(None);
 
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("CSL Round Trip"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("CSL Round Trip"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1615,16 +1769,23 @@ fn put_then_get_consolidated_shopping_list_round_trip() {
     });
 
     let (put_status, _) = http_put_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
         &payload,
     );
     assert_eq!(put_status, 200, "PUT should succeed");
 
     let (get_status, get_body) = http_get(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
         &[],
     );
-    assert_eq!(get_status, 200, "GET after PUT should return 200, body: {get_body}");
+    assert_eq!(
+        get_status, 200,
+        "GET after PUT should return 200, body: {get_body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&get_body).expect("JSON");
     assert_eq!(json["lines"].as_array().unwrap().len(), 2);
     let expected_fp = minimal_weekplan_source_fingerprint();
@@ -1642,8 +1803,10 @@ fn consolidated_shopping_list_respects_principal_scoping() {
     let srv = TestServer::start(None);
     srv.set_user_id("user-A");
 
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("User A Plan"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("User A Plan"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
@@ -1653,7 +1816,9 @@ fn consolidated_shopping_list_respects_principal_scoping() {
         "sourceFingerprint": "fp-user-a"
     });
     let (put_status, _) = http_put_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
         &payload,
     );
     assert_eq!(put_status, 200);
@@ -1661,7 +1826,9 @@ fn consolidated_shopping_list_respects_principal_scoping() {
     // User B cannot read User A's weekplan (403 from weekplan scoping).
     srv.set_user_id("user-B");
     let (get_status, _) = http_get(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidated-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
         &[],
     );
     assert!(
@@ -1676,16 +1843,23 @@ fn consolidated_shopping_list_respects_principal_scoping() {
 fn consolidate_shopping_list_empty_plan_returns_ai_skipped() {
     let srv = TestServer::start(None);
 
-    let (_, create_body) =
-        http_post_json(&srv.url("/api/v1/saved-weekplans"), &minimal_weekplan_payload("Empty Plan"));
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("Empty Plan"),
+    );
     let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
     let id = created["id"].as_str().expect("id");
 
     let (status, body) = http_post_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{id}/consolidate-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidate-shopping-list"
+        )),
         &serde_json::json!({}),
     );
-    assert_eq!(status, 200, "empty plan consolidation should return 200, body: {body}");
+    assert_eq!(
+        status, 200,
+        "empty plan consolidation should return 200, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
     assert_eq!(
         json["polishStatus"].as_str().unwrap_or(""),
@@ -1696,8 +1870,10 @@ fn consolidate_shopping_list_empty_plan_returns_ai_skipped() {
     assert!(json["baselineLines"].is_array());
     assert!(json["warnings"].is_array());
     // No desktop.api.not_implemented code in the response.
-    assert!(json["data"]["code"].is_null() || json["data"].is_null(),
-        "must not return not_implemented code, got: {json}");
+    assert!(
+        json["data"]["code"].is_null() || json["data"].is_null(),
+        "must not return not_implemented code, got: {json}"
+    );
 }
 
 #[test]
@@ -1707,7 +1883,10 @@ fn consolidate_shopping_list_unknown_plan_returns_404() {
         &srv.url("/api/v1/saved-weekplans/nonexistent-id/consolidate-shopping-list"),
         &serde_json::json!({}),
     );
-    assert_eq!(status, 404, "unknown weekplan should return 404, body: {body}");
+    assert_eq!(
+        status, 404,
+        "unknown weekplan should return 404, body: {body}"
+    );
 }
 
 #[test]
@@ -1725,7 +1904,10 @@ fn consolidate_shopping_list_with_recipe_returns_baseline_lines() {
             ]
         }),
     );
-    assert_eq!(recipe_status, 200, "recipe create should return 200, body: {recipe_body}");
+    assert_eq!(
+        recipe_status, 200,
+        "recipe create should return 200, body: {recipe_body}"
+    );
     let recipe: serde_json::Value = serde_json::from_str(&recipe_body).expect("JSON");
     let recipe_id = recipe["id"].as_str().expect("recipe id");
 
@@ -1745,27 +1927,53 @@ fn consolidate_shopping_list_with_recipe_returns_baseline_lines() {
             }
         }
     });
-    let (plan_status, plan_body) = http_post_json(&srv.url("/api/v1/saved-weekplans"), &weekplan_payload);
-    assert_eq!(plan_status, 200, "weekplan create should return 200, body: {plan_body}");
+    let (plan_status, plan_body) =
+        http_post_json(&srv.url("/api/v1/saved-weekplans"), &weekplan_payload);
+    assert_eq!(
+        plan_status, 200,
+        "weekplan create should return 200, body: {plan_body}"
+    );
     let plan: serde_json::Value = serde_json::from_str(&plan_body).expect("JSON");
     let plan_id = plan["id"].as_str().expect("plan id");
 
     let (status, body) = http_post_json(
-        &srv.url(&format!("/api/v1/saved-weekplans/{plan_id}/consolidate-shopping-list")),
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{plan_id}/consolidate-shopping-list"
+        )),
         &serde_json::json!({}),
     );
-    assert_eq!(status, 200, "consolidate with recipe should return 200, body: {body}");
+    assert_eq!(
+        status, 200,
+        "consolidate with recipe should return 200, body: {body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&body).expect("JSON");
-    assert_eq!(json["polishStatus"].as_str().unwrap_or(""), "ai_skipped",
-        "no OpenRouter key in test → ai_skipped");
-    let baseline = json["baselineLines"].as_array().expect("baselineLines array");
-    assert_eq!(baseline.len(), 2, "expected 2 baseline lines (wortelen + ui), got: {baseline:?}");
-    let names: Vec<&str> = baseline.iter()
-        .filter_map(|l| l["name"].as_str())
-        .collect();
-    assert!(names.contains(&"wortelen"), "baselineLines should contain 'wortelen', got: {names:?}");
-    assert!(names.contains(&"ui"), "baselineLines should contain 'ui', got: {names:?}");
-    assert_ne!(json["sourceFingerprint"].as_str().unwrap_or(""), "", "sourceFingerprint should be set");
+    assert_eq!(
+        json["polishStatus"].as_str().unwrap_or(""),
+        "ai_skipped",
+        "no OpenRouter key in test → ai_skipped"
+    );
+    let baseline = json["baselineLines"]
+        .as_array()
+        .expect("baselineLines array");
+    assert_eq!(
+        baseline.len(),
+        2,
+        "expected 2 baseline lines (wortelen + ui), got: {baseline:?}"
+    );
+    let names: Vec<&str> = baseline.iter().filter_map(|l| l["name"].as_str()).collect();
+    assert!(
+        names.contains(&"wortelen"),
+        "baselineLines should contain 'wortelen', got: {names:?}"
+    );
+    assert!(
+        names.contains(&"ui"),
+        "baselineLines should contain 'ui', got: {names:?}"
+    );
+    assert_ne!(
+        json["sourceFingerprint"].as_str().unwrap_or(""),
+        "",
+        "sourceFingerprint should be set"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1794,7 +2002,10 @@ fn settings_patch_persists_model_and_get_reflects_it() {
         &srv.url("/api/v1/settings"),
         &serde_json::json!({ "openrouterShoppingListModel": "anthropic/claude-3.5-sonnet" }),
     );
-    assert_eq!(patch_status, 200, "PATCH settings should return 200, body: {patch_body}");
+    assert_eq!(
+        patch_status, 200,
+        "PATCH settings should return 200, body: {patch_body}"
+    );
     let patched: serde_json::Value = serde_json::from_str(&patch_body).expect("JSON");
     assert_eq!(
         patched["openrouterShoppingListModel"].as_str(),
@@ -1802,7 +2013,10 @@ fn settings_patch_persists_model_and_get_reflects_it() {
     );
 
     let (get_status, get_body) = http_get(&srv.url("/api/v1/settings"), &[]);
-    assert_eq!(get_status, 200, "GET settings should return 200 after patch, body: {get_body}");
+    assert_eq!(
+        get_status, 200,
+        "GET settings should return 200 after patch, body: {get_body}"
+    );
     let json: serde_json::Value = serde_json::from_str(&get_body).expect("JSON");
     assert_eq!(
         json["openrouterShoppingListModel"].as_str(),

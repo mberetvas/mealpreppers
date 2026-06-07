@@ -2,7 +2,9 @@
 
 use crate::shadow_server::{
     platform::RepoError,
-    recipe_catalog::{models::RecipeCatalogItem, models::RecipeUpdatePayload, ports::RecipeRepository},
+    recipe_catalog::{
+        models::RecipeCatalogItem, models::RecipeUpdatePayload, ports::RecipeRepository,
+    },
 };
 
 pub fn execute(

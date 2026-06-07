@@ -69,10 +69,12 @@ use crate::shadow_server::{
         list_month_plans_handler, list_saved_weekplans_handler, patch_month_plan_handler,
         patch_saved_weekplan_handler,
     },
+    planning::ports::SavedWeekplanReader,
+    recipe_catalog::ports::{RecipeImageStore, RecipeRepository},
     recipe_catalog::{
         handlers::{
-            bulk_delete_handler, create_recipe_handler, get_recipe_handler,
-            list_recipes_handler, options_handler, update_recipe_handler,
+            bulk_delete_handler, create_recipe_handler, get_recipe_handler, list_recipes_handler,
+            options_handler, update_recipe_handler,
         },
         image::{serve_image_handler, upload_image_handler},
     },
@@ -83,9 +85,9 @@ use crate::shadow_server::{
         consolidate_shopping_list_handler, get_consolidated_shopping_list_handler,
         put_consolidated_shopping_list_handler,
     },
-    recipe_catalog::ports::{RecipeImageStore, RecipeRepository},
-    planning::ports::SavedWeekplanReader,
-    shopping_list::ports::{ConsolidatedShoppingListRepository, ShoppingListPolishPort, WeekplanForConsolidationReader},
+    shopping_list::ports::{
+        ConsolidatedShoppingListRepository, ShoppingListPolishPort, WeekplanForConsolidationReader,
+    },
     wire::{self, WirePhase},
 };
 
@@ -218,7 +220,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/recipe-images/:filename", get(serve_image_handler))
         .nest("/api", api_routes)
         // request_context_layer runs on every route (including /health) so Trace ID is always set
-        .layer(middleware::from_fn_with_state(state.clone(), request_context_layer))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            request_context_layer,
+        ))
         .layer(desktop_webview_cors_layer())
         .with_state(state)
 }
@@ -230,9 +235,7 @@ async fn health_handler() -> Json<Value> {
 
 /// Test-only stub route that proves **Trace ID** + **Planning Principal** resolution and
 /// emits a structured log line with a `domain.action` **Log Event Name**.
-async fn stub_handler(
-    Extension(ctx): Extension<RequestContext>,
-) -> Result<Json<Value>, AppError> {
+async fn stub_handler(Extension(ctx): Extension<RequestContext>) -> Result<Json<Value>, AppError> {
     log::info!(
         "desktop.request_context.resolved traceId={} planningUserId={}",
         ctx.trace_id,

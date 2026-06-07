@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use crate::shadow_server::{
     planning::{
-        infrastructure::{
-            SqliteSavedWeekplanReader, SqliteWeekplanForConsolidationReader,
-        },
+        infrastructure::{SqliteSavedWeekplanReader, SqliteWeekplanForConsolidationReader},
         ports::SavedWeekplanReader,
     },
     recipe_catalog::{
@@ -24,7 +22,10 @@ use crate::shadow_server::{
         infrastructure::{
             OpenRouterShoppingListPolishPort, SqliteConsolidatedShoppingListRepository,
         },
-        ports::{ConsolidatedShoppingListRepository, ShoppingListPolishPort, WeekplanForConsolidationReader},
+        ports::{
+            ConsolidatedShoppingListRepository, ShoppingListPolishPort,
+            WeekplanForConsolidationReader,
+        },
     },
 };
 
@@ -53,12 +54,12 @@ pub fn wire_dependencies(state: AppState, phase: WirePhase) -> AppState {
 
     let recipes: Arc<dyn RecipeRepository> = Arc::new(SqliteRecipeRepository::new(db_path.clone()));
 
-    let recipe_images: Arc<dyn RecipeImageStore> = Arc::new(FsRecipeImageStore::new(
-        state.recipe_images_dir(),
-    ));
+    let recipe_images: Arc<dyn RecipeImageStore> =
+        Arc::new(FsRecipeImageStore::new(state.recipe_images_dir()));
 
-    let consolidated_shopping_lists: Arc<dyn ConsolidatedShoppingListRepository> =
-        Arc::new(SqliteConsolidatedShoppingListRepository::new(db_path.clone()));
+    let consolidated_shopping_lists: Arc<dyn ConsolidatedShoppingListRepository> = Arc::new(
+        SqliteConsolidatedShoppingListRepository::new(db_path.clone()),
+    );
 
     let saved_weekplan_reader: Arc<dyn SavedWeekplanReader> =
         Arc::new(SqliteSavedWeekplanReader::new(db_path.clone()));

@@ -28,8 +28,7 @@ fn now_iso() -> String {
 
 /// Opens a connection and enables `PRAGMA foreign_keys = ON`.
 pub fn open_conn(path: &std::path::Path) -> Result<Connection, RepoError> {
-    let conn = Connection::open(path)
-        .map_err(|e| RepoError::Storage(format!("open db: {e}")))?;
+    let conn = Connection::open(path).map_err(|e| RepoError::Storage(format!("open db: {e}")))?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")
         .map_err(|e| RepoError::Storage(format!("set fk pragma: {e}")))?;
     Ok(conn)
@@ -76,7 +75,10 @@ fn row_to_item(
     })
 }
 
-fn load_ingredients(conn: &Connection, recipe_id: &str) -> Result<Vec<RecipeIngredient>, RepoError> {
+fn load_ingredients(
+    conn: &Connection,
+    recipe_id: &str,
+) -> Result<Vec<RecipeIngredient>, RepoError> {
     let mut stmt = conn.prepare(
         "SELECT id, position, raw_text, name, quantity, unit \
          FROM recipe_ingredients WHERE recipe_id = ?1 ORDER BY position",
@@ -301,11 +303,8 @@ pub fn update_recipe(
         )
         .map_err(RepoError::from)?;
 
-        tx.execute(
-            "DELETE FROM recipe_ingredients WHERE recipe_id = ?1",
-            [id],
-        )
-        .map_err(RepoError::from)?;
+        tx.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?1", [id])
+            .map_err(RepoError::from)?;
 
         tx.execute("DELETE FROM recipe_steps WHERE recipe_id = ?1", [id])
             .map_err(RepoError::from)?;
@@ -350,10 +349,7 @@ pub fn update_recipe(
 /// Deletes recipes by ID (de-duplicated). Returns the number of rows actually deleted.
 ///
 /// IDs that do not exist are silently skipped (same behaviour as the TypeScript implementation).
-pub fn delete_recipes_by_ids(
-    conn: &Connection,
-    ids: &[String],
-) -> Result<usize, RepoError> {
+pub fn delete_recipes_by_ids(conn: &Connection, ids: &[String]) -> Result<usize, RepoError> {
     if ids.is_empty() {
         return Ok(0);
     }
@@ -369,10 +365,7 @@ pub fn delete_recipes_by_ids(
 
     let sql = format!("DELETE FROM recipes WHERE id IN ({placeholders})");
     let count = conn
-        .execute(
-            &sql,
-            rusqlite::params_from_iter(ids.iter()),
-        )
+        .execute(&sql, rusqlite::params_from_iter(ids.iter()))
         .map_err(RepoError::from)?;
 
     Ok(count)
@@ -400,8 +393,5 @@ pub fn list_stored_options(conn: &Connection) -> Result<(Vec<String>, Vec<String
         }
     }
 
-    Ok((
-        categories.into_iter().collect(),
-        tags.into_iter().collect(),
-    ))
+    Ok((categories.into_iter().collect(), tags.into_iter().collect()))
 }

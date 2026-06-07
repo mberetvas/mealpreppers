@@ -3,8 +3,7 @@
 use crate::shadow_server::{
     platform::RepoError,
     shopping_list::{
-        models::SavedConsolidatedShoppingListRecord,
-        ports::ConsolidatedShoppingListRepository,
+        models::SavedConsolidatedShoppingListRecord, ports::ConsolidatedShoppingListRepository,
     },
 };
 

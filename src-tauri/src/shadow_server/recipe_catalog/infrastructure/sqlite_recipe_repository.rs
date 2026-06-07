@@ -41,10 +41,7 @@ impl RecipeRepository for SqliteRecipeRepository {
         list_stored_options(&conn)
     }
 
-    fn create_recipe(
-        &self,
-        payload: RecipeCreatePayload,
-    ) -> Result<RecipeCatalogItem, RepoError> {
+    fn create_recipe(&self, payload: RecipeCreatePayload) -> Result<RecipeCatalogItem, RepoError> {
         let mut conn = open_conn(&self.db_path)?;
         create_recipe(&mut conn, payload)
     }

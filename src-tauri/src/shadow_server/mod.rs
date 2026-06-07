@@ -14,8 +14,8 @@
 pub mod db;
 pub mod error;
 pub mod middleware;
-pub mod platform;
 pub mod planning;
+pub mod platform;
 pub mod recipe_catalog;
 pub mod recipe_ingestion;
 pub mod request_context;
@@ -53,10 +53,7 @@ impl ShadowServerState {
 /// - Spawns a Tokio runtime on a background thread and starts the Axum listener.
 ///
 /// Callers are responsible for recording startup timing milestones after this returns.
-pub fn start(
-    data_dir: &Path,
-    token: Option<&str>,
-) -> Result<ShadowServerState, String> {
+pub fn start(data_dir: &Path, token: Option<&str>) -> Result<ShadowServerState, String> {
     let db_path = resolve_db_path(data_dir);
     db::open_and_migrate(&db_path)?;
 
@@ -95,14 +92,12 @@ pub fn start(
                 data_dir: data_dir_owned.clone(),
                 token: token_owned,
                 port,
-                recipes: Arc::new(
-                    recipe_catalog::infrastructure::SqliteRecipeRepository::new(db_path.clone()),
-                ),
-                recipe_images: Arc::new(
-                    recipe_catalog::infrastructure::FsRecipeImageStore::new(
-                        data_dir_owned.join("recipe-images"),
-                    ),
-                ),
+                recipes: Arc::new(recipe_catalog::infrastructure::SqliteRecipeRepository::new(
+                    db_path.clone(),
+                )),
+                recipe_images: Arc::new(recipe_catalog::infrastructure::FsRecipeImageStore::new(
+                    data_dir_owned.join("recipe-images"),
+                )),
                 consolidated_shopping_lists: Arc::new(
                     shopping_list::infrastructure::SqliteConsolidatedShoppingListRepository::new(
                         db_path.clone(),
@@ -136,12 +131,9 @@ pub fn start(
 
     let port = port_rx
         .recv_timeout(Duration::from_secs(10))
-        .map_err(|_| "Shadow server did not start within 10s".to_string())?
-        .map_err(|e| e)?;
+        .map_err(|_| "Shadow server did not start within 10s".to_string())??;
 
-    log::info!(
-        "startup_timing desktop.shadow_server.started port={port}"
-    );
+    log::info!("startup_timing desktop.shadow_server.started port={port}");
 
     Ok(ShadowServerState {
         port,

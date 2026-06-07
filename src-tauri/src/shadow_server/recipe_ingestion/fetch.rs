@@ -4,11 +4,7 @@
 //! to reduce bot-detection blocking.
 
 // Hostnames used by Roularta / Libelle SSO login redirects.
-const ROULARTA_AUTH_HOSTS: &[&str] = &[
-    "token.roularta.be",
-    "sso.roularta.be",
-    "ciam.roularta.be",
-];
+const ROULARTA_AUTH_HOSTS: &[&str] = &["token.roularta.be", "sso.roularta.be", "ciam.roularta.be"];
 
 pub struct FetchRecipePageResult {
     pub html: String,
@@ -44,7 +40,11 @@ pub fn fetch_recipe_page_html(url: &str) -> Result<FetchRecipePageResult, String
         .read_to_string()
         .map_err(|e| format!("read body error: {e}"))?;
 
-    Ok(FetchRecipePageResult { html, final_url, status })
+    Ok(FetchRecipePageResult {
+        html,
+        final_url,
+        status,
+    })
 }
 
 /// Returns true when the response looks like a publisher login/SSO wall.
@@ -53,7 +53,7 @@ pub fn detect_publisher_auth_wall(html: &str, final_url: &str) -> bool {
     // Check if the final URL is a known Roularta auth host.
     if let Ok(parsed) = url::Url::parse(final_url) {
         let hostname = parsed.host_str().unwrap_or("").to_lowercase();
-        if ROULARTA_AUTH_HOSTS.iter().any(|h| *h == hostname.as_str()) {
+        if ROULARTA_AUTH_HOSTS.contains(&hostname.as_str()) {
             return true;
         }
     }
@@ -64,9 +64,7 @@ pub fn detect_publisher_auth_wall(html: &str, final_url: &str) -> bool {
     }
 
     // 15gram.be uses microdata inside #recipe-detail, not JSON-LD Recipe nodes.
-    if html.contains("id=\"recipe-detail\"")
-        && html.contains("itemprop=\"recipeIngredient\"")
-    {
+    if html.contains("id=\"recipe-detail\"") && html.contains("itemprop=\"recipeIngredient\"") {
         return false;
     }
 

@@ -8,8 +8,8 @@
 
 use rusqlite::{params, Connection};
 
-use crate::shadow_server::platform::RepoError;
 use super::models::SavedConsolidatedShoppingListRecord;
+use crate::shadow_server::platform::RepoError;
 
 // ---------------------------------------------------------------------------
 // Read
@@ -62,10 +62,8 @@ pub fn get_consolidated_shopping_list(
         RepoError::NotFound("No saved shopping list found for this weekplan.".into())
     })?;
 
-    let record: SavedConsolidatedShoppingListRecord =
-        serde_json::from_str(&json_str).map_err(|e| {
-            RepoError::Storage(format!("json decode consolidated_shopping_list: {e}"))
-        })?;
+    let record: SavedConsolidatedShoppingListRecord = serde_json::from_str(&json_str)
+        .map_err(|e| RepoError::Storage(format!("json decode consolidated_shopping_list: {e}")))?;
 
     Ok(record)
 }
@@ -111,9 +109,8 @@ pub fn save_consolidated_shopping_list(
         _ => {}
     }
 
-    let json_str = serde_json::to_string(record).map_err(|e| {
-        RepoError::Storage(format!("json encode consolidated_shopping_list: {e}"))
-    })?;
+    let json_str = serde_json::to_string(record)
+        .map_err(|e| RepoError::Storage(format!("json encode consolidated_shopping_list: {e}")))?;
 
     conn.execute(
         "UPDATE meal_week_templates \

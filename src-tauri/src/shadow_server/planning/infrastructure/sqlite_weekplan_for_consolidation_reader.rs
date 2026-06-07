@@ -5,9 +5,7 @@ use std::path::PathBuf;
 use crate::shadow_server::{
     planning::repository::{compute_source_fingerprint, get_saved_weekplan_by_id, open_conn},
     platform::RepoError,
-    shopping_list::ports::{
-        WeekplanForConsolidation, WeekplanForConsolidationReader,
-    },
+    shopping_list::ports::{WeekplanForConsolidation, WeekplanForConsolidationReader},
 };
 
 /// Install-scoped SQLite adapter for weekplan reads used by consolidation POST.

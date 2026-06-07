@@ -4,7 +4,9 @@
 pub enum RepoError {
     NotFound(String),
     Forbidden(String),
-    InvalidRecipeIds { missing: Vec<String> },
+    InvalidRecipeIds {
+        missing: Vec<String>,
+    },
     /// Saved consolidated list is stale because the week plan body changed.
     DeprecatedList(String),
     Storage(String),

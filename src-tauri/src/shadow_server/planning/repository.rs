@@ -26,8 +26,7 @@ use super::models::{
 
 /// Opens a connection with FK enforcement.
 pub fn open_conn(path: &std::path::Path) -> Result<Connection, RepoError> {
-    let conn = Connection::open(path)
-        .map_err(|e| RepoError::Storage(format!("open db: {e}")))?;
+    let conn = Connection::open(path).map_err(|e| RepoError::Storage(format!("open db: {e}")))?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")
         .map_err(|e| RepoError::Storage(format!("set fk pragma: {e}")))?;
     Ok(conn)
@@ -70,20 +69,16 @@ pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
     }
     let canonical = parts.join("|");
     let hash = Sha256::digest(canonical.as_bytes());
-    hash.iter()
-        .fold(String::with_capacity(64), |mut s, b| {
-            use std::fmt::Write;
-            let _ = write!(s, "{b:02x}");
-            s
-        })
+    hash.iter().fold(String::with_capacity(64), |mut s, b| {
+        use std::fmt::Write;
+        let _ = write!(s, "{b:02x}");
+        s
+    })
 }
 
 /// Computes `hasSavedShoppingList` and `shoppingListDeprecated` from the raw
 /// `consolidated_shopping_list` JSON column value and the week plan body.
-fn compute_shopping_list_flags(
-    consolidated_json: Option<&str>,
-    body: &WeekPlanV1,
-) -> (bool, bool) {
+fn compute_shopping_list_flags(consolidated_json: Option<&str>, body: &WeekPlanV1) -> (bool, bool) {
     let Some(json_str) = consolidated_json else {
         return (false, false);
     };
@@ -135,10 +130,7 @@ pub fn collect_recipe_ids_from_month_plan(plan: &MonthPlanV1) -> Vec<String> {
 /// Checks that all provided recipe IDs exist in the `recipes` table.
 ///
 /// Returns `Err(RepoError::InvalidRecipeIds { missing })` when any ID is absent.
-pub fn assert_recipe_ids_exist(
-    conn: &Connection,
-    recipe_ids: &[String],
-) -> Result<(), RepoError> {
+pub fn assert_recipe_ids_exist(conn: &Connection, recipe_ids: &[String]) -> Result<(), RepoError> {
     if recipe_ids.is_empty() {
         return Ok(());
     }
@@ -202,8 +194,7 @@ pub fn list_saved_weekplans(
     for row in rows {
         let (id, name, body_json, updated_at, csl) = row.map_err(RepoError::from)?;
         let body: WeekPlanV1 = serde_json::from_str(&body_json)?;
-        let (has_saved, deprecated) =
-            compute_shopping_list_flags(csl.as_deref(), &body);
+        let (has_saved, deprecated) = compute_shopping_list_flags(csl.as_deref(), &body);
         items.push(SavedWeekplanListItem {
             id,
             name,
@@ -250,8 +241,7 @@ pub fn get_saved_weekplan_by_id(
         Ok(_) => {}
     }
 
-    let (id_col, name, body_json, created_at, updated_at, owner_user_id, csl) =
-        result.unwrap();
+    let (id_col, name, body_json, created_at, updated_at, owner_user_id, csl) = result.unwrap();
 
     // Legacy unowned rows (NULL owner_user_id) are treated as not-found.
     match owner_user_id.as_deref() {
@@ -347,11 +337,7 @@ pub fn update_saved_weekplan(
 }
 
 /// Deletes a saved weekplan owned by `user_id`.
-pub fn delete_saved_weekplan(
-    conn: &Connection,
-    id: &str,
-    user_id: &str,
-) -> Result<(), RepoError> {
+pub fn delete_saved_weekplan(conn: &Connection, id: &str, user_id: &str) -> Result<(), RepoError> {
     // Verify ownership before attempting delete.
     get_saved_weekplan_by_id(conn, id, user_id)?;
 
@@ -370,9 +356,8 @@ pub fn delete_saved_weekplan(
 
 /// Lists all month plans ordered by `updated_at DESC`.
 pub fn list_month_plans(conn: &Connection) -> Result<Vec<MonthPlanListItem>, RepoError> {
-    let mut stmt = conn.prepare(
-        "SELECT id, name, updated_at FROM meal_month_plans ORDER BY updated_at DESC",
-    )?;
+    let mut stmt =
+        conn.prepare("SELECT id, name, updated_at FROM meal_month_plans ORDER BY updated_at DESC")?;
 
     let rows = stmt.query_map([], |row| {
         Ok((
@@ -384,16 +369,17 @@ pub fn list_month_plans(conn: &Connection) -> Result<Vec<MonthPlanListItem>, Rep
 
     rows.map(|r| {
         let (id, name, updated_at) = r.map_err(RepoError::from)?;
-        Ok(MonthPlanListItem { id, name, updated_at })
+        Ok(MonthPlanListItem {
+            id,
+            name,
+            updated_at,
+        })
     })
     .collect()
 }
 
 /// Returns a single month plan by ID.
-pub fn get_month_plan_by_id(
-    conn: &Connection,
-    id: &str,
-) -> Result<MonthPlanRow, RepoError> {
+pub fn get_month_plan_by_id(conn: &Connection, id: &str) -> Result<MonthPlanRow, RepoError> {
     let result = conn.query_row(
         "SELECT id, name, body, created_at, updated_at \
          FROM meal_month_plans WHERE id = ?1",
@@ -416,7 +402,13 @@ pub fn get_month_plan_by_id(
         Err(e) => Err(RepoError::from(e)),
         Ok((id_col, name, body_json, created_at, updated_at)) => {
             let body: MonthPlanV1 = serde_json::from_str(&body_json)?;
-            Ok(MonthPlanRow { id: id_col, name, body, created_at, updated_at })
+            Ok(MonthPlanRow {
+                id: id_col,
+                name,
+                body,
+                created_at,
+                updated_at,
+            })
         }
     }
 }
