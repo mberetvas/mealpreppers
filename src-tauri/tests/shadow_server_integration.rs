@@ -1750,6 +1750,41 @@ fn put_consolidated_shopping_list_saves_and_returns_200() {
 }
 
 #[test]
+fn put_consolidated_shopping_list_accepts_lines_only_body() {
+    let srv = TestServer::start(None);
+
+    let (_, create_body) = http_post_json(
+        &srv.url("/api/v1/saved-weekplans"),
+        &minimal_weekplan_payload("CSL Lines Only"),
+    );
+    let created: serde_json::Value = serde_json::from_str(&create_body).expect("JSON");
+    let id = created["id"].as_str().expect("id");
+
+    let payload = serde_json::json!({
+        "lines": [
+            {
+                "id": "L1",
+                "name": "basilicum",
+                "quantity": 1.0,
+                "unit": "tak",
+                "aisleCategory": "produce"
+            }
+        ]
+    });
+
+    let (status, body) = http_put_json(
+        &srv.url(&format!(
+            "/api/v1/saved-weekplans/{id}/consolidated-shopping-list"
+        )),
+        &payload,
+    );
+    assert_eq!(
+        status, 200,
+        "PUT with lines-only body must succeed (TS client parity), body: {body}"
+    );
+}
+
+#[test]
 fn put_then_get_consolidated_shopping_list_round_trip() {
     let srv = TestServer::start(None);
 
