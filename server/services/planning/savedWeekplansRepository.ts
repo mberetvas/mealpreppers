@@ -3,26 +3,26 @@ import { and, desc, eq } from 'drizzle-orm'
 import type { WeekPlanV1, WeekTemplateCreateInput, WeekTemplatePatchInput } from '../../../types/planning'
 import type { AppDb } from '../../db/sqlite'
 import { mealWeekTemplates } from '../../db/schema/planning'
+import type { SavedConsolidatedShoppingListRecord } from '../shopping-list/consolidatedShoppingListRepository'
+import { sqliteSavedWeekplanReader } from './infrastructure/sqliteSavedWeekplanReader'
 import type { PlanningPrincipal } from './planningPrincipal'
 import { fail, ok, type PlanningResult } from './planningResult'
-import { interpretSavedWeekplanAccess } from './savedWeekplanAccess'
+import type { SavedWeekplanReader } from './ports/savedWeekplanReader'
+import { savedWeekplanNotFound } from './savedWeekplanAccessErrors'
+import { computeShoppingListFlags } from './savedWeekplanReadModel'
 import type { WeekTemplateListItem, WeekTemplateRow } from './planningRepository'
-import { computeShoppingListFlags, type SavedConsolidatedShoppingListRecord } from '../shopping-list/consolidatedShoppingListRepository'
-
-type WeekTemplateSelectRow = typeof mealWeekTemplates.$inferSelect
 
 function nowIso(): string {
   return new Date().toISOString()
 }
 
-function ownerColumns(row: WeekTemplateSelectRow) {
-  return {
-    owner_user_id: row.ownerUserId,
-    anon_session_id: row.anonSessionId,
-  }
-}
-
-function mapWeekTemplateRow(row: WeekTemplateSelectRow): WeekTemplateRow {
+function mapWeekTemplateRow(row: {
+  id: string
+  name: string
+  body: WeekPlanV1
+  createdAt: string
+  updatedAt: string
+}): WeekTemplateRow {
   return {
     id: row.id,
     name: row.name,
@@ -47,24 +47,37 @@ function storageError(message: string | undefined, fallback: string) {
   }
 }
 
-function savedNotFound() {
-  return {
-    kind: 'not_found' as const,
-    entity: 'saved_weekplan' as const,
-    message: 'Saved weekplan not found.',
-  }
-}
+/** Inserts a saved weekplan row (transaction-safe). Used by the create application module. */
+export function insertSavedWeekplanRow(
+  db: AppDb,
+  principal: PlanningPrincipal,
+  input: WeekTemplateCreateInput,
+): PlanningResult<WeekTemplateRow> {
+  try {
+    const owners = ownerInsertPayload(principal)
+    const timestamp = nowIso()
+    const id = randomUUID()
 
-function savedForbidden() {
-  return {
-    kind: 'forbidden' as const,
-    entity: 'saved_weekplan' as const,
-    message: 'You do not have access to this saved weekplan.',
-  }
-}
+    db.insert(mealWeekTemplates).values({
+      id,
+      name: input.name,
+      body: input.body,
+      ...owners,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      consolidatedShoppingList: null,
+    }).run()
 
-function interpretRowAccess(row: WeekTemplateSelectRow, principal: PlanningPrincipal) {
-  return interpretSavedWeekplanAccess(ownerColumns(row), principal)
+    const row = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
+    if (!row) {
+      return fail(storageError(undefined, 'Saved weekplan could not be created.'))
+    }
+
+    return ok(mapWeekTemplateRow(row))
+  }
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplan could not be created.'))
+  }
 }
 
 /** Lists saved weekplans visible to the current principal (excludes legacy unowned rows). Each row includes shopping list status flags. */
@@ -106,27 +119,13 @@ export async function getSavedWeekplanById(
   db: AppDb,
   id: string,
   principal: PlanningPrincipal,
+  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateRow>> {
-  try {
-    const row = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
-
-    if (!row) {
-      return fail(savedNotFound())
-    }
-
-    const access = interpretRowAccess(row, principal)
-    if (access === 'legacy_unowned') {
-      return fail(savedNotFound())
-    }
-    if (access === 'wrong_owner') {
-      return fail(savedForbidden())
-    }
-
-    return ok(mapWeekTemplateRow(row))
+  const result = await reader.getById(db, id, principal)
+  if (!result.ok) {
+    return result
   }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplan could not be loaded.'))
-  }
+  return ok(mapWeekTemplateRow(result.value))
 }
 
 /** List-row shape returned by `listSavedWeekplans`, includes shopping list status flags. */
@@ -145,64 +144,15 @@ export async function getSavedWeekplanWithShoppingListFlags(
   db: AppDb,
   id: string,
   principal: PlanningPrincipal,
+  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateRowWithShoppingListFlags>> {
-  try {
-    const row = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
-
-    if (!row) {
-      return fail(savedNotFound())
-    }
-
-    const access = interpretRowAccess(row, principal)
-    if (access === 'legacy_unowned') {
-      return fail(savedNotFound())
-    }
-    if (access === 'wrong_owner') {
-      return fail(savedForbidden())
-    }
-
-    const flags = computeShoppingListFlags(
-      row.consolidatedShoppingList as SavedConsolidatedShoppingListRecord | null,
-      row.body,
-    )
-    return ok({ ...mapWeekTemplateRow(row), ...flags })
+  const result = await reader.getById(db, id, principal)
+  if (!result.ok) {
+    return result
   }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplan could not be loaded.'))
-  }
-}
 
-/** Creates a saved weekplan row owned by the current principal. */
-export async function createSavedWeekplan(
-  db: AppDb,
-  principal: PlanningPrincipal,
-  input: WeekTemplateCreateInput,
-): Promise<PlanningResult<WeekTemplateRow>> {
-  try {
-    const owners = ownerInsertPayload(principal)
-    const timestamp = nowIso()
-    const id = randomUUID()
-
-    db.insert(mealWeekTemplates).values({
-      id,
-      name: input.name,
-      body: input.body,
-      ...owners,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      consolidatedShoppingList: null,
-    }).run()
-
-    const row = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
-    if (!row) {
-      return fail(storageError(undefined, 'Saved weekplan could not be created.'))
-    }
-
-    return ok(mapWeekTemplateRow(row))
-  }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplan could not be created.'))
-  }
+  const flags = computeShoppingListFlags(result.value.consolidatedShoppingList, result.value.body)
+  return ok({ ...mapWeekTemplateRow(result.value), ...flags })
 }
 
 /** Updates a saved weekplan when owned by the principal. */
@@ -211,20 +161,12 @@ export async function updateSavedWeekplan(
   id: string,
   principal: PlanningPrincipal,
   input: WeekTemplatePatchInput,
+  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateRow>> {
   try {
-    const existing = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
-
-    if (!existing) {
-      return fail(savedNotFound())
-    }
-
-    const access = interpretRowAccess(existing, principal)
-    if (access === 'legacy_unowned') {
-      return fail(savedNotFound())
-    }
-    if (access === 'wrong_owner') {
-      return fail(savedForbidden())
+    const access = await reader.getById(db, id, principal)
+    if (!access.ok) {
+      return access
     }
 
     const patch: Partial<typeof mealWeekTemplates.$inferInsert> = { updatedAt: nowIso() }
@@ -238,7 +180,7 @@ export async function updateSavedWeekplan(
 
     const row = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
     if (!row) {
-      return fail(savedNotFound())
+      return fail(savedWeekplanNotFound())
     }
 
     return ok(mapWeekTemplateRow(row))
@@ -253,20 +195,12 @@ export async function deleteSavedWeekplan(
   db: AppDb,
   id: string,
   principal: PlanningPrincipal,
+  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
 ): Promise<PlanningResult<{ ok: true }>> {
   try {
-    const existing = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
-
-    if (!existing) {
-      return fail(savedNotFound())
-    }
-
-    const access = interpretRowAccess(existing, principal)
-    if (access === 'legacy_unowned') {
-      return fail(savedNotFound())
-    }
-    if (access === 'wrong_owner') {
-      return fail(savedForbidden())
+    const access = await reader.getById(db, id, principal)
+    if (!access.ok) {
+      return access
     }
 
     const deleted = db
@@ -276,7 +210,7 @@ export async function deleteSavedWeekplan(
       .get()
 
     if (!deleted) {
-      return fail(savedNotFound())
+      return fail(savedWeekplanNotFound())
     }
 
     return ok({ ok: true })

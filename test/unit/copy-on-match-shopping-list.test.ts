@@ -3,16 +3,24 @@
  */
 import { describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import {
-  copyConsolidatedListFromMatchingPlan,
-  type SavedConsolidatedShoppingListRecord,
-} from '../../server/services/shopping-list/consolidatedShoppingListRepository'
+import type { AppDb } from '../../server/db/sqlite'
+import type { SavedConsolidatedShoppingListRecord } from '../../server/services/shopping-list/consolidatedShoppingListRepository'
+import { sqliteConsolidatedShoppingListCopyAdapter } from '../../server/services/shopping-list/infrastructure/sqliteConsolidatedShoppingListCopyAdapter'
 import { computeSourceFingerprint } from '../../server/services/shopping-list/sourceFingerprint'
 import type { WeekPlanV1 } from '../../types/planning'
 import { useAppTestDb } from '../helpers/recipeCatalogTestDb'
 import { mealWeekTemplates } from '../../server/db/schema/planning'
 
 const ctx = useAppTestDb()
+
+function copyConsolidatedListFromMatchingPlan(
+  db: AppDb,
+  newPlanId: string,
+  principal: { kind: 'user', userId: string },
+  fingerprint: string,
+) {
+  return sqliteConsolidatedShoppingListCopyAdapter.copyFromMatchingPlan(db, newPlanId, principal, fingerprint)
+}
 
 function makeWeekPlanBody(overrides?: Partial<WeekPlanV1['days']>): WeekPlanV1 {
   const emptySlot = { recipeId: null }
@@ -322,9 +330,17 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
 })
 
 describe('PATCH saved-weekplan → copy-on-match is never triggered', () => {
-  it('updateSavedWeekplan does not import or invoke copyConsolidatedListFromMatchingPlan', async () => {
+  it('updateSavedWeekplan does not invoke copy-on-match', async () => {
     const { updateSavedWeekplan } = await import('../../server/services/planning/savedWeekplansRepository')
     const fnSource = updateSavedWeekplan.toString()
-    expect(fnSource).not.toContain('copyConsolidatedListFromMatchingPlan')
+    expect(fnSource).not.toContain('copyFromMatchingPlan')
+    expect(fnSource).not.toContain('ConsolidatedShoppingListCopyPort')
+  })
+
+  it('create application module is separate from updateSavedWeekplan', async () => {
+    const { updateSavedWeekplan } = await import('../../server/services/planning/savedWeekplansRepository')
+    const createModule = await import('../../server/services/planning/application/createSavedWeekplan')
+    expect(updateSavedWeekplan.toString()).not.toContain('executeCreateSavedWeekplan')
+    expect(createModule.executeCreateSavedWeekplan.toString()).toContain('copyFromMatchingPlan')
   })
 })

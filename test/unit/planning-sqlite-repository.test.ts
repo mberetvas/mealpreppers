@@ -13,9 +13,9 @@ import {
   updateMonthPlan,
 } from '../../server/services/planning/planningRepository'
 import {
-  createSavedWeekplan,
   deleteSavedWeekplan,
   getSavedWeekplanById,
+  insertSavedWeekplanRow,
   listSavedWeekplans,
   updateSavedWeekplan,
 } from '../../server/services/planning/savedWeekplansRepository'
@@ -27,8 +27,8 @@ describe('Saved Weekplans (SQLite)', () => {
   const body = emptyWeekPlan()
 
   it('lists only rows owned by the user principal', async () => {
-    await createSavedWeekplan(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Mine', body })
-    await createSavedWeekplan(ctx.db, { kind: 'user', userId: 'user-2' }, { name: 'Theirs', body })
+    await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Mine', body })
+    await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-2' }, { name: 'Theirs', body })
 
     const result = await listSavedWeekplans(ctx.db, { kind: 'user', userId: 'user-1' })
     expect(result.ok).toBe(true)
@@ -39,7 +39,7 @@ describe('Saved Weekplans (SQLite)', () => {
   })
 
   it('sets owner_user_id on create for user principal', async () => {
-    const result = await createSavedWeekplan(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'User week', body })
+    const result = await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'User week', body })
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
@@ -71,7 +71,7 @@ describe('Saved Weekplans (SQLite)', () => {
   })
 
   it('returns forbidden for cross-owner user row', async () => {
-    const created = await createSavedWeekplan(
+    const created = await insertSavedWeekplanRow(
       ctx.db,
       { kind: 'user', userId: 'user-owner' },
       { name: 'Other', body },
@@ -89,7 +89,7 @@ describe('Saved Weekplans (SQLite)', () => {
   })
 
   it('delete scopes to the owning user principal', async () => {
-    const created = await createSavedWeekplan(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Mine', body })
+    const created = await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Mine', body })
     expect(created.ok).toBe(true)
     if (!created.ok) return
 
@@ -106,7 +106,7 @@ describe('Saved Weekplans (SQLite)', () => {
 
   it('returns shopping list flags on list rows', async () => {
     const fingerprint = computeSourceFingerprint(body)
-    const created = await createSavedWeekplan(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Flags', body })
+    const created = await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Flags', body })
     expect(created.ok).toBe(true)
     if (!created.ok) return
 
@@ -127,7 +127,7 @@ describe('Saved Weekplans (SQLite)', () => {
   })
 
   it('update returns forbidden for cross-owner user', async () => {
-    const created = await createSavedWeekplan(
+    const created = await insertSavedWeekplanRow(
       ctx.db,
       { kind: 'user', userId: 'user-owner' },
       { name: 'Other', body },
