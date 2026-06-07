@@ -8,6 +8,8 @@ import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
 import { createEvent } from 'h3'
 import { appLogger } from '../../server/utils/logger'
+import deleteSavedWeekplanHandler from '../../server/api/v1/saved-weekplans/[id].delete'
+import getSavedWeekplanHandler from '../../server/api/v1/saved-weekplans/[id].get'
 import listSavedWeekplansHandler from '../../server/api/v1/saved-weekplans/index.get'
 import patchSavedWeekplanHandler from '../../server/api/v1/saved-weekplans/[id].patch'
 
@@ -44,12 +46,22 @@ vi.mock('../../server/utils/logger', () => ({
 
 const mocks = vi.hoisted(() => ({
   listSavedWeekplans: vi.fn(),
+  getSavedWeekplanWithShoppingListFlags: vi.fn(),
   updateSavedWeekplan: vi.fn(),
+  deleteSavedWeekplan: vi.fn(),
   getDb: vi.fn(() => ({})),
+  savedWeekplanReader: { listForPrincipal: vi.fn(), getById: vi.fn(), getForConsolidatedListOps: vi.fn() },
 }))
 
 vi.mock('../../server/db/sqlite', () => ({
   getDb: mocks.getDb,
+}))
+
+vi.mock('../../server/services/planning/planningComposition', () => ({
+  createPlanningDeps: () => ({
+    savedWeekplanReader: mocks.savedWeekplanReader,
+    createSavedWeekplanDeps: {},
+  }),
 }))
 
 vi.mock('../../server/services/planning/savedWeekplansRepository', async (importOriginal) => {
@@ -57,7 +69,9 @@ vi.mock('../../server/services/planning/savedWeekplansRepository', async (import
   return {
     ...actual,
     listSavedWeekplans: mocks.listSavedWeekplans,
+    getSavedWeekplanWithShoppingListFlags: mocks.getSavedWeekplanWithShoppingListFlags,
     updateSavedWeekplan: mocks.updateSavedWeekplan,
+    deleteSavedWeekplan: mocks.deleteSavedWeekplan,
   }
 })
 
@@ -95,6 +109,7 @@ describe('saved-weekplans handlers via Planning Request Context seam', () => {
     expect(mocks.listSavedWeekplans).toHaveBeenCalledWith(
       {},
       { kind: 'user', userId: LOCAL_USER_ID },
+      mocks.savedWeekplanReader,
     )
   })
 
@@ -122,6 +137,68 @@ describe('saved-weekplans handlers via Planning Request Context seam', () => {
         operation: 'list saved weekplans',
         errorId: thrown.data?.errorId,
       }),
+    )
+  })
+
+  it('GET by id delegates to getSavedWeekplanWithShoppingListFlags with the composition-root reader', async () => {
+    const row = {
+      id: 'plan-1',
+      name: 'Week',
+      body: { version: 'week_v1', days: [] },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      hasSavedShoppingList: false,
+      shoppingListDeprecated: false,
+    }
+    mocks.getSavedWeekplanWithShoppingListFlags.mockResolvedValue({ ok: true, value: row })
+
+    const event = makeEvent('trace-get', LOCAL_USER_ID)
+    const out = await getSavedWeekplanHandler(event)
+
+    expect(out).toEqual(row)
+    expect(mocks.getSavedWeekplanWithShoppingListFlags).toHaveBeenCalledWith(
+      {},
+      'plan-1',
+      { kind: 'user', userId: LOCAL_USER_ID },
+      mocks.savedWeekplanReader,
+    )
+  })
+
+  it('PATCH delegates to updateSavedWeekplan with the composition-root reader', async () => {
+    const row = {
+      id: 'plan-1',
+      name: 'Renamed',
+      body: { version: 'week_v1', days: [] },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    }
+    mocks.updateSavedWeekplan.mockResolvedValue({ ok: true, value: row })
+
+    const event = makeEvent('trace-patch', LOCAL_USER_ID)
+    const out = await patchSavedWeekplanHandler(event)
+
+    expect(out).toEqual(row)
+    expect(mocks.updateSavedWeekplan).toHaveBeenCalledWith(
+      {},
+      'plan-1',
+      { kind: 'user', userId: LOCAL_USER_ID },
+      { name: 'Renamed' },
+      mocks.savedWeekplanReader,
+    )
+  })
+
+  it('DELETE delegates to deleteSavedWeekplan with the composition-root reader', async () => {
+    mocks.deleteSavedWeekplan.mockResolvedValue({ ok: true, value: { ok: true } })
+
+    const event = makeEvent('trace-delete', LOCAL_USER_ID)
+    const out = await deleteSavedWeekplanHandler(event)
+
+    expect(out).toEqual({ ok: true })
+    expect(mocks.deleteSavedWeekplan).toHaveBeenCalledWith(
+      {},
+      'plan-1',
+      { kind: 'user', userId: LOCAL_USER_ID },
+      mocks.savedWeekplanReader,
     )
   })
 
