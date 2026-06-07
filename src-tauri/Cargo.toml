@@ -39,7 +39,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync"]
 rusqlite = { version = "0.31", features = ["bundled"] }
 subtle = "2"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
-sha2 = "0.10"
+sha2 = "0.11"
 scraper = { version = "0.20", default-features = false }
 indexmap = "2"
 tower-http = { version = "0.6", features = ["cors"] }
