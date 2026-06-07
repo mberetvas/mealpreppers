@@ -12,6 +12,7 @@ import {
   listMonthPlans,
   updateMonthPlan,
 } from '../../server/services/planning/planningRepository'
+import { sqliteSavedWeekplanReader } from '../../server/services/planning/infrastructure/sqliteSavedWeekplanReader'
 import {
   deleteSavedWeekplan,
   getSavedWeekplanById,
@@ -22,6 +23,7 @@ import {
 import { computeSourceFingerprint } from '../../server/services/shopping-list/sourceFingerprint'
 
 const ctx = useAppTestDb()
+const reader = sqliteSavedWeekplanReader
 
 describe('Saved Weekplans (SQLite)', () => {
   const body = emptyWeekPlan()
@@ -30,11 +32,35 @@ describe('Saved Weekplans (SQLite)', () => {
     await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Mine', body })
     await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-2' }, { name: 'Theirs', body })
 
-    const result = await listSavedWeekplans(ctx.db, { kind: 'user', userId: 'user-1' })
+    const result = await listSavedWeekplans(ctx.db, { kind: 'user', userId: 'user-1' }, reader)
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.value).toHaveLength(1)
       expect(result.value[0]?.name).toBe('Mine')
+    }
+  })
+
+  it('excludes legacy unowned rows from list', async () => {
+    const legacyId = '00000000-0000-4000-8000-000000000098'
+    const now = new Date().toISOString()
+    ctx.db.insert(mealWeekTemplates).values({
+      id: legacyId,
+      name: 'Legacy list',
+      body,
+      createdAt: now,
+      updatedAt: now,
+      ownerUserId: null,
+      anonSessionId: null,
+      consolidatedShoppingList: null,
+    }).run()
+
+    await insertSavedWeekplanRow(ctx.db, { kind: 'user', userId: 'user-1' }, { name: 'Owned', body })
+
+    const result = await listSavedWeekplans(ctx.db, { kind: 'user', userId: 'user-1' }, reader)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value).toHaveLength(1)
+      expect(result.value[0]?.name).toBe('Owned')
     }
   })
 
@@ -62,7 +88,7 @@ describe('Saved Weekplans (SQLite)', () => {
       consolidatedShoppingList: null,
     }).run()
 
-    const result = await getSavedWeekplanById(ctx.db, legacyId, { kind: 'user', userId: 'user-1' })
+    const result = await getSavedWeekplanById(ctx.db, legacyId, { kind: 'user', userId: 'user-1' }, reader)
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error.kind).toBe('not_found')
@@ -83,6 +109,7 @@ describe('Saved Weekplans (SQLite)', () => {
       ctx.db,
       created.value.id,
       { kind: 'user', userId: 'user-intruder' },
+      reader,
     )
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.kind).toBe('forbidden')
@@ -97,10 +124,11 @@ describe('Saved Weekplans (SQLite)', () => {
       ctx.db,
       created.value.id,
       { kind: 'user', userId: 'user-2' },
+      reader,
     )
     expect(wrongPrincipal.ok).toBe(false)
 
-    const ok = await deleteSavedWeekplan(ctx.db, created.value.id, { kind: 'user', userId: 'user-1' })
+    const ok = await deleteSavedWeekplan(ctx.db, created.value.id, { kind: 'user', userId: 'user-1' }, reader)
     expect(ok.ok).toBe(true)
   })
 
@@ -118,7 +146,7 @@ describe('Saved Weekplans (SQLite)', () => {
       },
     }).where(eq(mealWeekTemplates.id, created.value.id)).run()
 
-    const result = await listSavedWeekplans(ctx.db, { kind: 'user', userId: 'user-1' })
+    const result = await listSavedWeekplans(ctx.db, { kind: 'user', userId: 'user-1' }, reader)
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.value[0]?.hasSavedShoppingList).toBe(true)
@@ -140,6 +168,7 @@ describe('Saved Weekplans (SQLite)', () => {
       created.value.id,
       { kind: 'user', userId: 'user-intruder' },
       { name: 'Renamed' },
+      reader,
     )
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.kind).toBe('forbidden')

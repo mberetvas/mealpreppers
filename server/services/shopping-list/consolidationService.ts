@@ -4,6 +4,7 @@ import type { MergedLine, RecipeProvenance } from './exactMerge'
 import type { PolishResponse, PolishResponseChange } from './polishHarness'
 import type { ShoppingListPolishPort } from './polishPort'
 import type { PolishHint } from './polishHintBuilder'
+import { sqliteSavedWeekplanReader } from '../planning/infrastructure/sqliteSavedWeekplanReader'
 import { getSavedWeekplanById } from '../planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../utils/planningErrors'
 import { collectRecipeOccurrences, buildShoppingList } from '../../../utils/shoppingList'
@@ -57,7 +58,7 @@ export async function consolidateShoppingList(
 
   logger.info('shopping_list.consolidate_start', { planId })
 
-  const planResult = await getSavedWeekplanById(getDb(), planId, principal)
+  const planResult = await getSavedWeekplanById(getDb(), planId, principal, sqliteSavedWeekplanReader)
   if (!planResult.ok) {
     throw createError(toPlanningHttpError(planResult.error))
   }

@@ -4,6 +4,7 @@ import {
   assertRecipeIdsExist,
   collectRecipeIdsFromWeekPlan,
 } from '../../../services/planning/planningRepository'
+import { createPlanningDeps } from '../../../services/planning/planningComposition'
 import { withPlanningHandler } from '../../../services/planning/planningRequestContext'
 import { updateSavedWeekplan } from '../../../services/planning/savedWeekplansRepository'
 import { toPlanningHttpError } from '../../../utils/planningErrors'
@@ -31,7 +32,8 @@ export default defineEventHandler(
         }
       }
 
-      const result = await updateSavedWeekplan(db, id, ctx.principal, parsed.data)
+      const { savedWeekplanReader } = createPlanningDeps(db)
+      const result = await updateSavedWeekplan(db, id, ctx.principal, parsed.data, savedWeekplanReader)
       if (!result.ok) {
         throw createError(toPlanningHttpError(result.error))
       }

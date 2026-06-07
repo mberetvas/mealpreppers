@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import type { AppDb } from '../../../db/sqlite'
 import { mealWeekTemplates } from '../../../db/schema/planning'
 import type { SavedConsolidatedShoppingListRecord } from '../../shopping-list/consolidatedShoppingListRepository'
@@ -9,6 +9,7 @@ import { interpretSavedWeekplanAccess } from '../savedWeekplanAccess'
 import type {
   SavedWeekplanAccessRow,
   SavedWeekplanConsolidatedContext,
+  SavedWeekplanListRow,
   SavedWeekplanReader,
 } from '../ports/savedWeekplanReader'
 
@@ -43,8 +44,46 @@ function loadRow(db: AppDb, planId: string) {
     .get()
 }
 
+function principalFilter(principal: PlanningPrincipal) {
+  return eq(mealWeekTemplates.ownerUserId, principal.userId)
+}
+
 /** SQLite adapter for [`SavedWeekplanReader`]. */
 export class SqliteSavedWeekplanReader implements SavedWeekplanReader {
+  async listForPrincipal(
+    db: AppDb,
+    principal: PlanningPrincipal,
+  ): Promise<PlanningResult<SavedWeekplanListRow[]>> {
+    try {
+      const rows = db
+        .select({
+          id: mealWeekTemplates.id,
+          name: mealWeekTemplates.name,
+          updatedAt: mealWeekTemplates.updatedAt,
+          body: mealWeekTemplates.body,
+          consolidatedShoppingList: mealWeekTemplates.consolidatedShoppingList,
+        })
+        .from(mealWeekTemplates)
+        .where(principalFilter(principal))
+        .orderBy(desc(mealWeekTemplates.updatedAt))
+        .all()
+
+      return ok(rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        updatedAt: row.updatedAt,
+        body: row.body,
+        consolidatedShoppingList: row.consolidatedShoppingList as SavedConsolidatedShoppingListRecord | null,
+      })))
+    }
+    catch (error) {
+      return fail(storageError(
+        error instanceof Error ? error.message : undefined,
+        'Saved weekplans could not be loaded.',
+      ))
+    }
+  }
+
   async getForConsolidatedListOps(
     db: AppDb,
     planId: string,

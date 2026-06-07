@@ -20,8 +20,22 @@ export interface SavedWeekplanAccessRow {
   consolidatedShoppingList: SavedConsolidatedShoppingListRecord | null
 }
 
+/** List-row shape returned by `listForPrincipal` (sufficient for shopping-list flag computation). */
+export interface SavedWeekplanListRow {
+  id: string
+  name: string
+  updatedAt: string
+  body: WeekPlanV1
+  consolidatedShoppingList: SavedConsolidatedShoppingListRecord | null
+}
+
 /** Planning read port for Saved Weekplan ownership and body (consumer: Planning + Shopping list). */
 export interface SavedWeekplanReader {
+  listForPrincipal(
+    db: AppDb,
+    principal: PlanningPrincipal,
+  ): Promise<PlanningResult<SavedWeekplanListRow[]>>
+
   getForConsolidatedListOps(
     db: AppDb,
     planId: string,

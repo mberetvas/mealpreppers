@@ -1,10 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { and, desc, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { WeekPlanV1, WeekTemplateCreateInput, WeekTemplatePatchInput } from '../../../types/planning'
 import type { AppDb } from '../../db/sqlite'
 import { mealWeekTemplates } from '../../db/schema/planning'
-import type { SavedConsolidatedShoppingListRecord } from '../shopping-list/consolidatedShoppingListRepository'
-import { sqliteSavedWeekplanReader } from './infrastructure/sqliteSavedWeekplanReader'
 import type { PlanningPrincipal } from './planningPrincipal'
 import { fail, ok, type PlanningResult } from './planningResult'
 import type { SavedWeekplanReader } from './ports/savedWeekplanReader'
@@ -30,10 +28,6 @@ function mapWeekTemplateRow(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
-}
-
-function principalFilter(principal: PlanningPrincipal) {
-  return eq(mealWeekTemplates.ownerUserId, principal.userId)
 }
 
 function ownerInsertPayload(principal: PlanningPrincipal): { ownerUserId: string, anonSessionId: null } {
@@ -84,34 +78,19 @@ export function insertSavedWeekplanRow(
 export async function listSavedWeekplans(
   db: AppDb,
   principal: PlanningPrincipal,
+  reader: SavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateListItemWithShoppingListFlags[]>> {
-  try {
-    const rows = db
-      .select({
-        id: mealWeekTemplates.id,
-        name: mealWeekTemplates.name,
-        updatedAt: mealWeekTemplates.updatedAt,
-        body: mealWeekTemplates.body,
-        consolidatedShoppingList: mealWeekTemplates.consolidatedShoppingList,
-      })
-      .from(mealWeekTemplates)
-      .where(principalFilter(principal))
-      .orderBy(desc(mealWeekTemplates.updatedAt))
-      .all()
+  const result = await reader.listForPrincipal(db, principal)
+  if (!result.ok) {
+    return result
+  }
 
-    return ok(rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      updatedAt: row.updatedAt,
-      ...computeShoppingListFlags(
-        row.consolidatedShoppingList as SavedConsolidatedShoppingListRecord | null,
-        row.body,
-      ),
-    })))
-  }
-  catch (error) {
-    return fail(storageError(error instanceof Error ? error.message : undefined, 'Saved weekplans could not be loaded.'))
-  }
+  return ok(result.value.map(row => ({
+    id: row.id,
+    name: row.name,
+    updatedAt: row.updatedAt,
+    ...computeShoppingListFlags(row.consolidatedShoppingList, row.body),
+  })))
 }
 
 /** Fetches one saved weekplan by id when owned by the principal. */
@@ -119,7 +98,7 @@ export async function getSavedWeekplanById(
   db: AppDb,
   id: string,
   principal: PlanningPrincipal,
-  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
+  reader: SavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateRow>> {
   const result = await reader.getById(db, id, principal)
   if (!result.ok) {
@@ -144,7 +123,7 @@ export async function getSavedWeekplanWithShoppingListFlags(
   db: AppDb,
   id: string,
   principal: PlanningPrincipal,
-  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
+  reader: SavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateRowWithShoppingListFlags>> {
   const result = await reader.getById(db, id, principal)
   if (!result.ok) {
@@ -161,7 +140,7 @@ export async function updateSavedWeekplan(
   id: string,
   principal: PlanningPrincipal,
   input: WeekTemplatePatchInput,
-  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
+  reader: SavedWeekplanReader,
 ): Promise<PlanningResult<WeekTemplateRow>> {
   try {
     const access = await reader.getById(db, id, principal)
@@ -175,7 +154,7 @@ export async function updateSavedWeekplan(
 
     db.update(mealWeekTemplates)
       .set(patch)
-      .where(and(eq(mealWeekTemplates.id, id), principalFilter(principal)))
+      .where(eq(mealWeekTemplates.id, id))
       .run()
 
     const row = db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, id)).get()
@@ -195,7 +174,7 @@ export async function deleteSavedWeekplan(
   db: AppDb,
   id: string,
   principal: PlanningPrincipal,
-  reader: SavedWeekplanReader = sqliteSavedWeekplanReader,
+  reader: SavedWeekplanReader,
 ): Promise<PlanningResult<{ ok: true }>> {
   try {
     const access = await reader.getById(db, id, principal)
@@ -205,7 +184,7 @@ export async function deleteSavedWeekplan(
 
     const deleted = db
       .delete(mealWeekTemplates)
-      .where(and(eq(mealWeekTemplates.id, id), principalFilter(principal)))
+      .where(eq(mealWeekTemplates.id, id))
       .returning({ id: mealWeekTemplates.id })
       .get()
 
