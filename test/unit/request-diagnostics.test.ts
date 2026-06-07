@@ -55,7 +55,7 @@ describe('request-diagnostics middleware', () => {
 
   it('does not emit when resolved log level is info', async () => {
     mockLogLevel = 'info'
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent()
@@ -67,7 +67,7 @@ describe('request-diagnostics middleware', () => {
 
   it('does not emit when resolved log level is warn', async () => {
     mockLogLevel = 'warn'
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent()
@@ -79,7 +79,7 @@ describe('request-diagnostics middleware', () => {
 
   it('does not emit when resolved log level is error', async () => {
     mockLogLevel = 'error'
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent()
@@ -92,7 +92,7 @@ describe('request-diagnostics middleware', () => {
   it('emits request_started then request_handled when log level is debug', async () => {
     mockLogLevel = 'debug'
     delete process.env.LOG_LEVEL
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'POST')
@@ -123,7 +123,7 @@ describe('request-diagnostics middleware', () => {
   })
 
   it('request_started includes metadata from extractRequestMetadata', async () => {
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -136,7 +136,7 @@ describe('request-diagnostics middleware', () => {
   })
 
   it('captures the correct HTTP method in request_started', async () => {
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/meals', 'DELETE')
@@ -152,7 +152,7 @@ describe('request-diagnostics middleware', () => {
   })
 
   it('uses only the pathname, not query string in request_started', async () => {
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/search?q=pasta&limit=10', 'GET')
@@ -168,7 +168,7 @@ describe('request-diagnostics middleware', () => {
   })
 
   it('uses empty traceId when event context has no traceId', async () => {
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent()
@@ -183,7 +183,7 @@ describe('request-diagnostics middleware', () => {
   })
 
   it('does not include raw request or response body fields in diagnostics', async () => {
-    const { default: middleware } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: middleware } = await import('../../server/middleware/03.request-diagnostics')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'POST')

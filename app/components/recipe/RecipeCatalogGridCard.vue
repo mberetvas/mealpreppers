@@ -54,7 +54,7 @@ const { primaryMeta } = useRecipeTimeFormat()
 
     <div class="grid gap-4 p-5">
       <div>
-        <h2 class="font-['Newsreader'] text-2xl font-semibold leading-tight text-atelier-heading group-hover:underline group-hover:decoration-primary/30 group-hover:underline-offset-4">
+        <h2 class="font-headline text-2xl font-semibold leading-tight text-atelier-heading group-hover:underline group-hover:decoration-primary/30 group-hover:underline-offset-4">
           {{ recipe.title }}
         </h2>
         <p v-if="recipe.description" class="mt-2 line-clamp-2 text-sm leading-6 text-atelier-description">

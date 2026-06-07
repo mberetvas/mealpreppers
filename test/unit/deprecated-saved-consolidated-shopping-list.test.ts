@@ -4,7 +4,6 @@
  * and re-consolidate flow after deprecation.
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MergedLine } from '../../server/services/shopping-list/exactMerge'
 import {
   saveConsolidatedShoppingList,
@@ -13,6 +12,10 @@ import {
 } from '../../server/services/shopping-list/consolidatedShoppingListRepository'
 import { computeSourceFingerprint } from '../../server/services/shopping-list/sourceFingerprint'
 import type { WeekPlanV1 } from '../../types/planning'
+import { useAppTestDb } from '../helpers/recipeCatalogTestDb'
+import { mealWeekTemplates } from '../../server/db/schema/planning'
+
+const ctx = useAppTestDb()
 
 // --- Helpers ---
 
@@ -39,6 +42,26 @@ function makeSavedLines(): MergedLine[] {
     { id: 'L1', name: 'pasta', quantity: 800, unit: 'g', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
     { id: 'L2', name: 'olijfolie', quantity: 2, unit: 'el', provenance: [{ recipeId: 'r1', recipeTitle: 'Pasta' }] },
   ]
+}
+
+function insertWeekPlan(fields: {
+  id: string
+  body: WeekPlanV1
+  ownerUserId: string | null
+  anonSessionId: string | null
+  consolidatedShoppingList: SavedConsolidatedShoppingListRecord | null
+}) {
+  const now = new Date().toISOString()
+  ctx.db.insert(mealWeekTemplates).values({
+    id: fields.id,
+    name: fields.id,
+    body: fields.body,
+    createdAt: now,
+    updatedAt: now,
+    ownerUserId: fields.ownerUserId,
+    anonSessionId: fields.anonSessionId,
+    consolidatedShoppingList: fields.consolidatedShoppingList,
+  }).run()
 }
 
 // --- computeShoppingListFlags: deprecated detection ---
@@ -108,20 +131,18 @@ describe('saveConsolidatedShoppingList — rejection when deprecated', () => {
       '1': { breakfast: { recipeId: 'recipe-b' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
     })
 
-    const client = mockSupabaseClientForSave({
-      selectResult: {
-        id: 'plan-1',
-        body: changedBody,
-        owner_user_id: null,
-        anon_session_id: 'sess-1',
-        consolidated_shopping_list: existingRecord,
-      },
+    insertWeekPlan({
+      id: 'plan-1',
+      body: changedBody,
+      ownerUserId: 'sess-1',
+      anonSessionId: null,
+      consolidatedShoppingList: existingRecord,
     })
 
     const result = await saveConsolidatedShoppingList(
-      client,
+      ctx.db,
       'plan-1',
-      { kind: 'anonymous', sessionId: 'sess-1' },
+      { kind: 'user', userId: 'sess-1' },
       makeSavedLines(),
     )
 
@@ -136,20 +157,18 @@ describe('saveConsolidatedShoppingList — rejection when deprecated', () => {
       '1': { breakfast: { recipeId: 'recipe-a' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
     })
 
-    const client = mockSupabaseClientForSave({
-      selectResult: {
-        id: 'plan-1',
-        body,
-        owner_user_id: null,
-        anon_session_id: 'sess-1',
-        consolidated_shopping_list: null,
-      },
+    insertWeekPlan({
+      id: 'plan-1',
+      body,
+      ownerUserId: 'sess-1',
+      anonSessionId: null,
+      consolidatedShoppingList: null,
     })
 
     const result = await saveConsolidatedShoppingList(
-      client,
+      ctx.db,
       'plan-1',
-      { kind: 'anonymous', sessionId: 'sess-1' },
+      { kind: 'user', userId: 'sess-1' },
       makeSavedLines(),
     )
 
@@ -166,20 +185,18 @@ describe('saveConsolidatedShoppingList — rejection when deprecated', () => {
       confirmedAt: '2026-05-25T10:00:00.000Z',
     }
 
-    const client = mockSupabaseClientForSave({
-      selectResult: {
-        id: 'plan-1',
-        body,
-        owner_user_id: null,
-        anon_session_id: 'sess-1',
-        consolidated_shopping_list: existingRecord,
-      },
+    insertWeekPlan({
+      id: 'plan-1',
+      body,
+      ownerUserId: 'sess-1',
+      anonSessionId: null,
+      consolidatedShoppingList: existingRecord,
     })
 
     const result = await saveConsolidatedShoppingList(
-      client,
+      ctx.db,
       'plan-1',
-      { kind: 'anonymous', sessionId: 'sess-1' },
+      { kind: 'user', userId: 'sess-1' },
       makeSavedLines(),
     )
 
@@ -429,33 +446,3 @@ describe('useConsolidatedShoppingList — deprecated state', () => {
   })
 })
 
-// --- Supabase mock helpers ---
-
-function mockSupabaseClientForSave(opts: {
-  selectResult: Record<string, unknown> | null
-  updateFn?: ReturnType<typeof vi.fn>
-  error?: { message: string }
-}) {
-  const updateFn = opts.updateFn ?? vi.fn()
-  const maybeSingle = vi.fn(async () => ({
-    data: opts.selectResult,
-    error: opts.error ?? null,
-  }))
-  const selectEq = vi.fn(() => ({ maybeSingle }))
-  const selectFn = vi.fn(() => ({ eq: selectEq }))
-
-  // For update path: chain update → eq → select → single
-  const updateSingle = vi.fn(async () => ({ data: { id: 'plan-1' }, error: null }))
-  const updateSelect = vi.fn(() => ({ single: updateSingle }))
-  const updateEq = vi.fn(() => ({ select: updateSelect }))
-  updateFn.mockReturnValue({ eq: updateEq })
-
-  const from = vi.fn((_table: string) => {
-    return {
-      select: selectFn,
-      update: updateFn,
-    }
-  })
-
-  return { from } as unknown as SupabaseClient
-}

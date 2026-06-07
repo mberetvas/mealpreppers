@@ -14,24 +14,20 @@ export function isLegacyUnownedWeekTemplateOwner(row: WeekTemplateOwnerColumns):
 }
 
 /**
- * Classifies row ownership relative to the current principal.
+ * Classifies row ownership relative to the current local principal.
  * Legacy rows (both owner columns null) are hidden from Saved Weekplans (404).
- * Backfill or purge per Docs/audits/001-legacy-unowned-week-grid-rows.md.
  */
 export function interpretSavedWeekplanAccess(
   row: WeekTemplateOwnerColumns,
   principal: PlanningPrincipal,
 ): SavedWeekplanAccessInterpretation {
-  if (isLegacyUnownedWeekTemplateOwner(row)) return 'legacy_unowned'
-
-  const hasUser = row.owner_user_id != null
-  const hasAnon = row.anon_session_id != null
-
-  if (principal.kind === 'user') {
-    if (hasUser && row.owner_user_id === principal.userId) return 'matched'
-    return 'wrong_owner'
+  if (isLegacyUnownedWeekTemplateOwner(row)) {
+    return 'legacy_unowned'
   }
 
-  if (hasAnon && row.anon_session_id === principal.sessionId && !hasUser) return 'matched'
+  if (row.owner_user_id === principal.userId) {
+    return 'matched'
+  }
+
   return 'wrong_owner'
 }

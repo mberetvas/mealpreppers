@@ -312,7 +312,7 @@ class="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl b
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-atelier-warm-accent">
             Recipe Atelier
           </p>
-          <h1 class="mt-3 font-['Newsreader'] text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
+          <h1 class="mt-3 font-headline text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
             Edit Recipe
           </h1>
         </div>
@@ -393,7 +393,7 @@ class="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl b
 
           <AtelierParchmentSection>
             <div class="mb-5 flex items-center justify-between gap-4">
-              <h2 class="font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
+              <h2 class="font-headline text-3xl font-semibold text-atelier-heading">
                 Ingredients
               </h2>
               <AtelierCircleIconButton aria-label="Add ingredient" @click="addIngredient">
@@ -450,7 +450,7 @@ class="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl b
 
           <AtelierParchmentSection>
             <div class="mb-5 flex items-center justify-between gap-4">
-              <h2 class="font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
+              <h2 class="font-headline text-3xl font-semibold text-atelier-heading">
                 Preparation
               </h2>
               <AtelierCircleIconButton no-shrink aria-label="Add step" @click="addStep">

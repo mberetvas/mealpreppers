@@ -53,20 +53,14 @@ _Avoid_: always-on request dumps
 Vocabulary for weekly meal grids, persistence, and accounts. Product copy uses these names even when internal storage or legacy HTTP paths still say “week template.”
 
 **Saved Weekplan**:
-A **persisted** weekly meal grid (the `WeekPlanV1` document) plus a human-readable **title** and server metadata (`id`, timestamps). It belongs to the **current principal** (signed-in user or anonymous session). This is what users **save** from the planner and manage on the **Manage plans** page (`/saved-weekplans`).
+A **persisted** weekly meal grid (the `WeekPlanV1` document) plus a human-readable **title** and server metadata (`id`, timestamps). It belongs to the **local install user** (one implicit principal per desktop install). This is what users **save** from the planner and manage on the **Manage plans** page (`/saved-weekplans`).
 
 **Draft week plan**:
 Planner work that is **not** stored as a Saved Weekplan yet (no create **POST**). It may exist only in the client until the user saves with a valid title.
 
-**Anonymous merge**:
-When someone moves from **anonymous** to **authenticated**, choosing to **move** anonymous-owned Saved Weekplans into the account or **discard** them (no silent retention of anonymous-owned rows as “hidden”).
-
-**Anonymous idle purge**:
-A scheduled job may **delete anonymous-owned** Saved Weekplans whose **`updated_at`** is older than the configured idle window (approximately 90 days). **Authenticated** users’ Saved Weekplans are **not** selected by that job.
-
 **Planning Principal**:
-The current actor for Planning reads and mutations, resolved as either an authenticated user or an anonymous planning session. It scopes access to **Saved Weekplans** and legacy planning records.
-_Avoid_: raw bearer lookup, per-handler auth branching
+The current actor for Planning reads and mutations — a single local `{ kind: 'user', userId }` resolved on every **Desktop Local API** request from the install-scoped `local-user-id` file. It scopes access to **Saved Weekplans** and legacy planning records.
+_Avoid_: raw bearer lookup, per-handler auth branching, anonymous session cookies
 
 **Planning Request Context**:
 The request-scoped module interface used by Planning handlers. It provides the **Request Context Trace ID**, the current **Planning Principal**, and a request-scoped **Application Logger**, and it owns unexpected-error logging for the Planning slice.
@@ -74,7 +68,7 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 
 ### HTTP API (Saved Weekplans vs legacy)
 
-- **Saved Weekplans**: `GET` / `POST` `/api/v1/saved-weekplans`, `GET` / `PATCH` / `DELETE` `/api/v1/saved-weekplans/:id`, plus anonymous merge preview and merge routes as needed. Legacy unscoped `/api/v1/planning/week-templates` was retired (May 2026).
+- **Saved Weekplans**: `GET` / `POST` `/api/v1/saved-weekplans`, `GET` / `PATCH` / `DELETE` `/api/v1/saved-weekplans/:id`, plus consolidated shopping list routes. Legacy unscoped `/api/v1/planning/week-templates` was retired (May 2026).
 - Architecture decision: [ADR 0001 — Saved Weekplans single persistence](docs/adr/0001-saved-weekplans-single-persistence.md).
 
 ### Navigation (manage surface)
@@ -88,6 +82,45 @@ _Avoid_: per-handler trace lookup, per-handler principal resolution, ad hoc logg
 All Recipe Catalog entries are publicly readable. `GET /api/v1/recipes/:id` performs no **Planning Principal** check by design — any client may fetch any recipe without authentication. This keeps the catalog a shared reference layer that the Shopping list and Planner consume without ownership constraints.
 _Future consideration_: any batch endpoint or private-recipe feature must revisit visibility enforcement consistent with the requesting **Planning Principal**.
 _Avoid_: per-user recipe gating (unless explicitly designed)
+
+## Desktop (Tauri)
+
+**Desktop Local API**:
+The install-scoped HTTP server on loopback (`127.0.0.1:{port}`) that implements `/health`, `/api/v1/*`, and local recipe-image routes. It runs **in-process** with the Tauri shell (Axum), replaces the bundled Node/Nitro child, and keeps the same URL shapes the Nuxt UI already calls via `$fetch`.
+_Avoid_: Nitro sidecar, Node backend process (retired target)
+
+**Desktop IPC**:
+Tauri commands used only for OS integration — keychain, opening paths/URLs, and similar — not for domain CRUD (recipes, **Saved Weekplans**, shopping lists).
+_Avoid_: `invoke` for `/api/v1` data operations
+
+**Desktop API platform milestone**:
+The first Rust merge that lands in-process Axum, SQLite access, migrations, `/health`, and request plumbing on loopback while the Nitro child **still** serves all user-facing `/api/v1` routes.
+_Avoid_: calling this milestone “Nitro removal”
+
+**Planner-safe cutover**:
+The desktop release that **stops** the Nitro child and serves planner/core catalog APIs from the **Desktop Local API**: Recipe Catalog (including local **recipe-images**), **Saved Weekplans**, and month-plans. Recipe URL preview and shopping-list consolidation routes are explicitly **out of scope** until the following backend phase.
+_Avoid_: partial Nitro + partial Rust serving the same paths in production
+
+**Cutover feature gate**:
+Product and UI behavior at **planner-safe cutover** that keeps the happy path off phase-deferred APIs: shopping list without `view` opens the **sections** tab (works offline); consolidated shopping and recipe URL import stay hidden or disabled with clear copy. The **Desktop Local API** still registers those routes and answers accidental calls with `501` and a stable code (`desktop.api.not_implemented`).
+_Avoid_: stub success responses, relying on 501 for normal navigation
+
+**Install database migrations**:
+Versioned SQL under `src-tauri/migrations/`, applied by the Rust stack (e.g. sqlx/refinery) at **Desktop Local API** startup. Schema history is Rust-owned; there is no requirement to read Drizzle’s `__drizzle_migrations` ledger (greenfield installs and dev databases may be reset during the migration program).
+_Avoid_: Drizzle-compatible migrator, dual migration tables
+
+**Desktop API platform development**:
+While the **Desktop API platform milestone** is in progress: **Loop A** (`desktop:dev`) remains the default UI path (Nitro in Nuxt); the Rust **Desktop Local API** also listens on a **shadow** loopback port during Tauri startup for `/health`, migrations, and integration tests. Switching between Nitro and Rust against the same files requires resetting the dev database or pointing `DATABASE_PATH` / `MEALPREPPER_DATA_DIR` at separate directories. Bootstrap cutover to Rust (`MEALPREPPER_RUST_API` / loop B swap) waits until pre-**planner-safe cutover**.
+_Avoid_: sharing one `.data` directory across Nitro-migrated and Rust-migrated DBs without reset
+
+**Settings**:
+Route `/settings` (linked from **More**) for OpenRouter key (OS keychain), app version, data directory, and **Open data folder**. End-user keys never enter `runtimeConfig.public`.
+
+**Offline product guarantee (v1)**:
+Core data paths (recipes, planner, Saved Weekplans, non-AI shopping lists) work offline. **AI shopping-list polish** and **recipe URL import** require network; UI surfaces offline / missing-key states explicitly.
+
+**Fonts CDN gap (v1)**:
+Google Fonts and Material Symbols load from CDN (`nuxt.config.ts`). First paint may use fallback fonts until network is available once — acceptable for v1; vendoring fonts is a follow-up.
 
 ## Shopping list
 
@@ -287,7 +320,7 @@ On parse failure, **Shopping list consolidation service** does not re-call the m
 _Avoid_: repair loop, auto-retry, server-side harness gate
 
 **Shopping list consolidation access**:
-The same **Planning Principal** rules as loading the **Saved Weekplan** for the shopping list; anonymous session owners may consolidate their own plans.
+The same **Planning Principal** rules as loading the **Saved Weekplan** for the shopping list; the local install user may consolidate their own plans.
 _Avoid_: sign-in required, public consolidate
 
 **Shopping list partial consolidation**:
@@ -341,9 +374,8 @@ _Avoid_: public URL (overloaded), CORS origin
 - The **Planning Request Context** resolves the current **Planning Principal**
 - The **Planning Request Context** provides a request-scoped **Application Logger** for Planning handlers
 - A **Draft week plan** becomes a **Saved Weekplan** after a successful first **create** from the planner
-- **Anonymous merge** changes ownership of anonymous **Saved Weekplans**; **discard** removes them rather than leaving them anonymous-owned
-- **Anonymous idle purge** applies only to rows still tied to an anonymous session, not to authenticated-owned **Saved Weekplans**
-- **Supabase browser origin** and **Supabase server origin** may differ under local Compose; both refer to the same Supabase project, but the **browser** must not receive URLs that only work inside the Compose network
+- **Planning Principal** is always the single local install user on desktop builds
+- Historical Supabase Compose vocabulary is archived in `Docs/archive/supabase-schema/`; persistence is SQLite + local filesystem images
 - A **Shopping list** is built from exactly one **Saved Weekplan** selected by **Shopping list plan link**
 - **Recipe section** order follows week-grid slot traversal (day ascending, breakfast → lunch → dinner), not alphabetical merge across recipes
 - **Shopping list empty plan** requires zero recipe slots; partial or **total recipe resolution failure** still means the plan had recipe ids

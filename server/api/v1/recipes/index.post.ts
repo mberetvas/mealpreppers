@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readBody } from 'h3'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import { createRecipe } from '../../../services/recipe-catalog/recipeRepository'
 import { recipeCreatePayloadSchema } from '../../../services/recipe-catalog/recipeSchemas'
@@ -13,9 +13,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid recipe payload.', data: parsedPayload.error.flatten() })
     }
 
-    const payload = parsedPayload.data
-    const supabase = getSupabaseServerClient()
-    const result = await createRecipe(supabase, payload)
+    const result = await createRecipe(getDb(), parsedPayload.data)
     if (!result.ok) {
       throw createError(toRecipeHttpError(result.error))
     }

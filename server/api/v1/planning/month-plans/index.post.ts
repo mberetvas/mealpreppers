@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readBody } from 'h3'
-import { getSupabaseServerClient } from '../../../../db/supabaseClient'
+import { getDb } from '../../../../db/sqlite'
 import { useTraceId } from '../../../../middleware/01.trace-context'
 import {
   assertRecipeIdsExist,
@@ -16,13 +16,13 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid month plan payload.', data: parsed.error.flatten() })
     }
 
-    const supabase = getSupabaseServerClient()
-    const recipeCheck = await assertRecipeIdsExist(supabase, collectRecipeIdsFromMonthPlan(parsed.data.body))
+    const db = getDb()
+    const recipeCheck = await assertRecipeIdsExist(db, collectRecipeIdsFromMonthPlan(parsed.data.body))
     if (!recipeCheck.ok) {
       throw createError(toPlanningHttpError(recipeCheck.error))
     }
 
-    const result = await createMonthPlan(supabase, parsed.data)
+    const result = await createMonthPlan(db, parsed.data)
     if (!result.ok) {
       throw createError(toPlanningHttpError(result.error))
     }

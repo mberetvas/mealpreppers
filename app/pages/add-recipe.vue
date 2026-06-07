@@ -3,6 +3,8 @@ import { onBeforeUnmount } from 'vue'
 import type { RecipePreviewRequest, RecipePreviewResponse } from '~~/types/recipe-preview'
 import { validateRecipeImageFile } from '~/utils/recipeImageValidation'
 import { SUPPORTED_RECIPE_SOURCES } from '~/constants/supportedRecipeSources'
+import { buildRecipeImportUnavailableMessage } from '~/composables/useNetworkFeatureState'
+import { openExternalUrl } from '~/utils/tauriDesktop'
 
 definePageMeta({
   layout: 'fullwidth',
@@ -58,12 +60,22 @@ const recipeImageInputRef = ref<HTMLInputElement | null>(null)
 
 const imagePreviewSource = computed(() => localPreviewUrl.value || form.imageUrl.trim())
 
+const { offline, desktopCutover } = useNetworkFeatureState()
+const urlImportBlocked = computed(() => offline.value || desktopCutover.value)
+const urlImportBlockedMessage = computed(() => buildRecipeImportUnavailableMessage(offline.value, desktopCutover.value))
+
 const canSave = computed(() => form.title.trim().length > 0 && normalizedIngredients().length > 0 && !isSaving.value)
 
 async function importRecipe(): Promise<void> {
   errorMessage.value = ''
   warnings.value = []
   importSuccessMessage.value = ''
+
+  if (urlImportBlocked.value) {
+    errorMessage.value = urlImportBlockedMessage.value
+    return
+  }
+
   isImporting.value = true
 
   try {
@@ -79,6 +91,10 @@ async function importRecipe(): Promise<void> {
     importSuccessMessage.value = 'Recipe imported from the URL. Review the form below, then save.'
   }
   catch (error) {
+    // #region agent log
+    const errObj = error as { statusCode?: number, statusMessage?: string, data?: { statusMessage?: string, statusCode?: number } }
+    fetch('http://127.0.0.1:7634/ingest/aa664fed-3c0e-4c5e-bb22-561d3d504744', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fafd41' }, body: JSON.stringify({ sessionId: 'fafd41', hypothesisId: 'E', location: 'add-recipe.vue:importRecipe', message: 'import failed', data: { statusCode: errObj.statusCode, statusMessage: errObj.statusMessage, dataStatusMessage: errObj.data?.statusMessage, dataStatusCode: errObj.data?.statusCode, hasBootstrap: typeof window !== 'undefined' && !!window.__MEALPREPPER_DESKTOP__ }, timestamp: Date.now() }) }).catch(() => {})
+    // #endregion
     errorMessage.value = toErrorMessage(error, 'Recipe could not be imported.')
   }
   finally {
@@ -242,8 +258,16 @@ function optionalNumber(value: string): number | undefined {
 }
 
 function toErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'object' && error !== null && 'statusMessage' in error && typeof error.statusMessage === 'string') {
-    return error.statusMessage
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { statusMessage?: string, data?: { statusMessage?: string } }
+    const fromData = err.data?.statusMessage?.trim()
+    if (fromData) {
+      return fromData
+    }
+    const fromTop = err.statusMessage?.trim()
+    if (fromTop) {
+      return fromTop
+    }
   }
 
   return fallback
@@ -340,7 +364,7 @@ onBeforeUnmount(() => {
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-atelier-warm-accent">
             Recipe Atelier
           </p>
-          <h1 class="mt-3 font-['Newsreader'] text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
+          <h1 class="mt-3 font-headline text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
             Add Recipe
           </h1>
         </div>
@@ -356,6 +380,13 @@ onBeforeUnmount(() => {
       </header>
 
       <AtelierParchmentSection v-if="entryMode === 'url'" density="compact">
+        <p
+          v-if="urlImportBlocked"
+          class="mb-4 rounded-xl border border-amber-200/70 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
+          role="status"
+        >
+          {{ urlImportBlockedMessage }}
+        </p>
         <label class="grid gap-3 text-sm font-semibold text-atelier-field-label">
           Recipe URL
           <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -364,9 +395,10 @@ onBeforeUnmount(() => {
               type="url"
               class="design-input"
               placeholder="https://..."
+              :disabled="urlImportBlocked"
             >
             <AtelierBlockButton
-              :disabled="isImporting || importUrl.trim().length === 0"
+              :disabled="urlImportBlocked || isImporting || importUrl.trim().length === 0"
               @click="importRecipe"
             >
               <span class="material-symbols-outlined text-[20px]">download</span>
@@ -379,14 +411,13 @@ onBeforeUnmount(() => {
             Supported websites
           </p>
           <div v-if="SUPPORTED_RECIPE_SOURCES.length > 0" class="flex flex-wrap gap-x-3 gap-y-1">
-            <a
+            <button
               v-for="source in SUPPORTED_RECIPE_SOURCES"
               :key="source.host"
-              :href="source.url"
-              target="_blank"
-              rel="noopener noreferrer"
+              type="button"
               class="text-xs text-atelier-description underline-offset-2 transition-colors hover:text-atelier-heading hover:underline"
-            >{{ source.host }}</a>
+              @click="openExternalUrl(source.url)"
+            >{{ source.host }}</button>
           </div>
           <p v-else class="text-xs text-atelier-error-foreground">
             Supported website list is currently unavailable.
@@ -465,7 +496,7 @@ onBeforeUnmount(() => {
 
           <AtelierParchmentSection>
             <div class="mb-5 flex items-center justify-between gap-4">
-              <h2 class="font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
+              <h2 class="font-headline text-3xl font-semibold text-atelier-heading">
                 Ingredients
               </h2>
               <AtelierCircleIconButton aria-label="Add ingredient" @click="addIngredient">
@@ -522,7 +553,7 @@ onBeforeUnmount(() => {
 
           <AtelierParchmentSection>
             <div class="mb-5 flex items-center justify-between gap-4">
-              <h2 class="font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
+              <h2 class="font-headline text-3xl font-semibold text-atelier-heading">
                 Preparation
               </h2>
               <AtelierCircleIconButton no-shrink aria-label="Add step" @click="addStep">

@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readBody } from 'h3'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import { deleteRecipesByIds } from '../../../services/recipe-catalog/recipeRepository'
 import { recipeBulkDeleteRequestSchema } from '../../../services/recipe-catalog/recipeSchemas'
@@ -17,8 +17,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabaseServerClient()
-    const result = await deleteRecipesByIds(supabase, parsed.data.ids)
+    const result = await deleteRecipesByIds(getDb(), parsed.data.ids)
     if (!result.ok) {
       throw createError(toRecipeHttpError(result.error))
     }

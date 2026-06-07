@@ -1,6 +1,8 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import type { WeekPlanV1 } from '../../../types/planning'
+import type { AppDb } from '../../db/sqlite'
+import { mealWeekTemplates } from '../../db/schema/planning'
 import type { PlanningPrincipal } from '../planning/planningPrincipal'
 import type { PlanningResult } from '../planning/planningResult'
 import { fail, ok } from '../planning/planningResult'
@@ -9,7 +11,7 @@ import { computeSourceFingerprint } from './sourceFingerprint'
 import { AISLE_CATEGORY_ORDER } from './aisleSort'
 import type { AisleCategory } from './aisleSort'
 
-/** Persisted shape stored in the `consolidated_shopping_list` JSONB column. */
+/** Persisted shape stored in the `consolidated_shopping_list` JSON column. */
 export interface SavedConsolidatedShoppingListRecord {
   lines: SavedShoppingListLine[]
   sourceFingerprint: string
@@ -78,16 +80,6 @@ export function computeShoppingListFlags(
   return { hasSavedShoppingList: true, shoppingListDeprecated: deprecated }
 }
 
-// --- DB row shape ---
-
-interface WeekTemplateDbRowForShoppingList {
-  id: string
-  body: WeekPlanV1
-  consolidated_shopping_list: SavedConsolidatedShoppingListRecord | null
-  owner_user_id: string | null
-  anon_session_id: string | null
-}
-
 // --- Error helpers ---
 
 function storageError(message: string | undefined, fallback: string) {
@@ -106,56 +98,64 @@ function deprecatedList() {
   return { kind: 'deprecated_list' as const, message: 'The shopping list is outdated because the plan has changed. Please re-consolidate before saving.' }
 }
 
+function ownerColumnsFromRow(row: { ownerUserId: string | null, anonSessionId: string | null }) {
+  return {
+    owner_user_id: row.ownerUserId,
+    anon_session_id: row.anonSessionId,
+  }
+}
+
 /** Loads the saved consolidated shopping list for a plan, with principal access check. */
 export async function getConsolidatedShoppingList(
-  client: SupabaseClient,
+  db: AppDb,
   planId: string,
   principal: PlanningPrincipal,
 ): Promise<PlanningResult<SavedConsolidatedShoppingListRecord | null>> {
-  const { data, error } = await client
-    .from('meal_week_templates')
-    .select('id, body, consolidated_shopping_list, owner_user_id, anon_session_id')
-    .eq('id', planId)
-    .maybeSingle()
+  try {
+    const row = db
+      .select({
+        id: mealWeekTemplates.id,
+        body: mealWeekTemplates.body,
+        consolidatedShoppingList: mealWeekTemplates.consolidatedShoppingList,
+        ownerUserId: mealWeekTemplates.ownerUserId,
+        anonSessionId: mealWeekTemplates.anonSessionId,
+      })
+      .from(mealWeekTemplates)
+      .where(eq(mealWeekTemplates.id, planId))
+      .get()
 
-  if (error) {
-    return fail(storageError(error.message, 'Consolidated shopping list could not be loaded.'))
-  }
+    if (!row) {
+      return fail(notFound())
+    }
 
-  if (!data) {
-    return fail(notFound())
-  }
+    const access = interpretSavedWeekplanAccess(ownerColumnsFromRow(row), principal)
+    if (access === 'legacy_unowned') {
+      return fail(notFound())
+    }
+    if (access === 'wrong_owner') {
+      return fail(forbidden())
+    }
 
-  const row = data as WeekTemplateDbRowForShoppingList
-  const access = interpretSavedWeekplanAccess(row, principal)
-  if (access === 'legacy_unowned') {
-    return fail(notFound())
+    const record = row.consolidatedShoppingList
+    if (!record) {
+      return ok(null)
+    }
+    return ok({
+      ...record,
+      lines: record.lines,
+    })
   }
-  if (access === 'wrong_owner') {
-    return fail(forbidden())
+  catch (error) {
+    return fail(storageError(
+      error instanceof Error ? error.message : undefined,
+      'Consolidated shopping list could not be loaded.',
+    ))
   }
-
-  const record = row.consolidated_shopping_list
-  if (!record) {
-    return ok(null)
-  }
-  return ok({
-    ...record,
-    lines: record.lines,
-  })
 }
 
 export interface CopyOnMatchResult {
   copied: boolean
   copiedList?: SavedConsolidatedShoppingListRecord
-}
-
-interface WeekTemplateDbRowForCopy {
-  id: string
-  body: WeekPlanV1
-  consolidated_shopping_list: SavedConsolidatedShoppingListRecord | null
-  owner_user_id: string | null
-  anon_session_id: string | null
 }
 
 /**
@@ -171,123 +171,122 @@ interface WeekTemplateDbRowForCopy {
  * - Tie-break: source with the highest `confirmedAt` is used.
  * - Returns { copied: true, copiedList } on success, { copied: false } when no match.
  */
+function principalFilterForCopy(principal: PlanningPrincipal) {
+  return eq(mealWeekTemplates.ownerUserId, principal.userId)
+}
+
 export async function copyConsolidatedListFromMatchingPlan(
-  client: SupabaseClient,
+  db: AppDb,
   newPlanId: string,
   principal: PlanningPrincipal,
   fingerprint: string,
 ): Promise<PlanningResult<CopyOnMatchResult>> {
-  let q = client
-    .from('meal_week_templates')
-    .select('id, body, consolidated_shopping_list, owner_user_id, anon_session_id')
+  try {
+    const rows = db
+      .select({
+        id: mealWeekTemplates.id,
+        body: mealWeekTemplates.body,
+        consolidatedShoppingList: mealWeekTemplates.consolidatedShoppingList,
+      })
+      .from(mealWeekTemplates)
+      .where(and(
+        principalFilterForCopy(principal),
+        isNotNull(mealWeekTemplates.consolidatedShoppingList),
+        ne(mealWeekTemplates.id, newPlanId),
+      ))
+      .all()
 
-  if (principal.kind === 'user') {
-    q = q.eq('owner_user_id', principal.userId).is('anon_session_id', null)
+    const validMatches = rows.filter((row) => {
+      const list = row.consolidatedShoppingList
+      if (!list) return false
+      if (list.sourceFingerprint !== fingerprint) return false
+      return computeSourceFingerprint(row.body) === fingerprint
+    })
+
+    if (validMatches.length === 0) {
+      return ok({ copied: false })
+    }
+
+    validMatches.sort((a, b) =>
+      b.consolidatedShoppingList!.confirmedAt.localeCompare(a.consolidatedShoppingList!.confirmedAt),
+    )
+
+    const listToCopy = validMatches[0]!.consolidatedShoppingList!
+
+    db.update(mealWeekTemplates)
+      .set({ consolidatedShoppingList: listToCopy })
+      .where(eq(mealWeekTemplates.id, newPlanId))
+      .run()
+
+    return ok({ copied: true, copiedList: listToCopy })
   }
-  else {
-    q = q.eq('anon_session_id', principal.sessionId).is('owner_user_id', null)
+  catch (error) {
+    return fail(storageError(
+      error instanceof Error ? error.message : undefined,
+      'Could not look up matching plans for copy-on-match.',
+    ))
   }
-
-  q = q.not('consolidated_shopping_list', 'is', null).neq('id', newPlanId)
-
-  const { data, error } = await q
-
-  if (error) {
-    return fail(storageError(error.message, 'Could not look up matching plans for copy-on-match.'))
-  }
-
-  const rows = (data ?? []) as WeekTemplateDbRowForCopy[]
-
-  const validMatches = rows.filter((row) => {
-    const list = row.consolidated_shopping_list
-    if (!list) return false
-    if (list.sourceFingerprint !== fingerprint) return false
-    return computeSourceFingerprint(row.body) === fingerprint
-  })
-
-  if (validMatches.length === 0) {
-    return ok({ copied: false })
-  }
-
-  validMatches.sort((a, b) =>
-    b.consolidated_shopping_list!.confirmedAt.localeCompare(a.consolidated_shopping_list!.confirmedAt),
-  )
-
-  const listToCopy = validMatches[0]!.consolidated_shopping_list!
-
-  const { error: updateError } = await client
-    .from('meal_week_templates')
-    .update({ consolidated_shopping_list: listToCopy })
-    .eq('id', newPlanId)
-    .select('id')
-    .single()
-
-  if (updateError) {
-    return fail(storageError(updateError.message, 'Could not write copied shopping list.'))
-  }
-
-  return ok({ copied: true, copiedList: listToCopy })
 }
 
 /** Saves a confirmed consolidated shopping list. Server computes sourceFingerprint from plan body. Rejects if existing list is deprecated. */
 export async function saveConsolidatedShoppingList(
-  client: SupabaseClient,
+  db: AppDb,
   planId: string,
   principal: PlanningPrincipal,
   lines: SavedShoppingListLine[],
 ): Promise<PlanningResult<SavedConsolidatedShoppingListRecord>> {
-  // Load plan to verify ownership and get body for fingerprint
-  const { data, error: loadError } = await client
-    .from('meal_week_templates')
-    .select('id, body, owner_user_id, anon_session_id, consolidated_shopping_list')
-    .eq('id', planId)
-    .maybeSingle()
+  try {
+    const row = db
+      .select({
+        id: mealWeekTemplates.id,
+        body: mealWeekTemplates.body,
+        ownerUserId: mealWeekTemplates.ownerUserId,
+        anonSessionId: mealWeekTemplates.anonSessionId,
+        consolidatedShoppingList: mealWeekTemplates.consolidatedShoppingList,
+      })
+      .from(mealWeekTemplates)
+      .where(eq(mealWeekTemplates.id, planId))
+      .get()
 
-  if (loadError) {
-    return fail(storageError(loadError.message, 'Consolidated shopping list could not be saved.'))
-  }
-
-  if (!data) {
-    return fail(notFound())
-  }
-
-  const row = data as WeekTemplateDbRowForShoppingList
-  const access = interpretSavedWeekplanAccess(row, principal)
-  if (access === 'legacy_unowned') {
-    return fail(notFound())
-  }
-  if (access === 'wrong_owner') {
-    return fail(forbidden())
-  }
-
-  // Reject save when existing list is deprecated (fingerprint mismatch)
-  if (row.consolidated_shopping_list) {
-    const currentFingerprint = computeSourceFingerprint(row.body)
-    if (row.consolidated_shopping_list.sourceFingerprint !== currentFingerprint) {
-      return fail(deprecatedList())
+    if (!row) {
+      return fail(notFound())
     }
+
+    const access = interpretSavedWeekplanAccess(ownerColumnsFromRow(row), principal)
+    if (access === 'legacy_unowned') {
+      return fail(notFound())
+    }
+    if (access === 'wrong_owner') {
+      return fail(forbidden())
+    }
+
+    if (row.consolidatedShoppingList) {
+      const currentFingerprint = computeSourceFingerprint(row.body)
+      if (row.consolidatedShoppingList.sourceFingerprint !== currentFingerprint) {
+        return fail(deprecatedList())
+      }
+    }
+
+    const sourceFingerprint = computeSourceFingerprint(row.body)
+    const confirmedAt = new Date().toISOString()
+
+    const record: SavedConsolidatedShoppingListRecord = {
+      lines,
+      sourceFingerprint,
+      confirmedAt,
+    }
+
+    db.update(mealWeekTemplates)
+      .set({ consolidatedShoppingList: record })
+      .where(eq(mealWeekTemplates.id, planId))
+      .run()
+
+    return ok(record)
   }
-
-  // Server computes fingerprint from current body
-  const sourceFingerprint = computeSourceFingerprint(row.body)
-  const confirmedAt = new Date().toISOString()
-
-  const record: SavedConsolidatedShoppingListRecord = {
-    lines,
-    sourceFingerprint,
-    confirmedAt,
+  catch (error) {
+    return fail(storageError(
+      error instanceof Error ? error.message : undefined,
+      'Consolidated shopping list could not be saved.',
+    ))
   }
-
-  const { error: updateError } = await client
-    .from('meal_week_templates')
-    .update({ consolidated_shopping_list: record })
-    .eq('id', planId)
-    .select('id')
-    .single()
-
-  if (updateError) {
-    return fail(storageError(updateError.message, 'Consolidated shopping list could not be saved.'))
-  }
-
-  return ok(record)
 }

@@ -1,4 +1,4 @@
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import {
   assertRecipeIdsExist,
   collectRecipeIdsFromWeekPlan,
@@ -19,13 +19,13 @@ export default defineEventHandler(
         throw createError({ statusCode: 400, statusMessage: 'Invalid saved weekplan payload.', data: parsed.error.flatten() })
       }
 
-      const supabase = getSupabaseServerClient()
-      const recipeCheck = await assertRecipeIdsExist(supabase, collectRecipeIdsFromWeekPlan(parsed.data.body))
+      const db = getDb()
+      const recipeCheck = await assertRecipeIdsExist(db, collectRecipeIdsFromWeekPlan(parsed.data.body))
       if (!recipeCheck.ok) {
         throw createError(toPlanningHttpError(recipeCheck.error))
       }
 
-      const result = await createSavedWeekplan(supabase, ctx.principal, parsed.data)
+      const result = await createSavedWeekplan(db, ctx.principal, parsed.data)
       if (!result.ok) {
         throw createError(toPlanningHttpError(result.error))
       }
@@ -34,7 +34,7 @@ export default defineEventHandler(
       // fingerprint, copy it immediately. The flag is returned on this response exactly once
       // so the client can show a copy notice without an extra round-trip.
       const fingerprint = computeSourceFingerprint(parsed.data.body)
-      const copyResult = await copyConsolidatedListFromMatchingPlan(supabase, result.value.id, ctx.principal, fingerprint)
+      const copyResult = await copyConsolidatedListFromMatchingPlan(db, result.value.id, ctx.principal, fingerprint)
       const shoppingListCopiedFromMatch = copyResult.ok && copyResult.value.copied
 
       ctx.logger.info('saved_weekplans.created', {

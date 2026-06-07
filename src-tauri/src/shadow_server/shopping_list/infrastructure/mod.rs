@@ -1,0 +1,5 @@
+pub mod openrouter_shopping_list_polish_port;
+pub mod sqlite_consolidated_shopping_list_repository;
+
+pub use openrouter_shopping_list_polish_port::OpenRouterShoppingListPolishPort;
+pub use sqlite_consolidated_shopping_list_repository::SqliteConsolidatedShoppingListRepository;

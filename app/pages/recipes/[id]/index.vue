@@ -83,7 +83,7 @@ useHead({
               <p v-if="data.categories[0]" class="text-xs font-semibold uppercase tracking-[0.18em] text-atelier-warm-accent">
                 {{ data.categories[0] }}
               </p>
-              <h1 class="font-['Newsreader'] text-4xl font-semibold leading-tight text-atelier-heading sm:text-5xl">
+              <h1 class="font-headline text-4xl font-semibold leading-tight text-atelier-heading sm:text-5xl">
                 {{ data.title }}
               </h1>
             </div>
@@ -171,7 +171,7 @@ useHead({
         </section>
 
         <section class="grid gap-4">
-          <h2 class="font-['Newsreader'] text-2xl font-semibold text-atelier-heading">
+          <h2 class="font-headline text-2xl font-semibold text-atelier-heading">
             Ingredients
           </h2>
           <ol class="list-none space-y-4 p-0">
@@ -180,14 +180,14 @@ useHead({
               :key="ing.id"
               class="text-base leading-7 text-atelier-ink"
             >
-              <span class="font-['Newsreader'] text-sm font-semibold text-atelier-warm-accent" aria-hidden="true">{{ String(ing.position).padStart(2, '0') }}.</span>
+              <span class="font-headline text-sm font-semibold text-atelier-warm-accent" aria-hidden="true">{{ String(ing.position).padStart(2, '0') }}.</span>
               <span class="ml-2 font-medium text-on-surface">{{ ing.rawText }}</span>
             </li>
           </ol>
         </section>
 
         <section class="grid gap-4">
-          <h2 class="font-['Newsreader'] text-2xl font-semibold text-atelier-heading">
+          <h2 class="font-headline text-2xl font-semibold text-atelier-heading">
             Steps
           </h2>
           <ol class="list-none space-y-6 p-0">
@@ -196,7 +196,7 @@ useHead({
               :key="step.id"
               class="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-6"
             >
-              <span class="font-['Newsreader'] text-lg font-semibold text-atelier-heading sm:min-w-16" aria-hidden="true">
+              <span class="font-headline text-lg font-semibold text-atelier-heading sm:min-w-16" aria-hidden="true">
                 Step {{ String(step.position).padStart(2, '0') }}
               </span>
               <p class="max-w-[65ch] text-base leading-7 text-on-surface sm:pt-0.5">

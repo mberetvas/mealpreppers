@@ -25,3 +25,11 @@ logs
 
 # Test coverage
 coverage/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/resources/.cache/
+src-tauri/resources/node/**/*
+!src-tauri/resources/node/**/.gitkeep
+src-tauri/resources/nitro/**/*
+!src-tauri/resources/nitro/**/.gitkeep

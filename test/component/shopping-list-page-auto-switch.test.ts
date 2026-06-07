@@ -1,11 +1,12 @@
 /**
- * Component tests for shopping-list page: auto-switch to consolidated view and
- * deprecated auto-trigger (issue 0004).
+ * Component tests for shopping-list page: view-mode gate behavior and
+ * deprecated auto-trigger (issue 0004 / cutover issue 0025).
  *
  * Covers acceptance criteria:
- * - fresh plan auto-consolidates (URL auto-switches, no interaction needed)
+ * - sections is the default view (no auto-switch to consolidated after cutover)
+ * - consolidated tab is disabled with clear copy when desktopCutover
+ * - desktop-cutover-notice shown in consolidated view when desktopCutover
  * - deprecated list auto-retriggers (recipes-changed notice, previous-list section)
- * - valid saved list defaults to consolidated tab
  * - recipe-sections toggle is not overridden when explicitly set
  * - fallback warning shown in review when exact-merge was used
  * - previous list shown during review after deprecated flow
@@ -13,10 +14,11 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, computed, watch, reactive, nextTick, type Ref } from 'vue'
+import { ref, computed, watch, reactive, type Ref } from 'vue'
 import { formatShoppingListIngredient, formatMergedLine } from '../../utils/shoppingList'
 import ShoppingListPage from '../../app/pages/shopping-list.vue'
 import { useConsolidatedShoppingList, _sessionDraftStore } from '../../app/composables/useConsolidatedShoppingList'
+import { useNetworkFeatureState } from '../../app/composables/useNetworkFeatureState'
 import type { SavedConsolidatedShoppingListRecord } from '../../server/services/shopping-list/consolidatedShoppingListRepository'
 
 const mountOptions = {
@@ -97,6 +99,7 @@ function setupWithRealComposable(
   vi.stubGlobal('useRouter', () => ({ replace: routerReplaceMock }))
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('useShoppingList', () => shoppingListState)
+  vi.stubGlobal('useNetworkFeatureState', () => useNetworkFeatureState())
   vi.stubGlobal('useConsolidatedShoppingList', (id: Ref<string>, options: Record<string, unknown>) =>
     useConsolidatedShoppingList(id, { fetchSavedList, fetchPlanFlags, fetchConsolidate, ...options }),
   )
@@ -139,6 +142,7 @@ function setupStaticMocks(query: Record<string, string>) {
   vi.stubGlobal('useRouter', () => ({ replace: routerReplaceMock }))
   vi.stubGlobal('useHead', vi.fn())
   vi.stubGlobal('computed', computed)
+  vi.stubGlobal('useNetworkFeatureState', () => useNetworkFeatureState())
   vi.stubGlobal('useShoppingList', () => shoppingListState)
   vi.stubGlobal('useConsolidatedShoppingList', () => consolidatedState)
   vi.stubGlobal('formatShoppingListIngredient', formatShoppingListIngredient)
@@ -153,68 +157,45 @@ beforeEach(() => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Auto-switch: fresh plan (no saved list)
+// Default view: sections (cutover behavior — no auto-switch after issue 0025)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('shopping-list page: fresh plan auto-consolidates', () => {
-  it('auto-switches URL to view=consolidated when no view param and no saved list', async () => {
+describe('shopping-list page: sections is default view', () => {
+  it('stays on sections view when no view query param', async () => {
     const { routerReplaceMock } = setupWithRealComposable({ plan: 'plan-1' })
-
-    mount(ShoppingListPage, mountOptions)
-    await flushPromises()
-
-    await vi.waitFor(() =>
-      routerReplaceMock.mock.calls.some(
-        call => call[0]?.query?.view === 'consolidated' && call[0]?.query?.plan === 'plan-1',
-      ),
-    )
-
-    expect(routerReplaceMock).toHaveBeenCalledWith(
-      expect.objectContaining({ query: expect.objectContaining({ view: 'consolidated' }) }),
-    )
-  })
-
-  it('starts consolidation automatically without user interaction', async () => {
-    const { fetchConsolidate, routerReplaceMock, routeQuery } = setupWithRealComposable({ plan: 'plan-1' })
-
-    mount(ShoppingListPage, mountOptions)
-    await flushPromises()
-
-    // Wait for URL to auto-switch to consolidated first
-    await vi.waitFor(() =>
-      routerReplaceMock.mock.calls.some(call => call[0]?.query?.view === 'consolidated'),
-    )
-    await vi.waitFor(() => routeQuery.view === 'consolidated')
-    await nextTick()
-
-    // Then consolidation should start automatically
-    await vi.waitFor(() => expect(fetchConsolidate).toHaveBeenCalledWith('plan-1'))
-  })
-
-  it('shows review UI after consolidation completes (review auto-opens)', async () => {
-    const { routeQuery } = setupWithRealComposable({ plan: 'plan-1' })
 
     const wrapper = mount(ShoppingListPage, mountOptions)
     await flushPromises()
-    await vi.waitFor(() => routeQuery.view === 'consolidated')
-    await vi.waitFor(() => wrapper.find('[data-testid="polish-review"]').exists())
 
-    expect(wrapper.find('[data-testid="polish-review"]').exists()).toBe(true)
+    const consolidatedSwitch = routerReplaceMock.mock.calls.some(
+      call => call[0]?.query?.view === 'consolidated',
+    )
+    expect(consolidatedSwitch).toBe(false)
+    expect(wrapper.find('[data-testid="view-mode-sections"]').classes()).toContain('active')
+  })
+
+  it('does not auto-trigger consolidation when no view param', async () => {
+    const { fetchConsolidate } = setupWithRealComposable({ plan: 'plan-1' })
+
+    mount(ShoppingListPage, mountOptions)
+    await flushPromises()
+
+    expect(fetchConsolidate).not.toHaveBeenCalled()
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Auto-switch: valid saved list defaults to consolidated
+// Saved list: no auto-switch after cutover (sections stays as default)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('shopping-list page: valid saved list defaults to consolidated tab', () => {
+describe('shopping-list page: valid saved list does not auto-switch after cutover', () => {
   const savedRecord: SavedConsolidatedShoppingListRecord = {
     lines: [{ id: 'L1', name: 'tomaten', quantity: 400, unit: 'g' }],
     sourceFingerprint: 'fp-1',
     confirmedAt: '2026-05-01T10:00:00Z',
   }
 
-  it('auto-switches URL to consolidated when valid saved list exists', async () => {
+  it('does NOT auto-switch URL to consolidated even when valid saved list exists', async () => {
     const { routerReplaceMock } = setupWithRealComposable(
       { plan: 'plan-1' },
       {
@@ -226,13 +207,10 @@ describe('shopping-list page: valid saved list defaults to consolidated tab', ()
     mount(ShoppingListPage, mountOptions)
     await flushPromises()
 
-    await vi.waitFor(() =>
-      routerReplaceMock.mock.calls.some(call => call[0]?.query?.view === 'consolidated'),
+    const consolidatedSwitch = routerReplaceMock.mock.calls.some(
+      call => call[0]?.query?.view === 'consolidated',
     )
-
-    expect(routerReplaceMock).toHaveBeenCalledWith(
-      expect.objectContaining({ query: expect.objectContaining({ view: 'consolidated' }) }),
-    )
+    expect(consolidatedSwitch).toBe(false)
   })
 
   it('does not start new consolidation when valid saved list exists', async () => {
@@ -357,14 +335,14 @@ describe('shopping-list page: deprecated auto-trigger', () => {
     // Instead, test the full integration using the real composable:
   })
 
-  it('auto-switches URL to consolidated and starts consolidation when deprecated and no view param', async () => {
+  it('does NOT auto-switch to consolidated for deprecated list when no view param', async () => {
     const deprecatedSavedRecord: SavedConsolidatedShoppingListRecord = {
       lines: [{ id: 'OLD1', name: 'oud ingredient', quantity: 200, unit: 'g' }],
       sourceFingerprint: 'fp-old',
       confirmedAt: '2026-01-01T10:00:00Z',
     }
 
-    const { fetchConsolidate, routerReplaceMock, routeQuery } = setupWithRealComposable(
+    const { fetchConsolidate, routerReplaceMock } = setupWithRealComposable(
       { plan: 'plan-1' },
       {
         fetchSavedList: vi.fn().mockResolvedValue(deprecatedSavedRecord),
@@ -375,15 +353,12 @@ describe('shopping-list page: deprecated auto-trigger', () => {
     mount(ShoppingListPage, mountOptions)
     await flushPromises()
 
-    // URL auto-switches to consolidated
-    await vi.waitFor(() =>
-      routerReplaceMock.mock.calls.some(call => call[0]?.query?.view === 'consolidated'),
+    // After cutover: no auto-switch and no auto-consolidation
+    const consolidatedSwitch = routerReplaceMock.mock.calls.some(
+      call => call[0]?.query?.view === 'consolidated',
     )
-    await vi.waitFor(() => routeQuery.view === 'consolidated')
-    await nextTick()
-
-    // Consolidation is triggered automatically
-    await vi.waitFor(() => expect(fetchConsolidate).toHaveBeenCalledWith('plan-1'))
+    expect(consolidatedSwitch).toBe(false)
+    expect(fetchConsolidate).not.toHaveBeenCalled()
   })
 })
 
@@ -392,15 +367,16 @@ describe('shopping-list page: deprecated auto-trigger', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('shopping-list page: previous list during review', () => {
-  it('shows Previous list section during review when consolidation came from deprecated', async () => {
+  it('shows Previous list section during review when user navigates to consolidated with deprecated list', async () => {
     const deprecatedSavedRecord: SavedConsolidatedShoppingListRecord = {
       lines: [{ id: 'OLD1', name: 'oud ingredient', quantity: 200, unit: 'g' }],
       sourceFingerprint: 'fp-old',
       confirmedAt: '2026-01-01T10:00:00Z',
     }
 
-    const { routeQuery } = setupWithRealComposable(
-      { plan: 'plan-1' },
+    // User explicitly navigates to view=consolidated (not auto-switched)
+    setupWithRealComposable(
+      { plan: 'plan-1', view: 'consolidated' },
       {
         fetchSavedList: vi.fn().mockResolvedValue(deprecatedSavedRecord),
         fetchPlanFlags: vi.fn().mockResolvedValue({ hasSavedShoppingList: true, shoppingListDeprecated: true }),
@@ -416,7 +392,6 @@ describe('shopping-list page: previous list during review', () => {
 
     const wrapper = mount(ShoppingListPage, mountOptions)
     await flushPromises()
-    await vi.waitFor(() => routeQuery.view === 'consolidated')
     await vi.waitFor(() => wrapper.find('[data-testid="polish-review"]').exists())
 
     expect(wrapper.find('[data-testid="previous-list"]').exists()).toBe(true)
@@ -471,5 +446,72 @@ describe('shopping-list page: fallback warning in review', () => {
 
     expect(wrapper.find('[data-testid="fallback-review-warning"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="polish-review"]').exists()).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Desktop cutover gate (issue 0025)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Sets up static mocks with desktopCutover = true to simulate Desktop phase-1 shell. */
+function setupCutoverGateMocks(query: Record<string, string>) {
+  const result = setupStaticMocks(query)
+  vi.stubGlobal('useNetworkFeatureState', () => ({
+    offline: ref(false),
+    missingApiKey: computed(() => false),
+    onlineReady: computed(() => true),
+    desktopCutover: computed(() => true),
+    isOnline: ref(true),
+    hasOpenRouterKey: ref(false),
+    refreshOpenRouterKeyState: vi.fn(),
+  }))
+  return result
+}
+
+describe('shopping-list page: desktop cutover gate', () => {
+  it('consolidated tab is disabled when desktopCutover is true', () => {
+    setupCutoverGateMocks({ plan: 'plan-1' })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+
+    const consolidatedBtn = wrapper.find('[data-testid="view-mode-consolidated"]')
+    expect(consolidatedBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('consolidated tab has a descriptive title when disabled', () => {
+    setupCutoverGateMocks({ plan: 'plan-1' })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+
+    const consolidatedBtn = wrapper.find('[data-testid="view-mode-consolidated"]')
+    expect(consolidatedBtn.attributes('title')).toMatch(/not available/i)
+  })
+
+  it('sections tab is NOT disabled when desktopCutover is true', () => {
+    setupCutoverGateMocks({ plan: 'plan-1' })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+
+    const sectionsBtn = wrapper.find('[data-testid="view-mode-sections"]')
+    expect(sectionsBtn.attributes('disabled')).toBeUndefined()
+  })
+
+  it('shows desktop-cutover-notice in consolidated view when desktopCutover is true', () => {
+    setupCutoverGateMocks({ plan: 'plan-1', view: 'consolidated' })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+
+    expect(wrapper.find('[data-testid="desktop-cutover-notice"]').exists()).toBe(true)
+  })
+
+  it('desktop-cutover-message mentions Recipe sections as alternative', () => {
+    setupCutoverGateMocks({ plan: 'plan-1', view: 'consolidated' })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+
+    const message = wrapper.find('[data-testid="desktop-cutover-message"]')
+    expect(message.text()).toMatch(/Recipe sections/i)
+  })
+
+  it('no desktop-cutover-notice in sections view (even when desktopCutover is true)', () => {
+    setupCutoverGateMocks({ plan: 'plan-1' })  // default: sections
+    const wrapper = mount(ShoppingListPage, mountOptions)
+
+    expect(wrapper.find('[data-testid="desktop-cutover-notice"]').exists()).toBe(false)
   })
 })

@@ -27,11 +27,11 @@ vi.mock('../../server/utils/logger', () => ({
 
 const mocks = vi.hoisted(() => ({
   getRecipeById: vi.fn(),
-  getSupabaseServerClient: vi.fn(() => ({})),
+  getDb: vi.fn(() => ({})),
 }))
 
-vi.mock('../../server/db/supabaseClient', () => ({
-  getSupabaseServerClient: mocks.getSupabaseServerClient,
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: mocks.getDb,
 }))
 
 vi.mock('../../server/services/recipe-catalog/recipeRepository', async (importOriginal) => {

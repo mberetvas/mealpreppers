@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
+import { getDb } from '../../../db/sqlite'
 import { useTraceId } from '../../../middleware/01.trace-context'
 import { getRecipeById } from '../../../services/recipe-catalog/recipeRepository'
 import { handleRecipeUnexpected, toRecipeHttpError } from '../../../utils/recipeErrors'
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Recipe id is required.' })
     }
 
-    const result = await getRecipeById(getSupabaseServerClient(), id)
+    const result = await getRecipeById(getDb(), id)
     if (!result.ok) {
       throw createError(toRecipeHttpError(result.error))
     }

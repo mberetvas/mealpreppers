@@ -1,5 +1,9 @@
 # Mealprepper
 
+Requires **Node.js 22.x** (aligned with the bundled desktop runtime — see `engines.node` in
+`package.json`). `bun install` runs a native rebuild of `better-sqlite3` automatically; after
+switching Node versions run `bun run rebuild:native`.
+
 ```bash
 bun install          # deps
 bun run dev          # http://localhost:3000
@@ -7,6 +11,21 @@ bun run build        # production
 bun run preview      # local prod preview
 bun run test         # Run tests
 ```
+
+### Desktop (Tauri spike)
+
+Requires [Rust](https://rustup.rs/) and Windows **C++ build tools** (see
+[Docs/desktop-development.md](./Docs/desktop-development.md)).
+
+```bash
+bun run desktop:dev          # Nuxt dev server + Tauri window (dev loop A)
+bun run build:desktop        # Nitro sidecar + pinned Node resources
+bun run desktop:build        # Packaged app with bundled sidecar
+```
+
+**OpenRouter (dev):** set `OPENROUTER_API_KEY` in `.env` when running `bun run dev` or loop A
+without Tauri. End users configure the key in **Settings** inside the packaged desktop app (OS
+keychain → Nitro sidecar env).
 
 Libelle recipe URL import uses Playwright (Chromium):
 

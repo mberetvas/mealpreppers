@@ -6,6 +6,7 @@ import type { RecipePreviewResponse } from '../../../../types/recipe-preview'
 import { enrichDagelijkseKostSteps } from './enrichDagelijkseKostSteps'
 import {
   RecipePageFetchError,
+  RecipePageParseError,
   RecipePublisherAuthWallError,
   UnsupportedRecipeSourceError,
 } from './recipePreviewErrors'
@@ -60,6 +61,10 @@ export async function previewRecipeFromUrl(
 
   const { draft, warnings: initialWarnings } = parseRecipeHtml(html, url)
   const warnings = [...initialWarnings]
+
+  if (!draft.title.trim() && draft.ingredients.length === 0) {
+    throw new RecipePageParseError()
+  }
 
   await enrichDagelijkseKost(draft, html, warnings)
 

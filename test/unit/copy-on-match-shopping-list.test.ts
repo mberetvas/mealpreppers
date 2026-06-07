@@ -1,18 +1,18 @@
 /**
  * Tests for Copy-on-match on POST saved-weekplan create (issue #0005).
- * Covers: match found → copy + flag set; no match → no copy; deprecated source → no copy;
- * multiple matches → latest confirmedAt wins; different principal → no copy; PATCH → no copy.
  */
-import { describe, expect, it, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
 import {
   copyConsolidatedListFromMatchingPlan,
   type SavedConsolidatedShoppingListRecord,
 } from '../../server/services/shopping-list/consolidatedShoppingListRepository'
 import { computeSourceFingerprint } from '../../server/services/shopping-list/sourceFingerprint'
 import type { WeekPlanV1 } from '../../types/planning'
+import { useAppTestDb } from '../helpers/recipeCatalogTestDb'
+import { mealWeekTemplates } from '../../server/db/schema/planning'
 
-// --- Helpers ---
+const ctx = useAppTestDb()
 
 function makeWeekPlanBody(overrides?: Partial<WeekPlanV1['days']>): WeekPlanV1 {
   const emptySlot = { recipeId: null }
@@ -32,44 +32,25 @@ function makeWeekPlanBody(overrides?: Partial<WeekPlanV1['days']>): WeekPlanV1 {
   }
 }
 
-/**
- * Returns a Proxy that accepts any chain of method calls and resolves with `result` when awaited.
- * Used to mock Supabase query builder chains of arbitrary depth.
- */
-function makeFlexProxy<T>(result: T) {
-  const handler: ProxyHandler<object> = {
-    get(_t, prop) {
-      if (prop === 'then') {
-        return (resolve: (v: T) => unknown, reject: (e: unknown) => unknown) =>
-          Promise.resolve(result).then(resolve, reject)
-      }
-      return () => new Proxy({}, handler)
-    },
-  }
-  return new Proxy({}, handler)
+function insertWeekPlan(fields: {
+  id: string
+  body: WeekPlanV1
+  ownerUserId: string | null
+  anonSessionId: string | null
+  consolidatedShoppingList: SavedConsolidatedShoppingListRecord | null
+}) {
+  const now = new Date().toISOString()
+  ctx.db.insert(mealWeekTemplates).values({
+    id: fields.id,
+    name: fields.id,
+    body: fields.body,
+    createdAt: now,
+    updatedAt: now,
+    ownerUserId: fields.ownerUserId,
+    anonSessionId: fields.anonSessionId,
+    consolidatedShoppingList: fields.consolidatedShoppingList,
+  }).run()
 }
-
-interface CopyClientOpts {
-  selectRows: Record<string, unknown>[]
-  selectError?: { message: string }
-  updateError?: { message: string }
-}
-
-/** Mocks a Supabase client for copyConsolidatedListFromMatchingPlan.
- * First `from` call is for the SELECT; second is for the UPDATE.
- */
-function makeCopyClient(opts: CopyClientOpts) {
-  const from = vi.fn()
-    .mockReturnValueOnce({
-      select: () => makeFlexProxy({ data: opts.selectRows, error: opts.selectError ?? null }),
-    })
-    .mockReturnValueOnce({
-      update: () => makeFlexProxy({ data: [{ id: 'new-plan' }], error: opts.updateError ?? null }),
-    })
-  return { from } as unknown as SupabaseClient
-}
-
-// --- Tests ---
 
 describe('copyConsolidatedListFromMatchingPlan', () => {
   describe('match found → copy + flag set', () => {
@@ -83,11 +64,22 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
         sourceFingerprint: fingerprint,
         confirmedAt: '2026-05-26T10:00:00.000Z',
       }
-      const client = makeCopyClient({
-        selectRows: [{ id: 'source-plan', body, consolidated_shopping_list: sourceList, owner_user_id: 'user-1', anon_session_id: null }],
+      insertWeekPlan({
+        id: 'source-plan',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: sourceList,
+      })
+      insertWeekPlan({
+        id: 'new-plan',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprint)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprint)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -96,7 +88,7 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
       }
     })
 
-    it('writes the copied list to the new plan via update', async () => {
+    it('writes the copied list to the new plan row', async () => {
       const body = makeWeekPlanBody({
         '2': { breakfast: { recipeId: 'r2' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
       })
@@ -106,17 +98,25 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
         sourceFingerprint: fingerprint,
         confirmedAt: '2026-05-25T08:00:00.000Z',
       }
-      const updateFn = vi.fn(() => makeFlexProxy({ data: [{ id: 'new-plan' }], error: null }))
-      const from = vi.fn()
-        .mockReturnValueOnce({
-          select: () => makeFlexProxy({ data: [{ id: 'source-plan', body, consolidated_shopping_list: sourceList, owner_user_id: 'user-1', anon_session_id: null }], error: null }),
-        })
-        .mockReturnValueOnce({ update: updateFn })
-      const client = { from } as unknown as SupabaseClient
+      insertWeekPlan({
+        id: 'source-plan-2',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: sourceList,
+      })
+      insertWeekPlan({
+        id: 'new-plan-2',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
+      })
 
-      await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprint)
+      await copyConsolidatedListFromMatchingPlan(ctx.db, 'new-plan-2', { kind: 'user', userId: 'user-1' }, fingerprint)
 
-      expect(updateFn).toHaveBeenCalledWith({ consolidated_shopping_list: sourceList })
+      const row = ctx.db.select().from(mealWeekTemplates).where(eq(mealWeekTemplates.id, 'new-plan-2')).get()
+      expect(row?.consolidatedShoppingList).toEqual(sourceList)
     })
   })
 
@@ -124,14 +124,18 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
     it('returns { copied: false } when no plans exist for the principal', async () => {
       const body = makeWeekPlanBody()
       const fingerprint = computeSourceFingerprint(body)
-      const client = makeCopyClient({ selectRows: [] })
+      insertWeekPlan({
+        id: 'new-plan-only',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
+      })
 
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprint)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'new-plan-only', { kind: 'user', userId: 'user-1' }, fingerprint)
 
       expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.value.copied).toBe(false)
-      }
+      if (result.ok) expect(result.value.copied).toBe(false)
     })
 
     it('returns { copied: false } when no existing plan fingerprint matches', async () => {
@@ -147,52 +151,61 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
         sourceFingerprint: computeSourceFingerprint(differentBody),
         confirmedAt: '2026-05-24T10:00:00.000Z',
       }
-      // source plan has differentBody, so its sourceFingerprint ≠ fingerprintOfNew
-      const client = makeCopyClient({
-        selectRows: [{ id: 'source-plan', body: differentBody, consolidated_shopping_list: sourceList, owner_user_id: 'user-1', anon_session_id: null }],
+      insertWeekPlan({
+        id: 'source-mismatch',
+        body: differentBody,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: sourceList,
+      })
+      insertWeekPlan({
+        id: 'new-mismatch',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprintOfNew)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'new-mismatch', { kind: 'user', userId: 'user-1' }, fingerprintOfNew)
 
       expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.value.copied).toBe(false)
-      }
+      if (result.ok) expect(result.value.copied).toBe(false)
     })
   })
 
   describe('deprecated source → no copy', () => {
     it('skips source when its consolidated list is deprecated relative to its own body', async () => {
-      // The source plan body has changed after the list was confirmed
       const originalSourceBody = makeWeekPlanBody({
         '1': { breakfast: { recipeId: 'r1' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
       })
       const fingerprintOfOriginal = computeSourceFingerprint(originalSourceBody)
-
-      // Source plan body is now different (plan was edited after confirming the list)
       const updatedSourceBody = makeWeekPlanBody({
         '1': { breakfast: { recipeId: 'r1' }, lunch: { recipeId: 'r2' }, dinner: { recipeId: null } },
       })
-      // The confirmed list still has the OLD fingerprint — deprecated
       const sourceList: SavedConsolidatedShoppingListRecord = {
         lines: [{ id: 'L1', name: 'pasta', quantity: 800, unit: 'g' }],
         sourceFingerprint: fingerprintOfOriginal,
         confirmedAt: '2026-05-26T10:00:00.000Z',
       }
-
-      // new plan has the same body as the original source body
-      const client = makeCopyClient({
-        selectRows: [{ id: 'source-plan', body: updatedSourceBody, consolidated_shopping_list: sourceList, owner_user_id: 'user-1', anon_session_id: null }],
+      insertWeekPlan({
+        id: 'source-deprecated',
+        body: updatedSourceBody,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: sourceList,
+      })
+      insertWeekPlan({
+        id: 'new-deprecated',
+        body: originalSourceBody,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprintOfOriginal)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'new-deprecated', { kind: 'user', userId: 'user-1' }, fingerprintOfOriginal)
 
       expect(result.ok).toBe(true)
-      if (result.ok) {
-        // sourceList.sourceFingerprint === fingerprintOfOriginal (matches new plan)
-        // BUT updatedSourceBody fingerprint ≠ fingerprintOfOriginal → deprecated
-        expect(result.value.copied).toBe(false)
-      }
+      if (result.ok) expect(result.value.copied).toBe(false)
     })
   })
 
@@ -212,19 +225,33 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
         sourceFingerprint: fingerprint,
         confirmedAt: '2026-05-26T14:00:00.000Z',
       }
-      const client = makeCopyClient({
-        selectRows: [
-          { id: 'plan-older', body, consolidated_shopping_list: olderList, owner_user_id: 'user-1', anon_session_id: null },
-          { id: 'plan-newer', body, consolidated_shopping_list: newerList, owner_user_id: 'user-1', anon_session_id: null },
-        ],
+      insertWeekPlan({
+        id: 'plan-older',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: olderList,
+      })
+      insertWeekPlan({
+        id: 'plan-newer',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: newerList,
+      })
+      insertWeekPlan({
+        id: 'new-multi',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
       })
 
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprint)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'new-multi', { kind: 'user', userId: 'user-1' }, fingerprint)
 
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.value.copied).toBe(true)
-        // Should use the newer list (higher confirmedAt)
         expect(result.value.copiedList?.confirmedAt).toBe('2026-05-26T14:00:00.000Z')
         expect(result.value.copiedList?.lines[0]?.quantity).toBe(600)
       }
@@ -232,61 +259,70 @@ describe('copyConsolidatedListFromMatchingPlan', () => {
   })
 
   describe('different principal → no copy', () => {
-    it('does not copy from plans owned by a different user (principal scoping is enforced by query)', async () => {
-      // The SELECT query filters by principal — we verify this by returning empty rows
-      // as the DB would when no plans match the principal filter.
+    it('does not copy from plans owned by a different user', async () => {
       const body = makeWeekPlanBody({
         '1': { breakfast: { recipeId: 'r1' }, lunch: { recipeId: null }, dinner: { recipeId: null } },
       })
       const fingerprint = computeSourceFingerprint(body)
-      // DB returns no rows for user-2 even though user-1 has a matching plan
-      const client = makeCopyClient({ selectRows: [] })
-
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-2' }, fingerprint)
-
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.value.copied).toBe(false)
+      const sourceList: SavedConsolidatedShoppingListRecord = {
+        lines: [{ id: 'L1', name: 'pasta', quantity: 1, unit: 'kg' }],
+        sourceFingerprint: fingerprint,
+        confirmedAt: '2026-05-26T10:00:00.000Z',
       }
-    })
-
-    it('anonymous principal does not receive copies scoped to other sessions', async () => {
-      const body = makeWeekPlanBody()
-      const fingerprint = computeSourceFingerprint(body)
-      const client = makeCopyClient({ selectRows: [] })
-
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'anonymous', sessionId: 'sess-other' }, fingerprint)
-
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.value.copied).toBe(false)
-      }
-    })
-  })
-
-  describe('storage error handling', () => {
-    it('returns storage_error when the SELECT query fails', async () => {
-      const body = makeWeekPlanBody()
-      const fingerprint = computeSourceFingerprint(body)
-      const from = vi.fn().mockReturnValueOnce({
-        select: () => makeFlexProxy({ data: null, error: { message: 'connection failed' } }),
+      insertWeekPlan({
+        id: 'user-1-plan',
+        body,
+        ownerUserId: 'user-1',
+        anonSessionId: null,
+        consolidatedShoppingList: sourceList,
       })
-      const client = { from } as unknown as SupabaseClient
+      insertWeekPlan({
+        id: 'user-2-new',
+        body,
+        ownerUserId: 'user-2',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
+      })
 
-      const result = await copyConsolidatedListFromMatchingPlan(client, 'new-plan', { kind: 'user', userId: 'user-1' }, fingerprint)
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'user-2-new', { kind: 'user', userId: 'user-2' }, fingerprint)
 
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.error.kind).toBe('storage_error')
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.value.copied).toBe(false)
+    })
+
+    it('local user does not receive copies scoped to other owners', async () => {
+      const body = makeWeekPlanBody()
+      const fingerprint = computeSourceFingerprint(body)
+      const sourceList: SavedConsolidatedShoppingListRecord = {
+        lines: [{ id: 'L1', name: 'ui', quantity: 1, unit: 'st' }],
+        sourceFingerprint: fingerprint,
+        confirmedAt: '2026-05-26T10:00:00.000Z',
       }
+      insertWeekPlan({
+        id: 'user-a-plan',
+        body,
+        ownerUserId: 'user-a',
+        anonSessionId: null,
+        consolidatedShoppingList: sourceList,
+      })
+      insertWeekPlan({
+        id: 'user-b-new',
+        body,
+        ownerUserId: 'user-b',
+        anonSessionId: null,
+        consolidatedShoppingList: null,
+      })
+
+      const result = await copyConsolidatedListFromMatchingPlan(ctx.db, 'user-b-new', { kind: 'user', userId: 'user-b' }, fingerprint)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.value.copied).toBe(false)
     })
   })
 })
 
 describe('PATCH saved-weekplan → copy-on-match is never triggered', () => {
   it('updateSavedWeekplan does not import or invoke copyConsolidatedListFromMatchingPlan', async () => {
-    // Structural guard: verify updateSavedWeekplan module does not use copyConsolidatedListFromMatchingPlan.
-    // This is verified by the absence of the function in the PATCH handler and savedWeekplansRepository.
     const { updateSavedWeekplan } = await import('../../server/services/planning/savedWeekplansRepository')
     const fnSource = updateSavedWeekplan.toString()
     expect(fnSource).not.toContain('copyConsolidatedListFromMatchingPlan')

@@ -1,0 +1,48 @@
+[package]
+name = "mealprepper"
+version = "0.1.1"
+description = "Mealprepper desktop shell"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "mealprepper_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+# Release builds with a visible terminal (panics, logs, sidecar stderr).
+console = []
+
+[build-dependencies]
+tauri-build = { version = "2.6.2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.2", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+uuid = { version = "1", features = ["v4"] }
+keyring = "3"
+open = "5"
+url = "2"
+# Desktop Local API shadow server
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+subtle = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+sha2 = "0.10"
+scraper = { version = "0.20", default-features = false }
+indexmap = "2"
+tower-http = { version = "0.6", features = ["cors"] }
+
+[dev-dependencies]
+tempfile = "3"

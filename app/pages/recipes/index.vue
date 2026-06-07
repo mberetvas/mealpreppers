@@ -199,7 +199,7 @@ const filterTriggerClass
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-atelier-warm-accent">
             Recipe Catalog
           </p>
-          <h1 class="mt-3 font-['Newsreader'] text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
+          <h1 class="mt-3 font-headline text-5xl font-semibold leading-tight text-atelier-heading sm:text-6xl">
             Your Atelier
           </h1>
         </div>
@@ -356,7 +356,7 @@ const filterTriggerClass
         <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
           <span class="material-symbols-outlined text-[28px]">menu_book</span>
         </div>
-        <h2 class="mt-5 font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
+        <h2 class="mt-5 font-headline text-3xl font-semibold text-atelier-heading">
           Your recipe book is empty
         </h2>
         <p class="mt-2 text-sm text-atelier-description">
@@ -373,7 +373,7 @@ const filterTriggerClass
         <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
           <span class="material-symbols-outlined text-[28px]">filter_list_off</span>
         </div>
-        <h2 class="mt-5 font-['Newsreader'] text-3xl font-semibold text-atelier-heading">
+        <h2 class="mt-5 font-headline text-3xl font-semibold text-atelier-heading">
           No matches
         </h2>
         <p class="mt-2 text-sm text-atelier-description">

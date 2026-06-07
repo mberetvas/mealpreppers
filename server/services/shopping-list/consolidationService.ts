@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../utils/structuredLogger'
 import type { PlanningPrincipal } from '../planning/planningPrincipal'
 import type { MergedLine, RecipeProvenance } from './exactMerge'
@@ -17,6 +16,7 @@ import { canonicalizePolishResponse, validatePolishResponse } from './polishHarn
 import { buildPolishHints } from './polishHintBuilder'
 import { computeSourceFingerprint } from './sourceFingerprint'
 import { isPolishAbortTimeout } from './polishChainFactory'
+import { getDb } from '../../db/sqlite'
 import { listRecipes } from '../recipe-catalog/recipeRepository'
 import type { RecipeCatalogItem } from '../../../types/recipe-catalog-item'
 import { createError } from 'h3'
@@ -37,7 +37,6 @@ export interface ConsolidationResult {
 }
 
 export interface ConsolidationDeps {
-  supabaseClient: SupabaseClient
   principal: PlanningPrincipal
   logger: StructuredLogger
   polishPort: ShoppingListPolishPort | null
@@ -54,11 +53,11 @@ export async function consolidateShoppingList(
   deps: ConsolidationDeps,
 ): Promise<ConsolidationResult> {
   const startTime = Date.now()
-  const { supabaseClient, principal, logger, polishPort, openrouterApiKey } = deps
+  const { principal, logger, polishPort, openrouterApiKey } = deps
 
   logger.info('shopping_list.consolidate_start', { planId })
 
-  const planResult = await getSavedWeekplanById(supabaseClient, planId, principal)
+  const planResult = await getSavedWeekplanById(getDb(), planId, principal)
   if (!planResult.ok) {
     throw createError(toPlanningHttpError(planResult.error))
   }
@@ -77,7 +76,7 @@ export async function consolidateShoppingList(
     }
   }
 
-  const recipesResult = await listRecipes(supabaseClient)
+  const recipesResult = await listRecipes(getDb())
   if (!recipesResult.ok) {
     throw createError({ statusCode: 500, statusMessage: 'Recipes could not be loaded for consolidation.' })
   }

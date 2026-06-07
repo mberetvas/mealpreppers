@@ -6,6 +6,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { ref, computed } from 'vue'
 import { formatShoppingListIngredient } from '../../utils/shoppingList'
+import { useNetworkFeatureState } from '../../app/composables/useNetworkFeatureState'
 import ShoppingListPage from '../../app/pages/shopping-list.vue'
 
 const mountOptions = {
@@ -75,6 +76,7 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('useShoppingList', () => state)
   vi.stubGlobal('useConsolidatedShoppingList', () => consolidatedState)
+  vi.stubGlobal('useNetworkFeatureState', () => useNetworkFeatureState())
   vi.stubGlobal('formatShoppingListIngredient', formatShoppingListIngredient)
 
   return { state, consolidatedState, routerReplaceMock }

@@ -24,6 +24,16 @@ export class RecipePageFetchError extends RecipePreviewDomainError {
   }
 }
 
+/** HTML was fetched but no recipe fields could be extracted (layout change or non-recipe page). */
+export class RecipePageParseError extends RecipePreviewDomainError {
+  constructor() {
+    super(
+      'The recipe could not be parsed from this page. The page may not contain recipe data, or the site layout may have changed. Try manual entry or another source.',
+      422,
+    )
+  }
+}
+
 export class RecipePublisherAuthWallError extends RecipePreviewDomainError {
   constructor(
     readonly diagnostics: { requestedUrl: string; finalUrl: string; status: number },

@@ -1,12 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { readMultipartFormData } from 'h3'
-import { getSupabaseServerClient } from '../../../db/supabaseClient'
 import {
   RECIPE_IMAGE_MIME_TO_EXT,
   validateRecipeImageFile,
 } from '../../../../app/utils/recipeImageValidation'
-
-const BUCKET = 'recipe-images'
+import { saveRecipeImageFile } from '../../../services/recipe-catalog/recipeLocalImages'
 
 export default defineEventHandler(async (event) => {
   const parts = await readMultipartFormData(event)
@@ -28,24 +26,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Use a JPEG, PNG, WebP, or GIF image.' })
   }
 
-  const objectPath = `${randomUUID()}.${ext}`
-  const supabase = getSupabaseServerClient()
+  const filename = `${randomUUID()}.${ext}`
+  const url = await saveRecipeImageFile(event, filename, filePart.data)
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(objectPath, filePart.data, {
-      contentType: mimeType,
-      upsert: false,
-    })
-
-  if (uploadError) {
-    throw createError({
-      statusCode: 502,
-      statusMessage: uploadError.message || 'Image upload failed.',
-    })
-  }
-
-  const { data: publicUrlData } = supabase.storage.from(BUCKET).getPublicUrl(objectPath)
-
-  return { url: publicUrlData.publicUrl }
+  return { url }
 })

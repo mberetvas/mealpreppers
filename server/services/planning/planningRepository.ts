@@ -1,10 +1,14 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { randomUUID } from 'node:crypto'
+import { desc, eq, inArray } from 'drizzle-orm'
 import type {
   MonthPlanCreateInput,
   MonthPlanPatchInput,
   MonthPlanV1,
   WeekPlanV1,
 } from '../../../types/planning'
+import type { AppDb } from '../../db/sqlite'
+import { mealMonthPlans } from '../../db/schema/planning'
+import { recipes } from '../../db/schema/recipeCatalog'
 import { fail, ok, type PlanningResult } from './planningResult'
 
 export interface WeekTemplateListItem {
@@ -29,112 +33,122 @@ export interface MonthPlanRow extends MonthPlanListItem {
   createdAt: string
 }
 
-interface MonthPlanDbRow {
-  id: string
-  name: string | null
-  body: MonthPlanV1
-  created_at: string
-  updated_at: string
+function nowIso(): string {
+  return new Date().toISOString()
 }
 
-export async function listMonthPlans(client: SupabaseClient): Promise<PlanningResult<MonthPlanListItem[]>> {
-  const { data, error } = await client
-    .from('meal_month_plans')
-    .select('id, name, updated_at')
-    .order('updated_at', { ascending: false })
-
-  if (error || !data) {
-    return fail(storageError(error?.message, 'Month plans could not be loaded.'))
-  }
-
-  return ok((data as Pick<MonthPlanDbRow, 'id' | 'name' | 'updated_at'>[]).map(row => ({
-    id: row.id,
-    name: row.name,
-    updatedAt: row.updated_at,
-  })))
-}
-
-export async function getMonthPlanById(client: SupabaseClient, id: string): Promise<PlanningResult<MonthPlanRow>> {
-  const { data, error } = await client
-    .from('meal_month_plans')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error) {
-    return fail(storageError(error.message, 'Month plan could not be loaded.'))
-  }
-
-  if (!data) {
-    return fail(notFoundError('month_plan', 'Month plan not found.'))
-  }
-
-  const row = data as MonthPlanDbRow
-  return ok({
+function mapMonthPlanRow(row: typeof mealMonthPlans.$inferSelect): MonthPlanRow {
+  return {
     id: row.id,
     name: row.name,
     body: row.body,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  })
-}
-
-export async function createMonthPlan(client: SupabaseClient, input: MonthPlanCreateInput): Promise<PlanningResult<MonthPlanRow>> {
-  const { data, error } = await client
-    .from('meal_month_plans')
-    .insert({
-      name: input.name ?? null,
-      body: input.body,
-    })
-    .select('*')
-    .single()
-
-  if (error || !data) {
-    return fail(storageError(error?.message, 'Month plan could not be created.'))
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
-
-  return ok(mapMonthPlanRow(data as MonthPlanDbRow))
 }
 
-export async function updateMonthPlan(client: SupabaseClient, id: string, input: MonthPlanPatchInput): Promise<PlanningResult<MonthPlanRow>> {
-  const patch: Record<string, unknown> = {}
-  if (input.name !== undefined) patch.name = input.name
-  if (input.body !== undefined) patch.body = input.body
+/** Lists month plans ordered by most recently updated. */
+export async function listMonthPlans(db: AppDb): Promise<PlanningResult<MonthPlanListItem[]>> {
+  try {
+    const rows = db
+      .select({
+        id: mealMonthPlans.id,
+        name: mealMonthPlans.name,
+        updatedAt: mealMonthPlans.updatedAt,
+      })
+      .from(mealMonthPlans)
+      .orderBy(desc(mealMonthPlans.updatedAt))
+      .all()
 
-  const { data, error } = await client
-    .from('meal_month_plans')
-    .update(patch)
-    .eq('id', id)
-    .select('*')
-    .single()
+    return ok(rows)
+  }
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Month plans could not be loaded.'))
+  }
+}
 
-  if (error || !data) {
-    if (error?.code === 'PGRST116') {
+/** Fetches one month plan by id. */
+export async function getMonthPlanById(db: AppDb, id: string): Promise<PlanningResult<MonthPlanRow>> {
+  try {
+    const row = db.select().from(mealMonthPlans).where(eq(mealMonthPlans.id, id)).get()
+
+    if (!row) {
       return fail(notFoundError('month_plan', 'Month plan not found.'))
     }
-    return fail(storageError(error?.message, 'Month plan could not be updated.'))
-  }
 
-  return ok(mapMonthPlanRow(data as MonthPlanDbRow))
+    return ok(mapMonthPlanRow(row))
+  }
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Month plan could not be loaded.'))
+  }
 }
 
-export async function deleteMonthPlan(client: SupabaseClient, id: string): Promise<PlanningResult<{ ok: true }>> {
-  const { data, error } = await client
-    .from('meal_month_plans')
-    .delete()
-    .eq('id', id)
-    .select('id')
-    .maybeSingle()
+/** Creates a month plan row. */
+export async function createMonthPlan(db: AppDb, input: MonthPlanCreateInput): Promise<PlanningResult<MonthPlanRow>> {
+  try {
+    const timestamp = nowIso()
+    const id = randomUUID()
 
-  if (error) {
-    return fail(storageError(error.message, 'Month plan could not be deleted.'))
+    db.insert(mealMonthPlans).values({
+      id,
+      name: input.name ?? null,
+      body: input.body,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }).run()
+
+    const row = db.select().from(mealMonthPlans).where(eq(mealMonthPlans.id, id)).get()
+    if (!row) {
+      return fail(storageError(undefined, 'Month plan could not be created.'))
+    }
+
+    return ok(mapMonthPlanRow(row))
   }
-
-  if (!data) {
-    return fail(notFoundError('month_plan', 'Month plan not found.'))
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Month plan could not be created.'))
   }
+}
 
-  return ok({ ok: true })
+/** Patches a month plan row. */
+export async function updateMonthPlan(db: AppDb, id: string, input: MonthPlanPatchInput): Promise<PlanningResult<MonthPlanRow>> {
+  try {
+    const existing = db.select().from(mealMonthPlans).where(eq(mealMonthPlans.id, id)).get()
+    if (!existing) {
+      return fail(notFoundError('month_plan', 'Month plan not found.'))
+    }
+
+    const patch: Partial<typeof mealMonthPlans.$inferInsert> = { updatedAt: nowIso() }
+    if (input.name !== undefined) patch.name = input.name
+    if (input.body !== undefined) patch.body = input.body
+
+    db.update(mealMonthPlans).set(patch).where(eq(mealMonthPlans.id, id)).run()
+
+    const row = db.select().from(mealMonthPlans).where(eq(mealMonthPlans.id, id)).get()
+    if (!row) {
+      return fail(notFoundError('month_plan', 'Month plan not found.'))
+    }
+
+    return ok(mapMonthPlanRow(row))
+  }
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Month plan could not be updated.'))
+  }
+}
+
+/** Deletes a month plan row. */
+export async function deleteMonthPlan(db: AppDb, id: string): Promise<PlanningResult<{ ok: true }>> {
+  try {
+    const deleted = db.delete(mealMonthPlans).where(eq(mealMonthPlans.id, id)).returning({ id: mealMonthPlans.id }).get()
+
+    if (!deleted) {
+      return fail(notFoundError('month_plan', 'Month plan not found.'))
+    }
+
+    return ok({ ok: true })
+  }
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Month plan could not be deleted.'))
+  }
 }
 
 /**
@@ -165,38 +179,30 @@ export function collectRecipeIdsFromMonthPlan(plan: MonthPlanV1): string[] {
 /**
  * Ensures every non-null recipe id exists in `recipes`.
  */
-export async function assertRecipeIdsExist(client: SupabaseClient, recipeIds: string[]): Promise<PlanningResult<void>> {
+export async function assertRecipeIdsExist(db: AppDb, recipeIds: string[]): Promise<PlanningResult<void>> {
   if (recipeIds.length === 0) return ok(undefined)
 
-  const { data, error } = await client
-    .from('recipes')
-    .select('id')
-    .in('id', recipeIds)
+  try {
+    const rows = db
+      .select({ id: recipes.id })
+      .from(recipes)
+      .where(inArray(recipes.id, recipeIds))
+      .all()
 
-  if (error || !data) {
-    return fail(storageError(error?.message, 'Recipe validation failed.'))
+    const found = new Set(rows.map(r => r.id))
+    const missing = recipeIds.filter(id => !found.has(id))
+    if (missing.length > 0) {
+      return fail({
+        kind: 'invalid_recipe_ids',
+        message: 'One or more recipe ids are not in the catalog.',
+        missingRecipeIds: missing,
+      })
+    }
+
+    return ok(undefined)
   }
-
-  const found = new Set((data as { id: string }[]).map(r => r.id))
-  const missing = recipeIds.filter(id => !found.has(id))
-  if (missing.length > 0) {
-    return fail({
-      kind: 'invalid_recipe_ids',
-      message: 'One or more recipe ids are not in the catalog.',
-      missingRecipeIds: missing,
-    })
-  }
-
-  return ok(undefined)
-}
-
-function mapMonthPlanRow(row: MonthPlanDbRow): MonthPlanRow {
-  return {
-    id: row.id,
-    name: row.name,
-    body: row.body,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+  catch (error) {
+    return fail(storageError(error instanceof Error ? error.message : undefined, 'Recipe validation failed.'))
   }
 }
 

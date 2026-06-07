@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen bg-surface">
-    <PlanAnonymousSavedWeekplansHandoffModal />
     <LayoutTopNavBar />
     <main class="pt-20 pb-24 md:pb-20 min-h-screen">
       <slot />

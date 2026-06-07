@@ -207,7 +207,7 @@ function openPreview(item: SavedWeekplanListItem): void {
       <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-atelier-chip text-primary">
         <span class="material-symbols-outlined text-[28px]" aria-hidden="true">calendar_month</span>
       </div>
-      <h2 class="mt-5 font-['Newsreader'] text-2xl font-semibold text-atelier-heading md:text-3xl">
+      <h2 class="mt-5 font-headline text-2xl font-semibold text-atelier-heading md:text-3xl">
         No Saved Weekplans yet
       </h2>
       <p class="mx-auto mt-3 max-w-md text-sm text-atelier-description">
@@ -251,7 +251,7 @@ function openPreview(item: SavedWeekplanListItem): void {
             class="block w-full text-left"
             @click="startRename(item)"
           >
-            <span class="font-['Newsreader'] text-xl font-semibold text-atelier-heading hover:text-primary md:text-2xl">
+            <span class="font-headline text-xl font-semibold text-atelier-heading hover:text-primary md:text-2xl">
               {{ item.name }}
             </span>
             <span class="mt-1 block text-xs text-atelier-meta">Click to rename</span>

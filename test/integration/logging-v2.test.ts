@@ -68,7 +68,7 @@ describe('Logging V2 integration', () => {
 
   it('propagates the preferred trace header into request-handled logs', async () => {
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({
       'x-trace-id': 'trace-preferred',
@@ -104,7 +104,7 @@ describe('Logging V2 integration', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({ 'x-trace-id': 'trace-absent' })
     await traceContext(event)
@@ -122,7 +122,7 @@ describe('Logging V2 integration', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({ 'x-trace-id': 'trace-invalid' })
     await traceContext(event)
@@ -139,7 +139,7 @@ describe('Logging V2 integration', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({ 'x-trace-id': 'trace-info' })
     await traceContext(event)
@@ -153,7 +153,7 @@ describe('Logging V2 integration', () => {
 
   it('includes trace ID from fallback x-request-id header in diagnostics', async () => {
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({ 'x-request-id': 'req-fallback-id' })
     await traceContext(event)
@@ -202,7 +202,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
 
   it('emits request_started before request_handled on finish', async () => {
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({ 'x-trace-id': 'trace-order' }, '/api/recipes', 'GET')
     await traceContext(event)
@@ -217,7 +217,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
 
   it('request_started carries method, path, traceId, and request_headers', async () => {
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent(
       { 'x-trace-id': 'trace-meta', 'content-type': 'application/json' },
@@ -240,7 +240,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
 
   it('redacts authorization header in request_started', async () => {
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent(
       { 'x-trace-id': 'trace-redact', authorization: 'Bearer secret-token' },
@@ -262,7 +262,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
 
   it('sanitizes a URL-shaped target_url query param in request_started', async () => {
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent(
       { 'x-trace-id': 'trace-url' },
@@ -282,7 +282,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
   it('includes json_key_count in request_started for a JSON POST body', async () => {
     const body = Buffer.from(JSON.stringify({ title: 'Pasta', servings: 4, tags: ['quick'] }))
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent(
       { 'x-trace-id': 'trace-json', 'content-type': 'application/json' },
@@ -305,7 +305,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
   it('sets structure_parse_skipped for a body over 1 MiB', async () => {
     const bigBody = Buffer.alloc(1024 * 1024 + 1)
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent(
       { 'x-trace-id': 'trace-big', 'content-type': 'application/json' },
@@ -330,7 +330,7 @@ describe('Logging V2 integration — http.request_started (DEBUG)', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestDiagnostics } = await import('../../server/middleware/02.request-diagnostics')
+    const { default: requestDiagnostics } = await import('../../server/middleware/03.request-diagnostics')
 
     const event = makeEvent({ 'x-trace-id': 'trace-no-debug' })
     await traceContext(event)
@@ -379,7 +379,7 @@ describe('Logging V2 integration — request_completed (INFO)', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+    const { default: requestCompleted } = await import('../../server/middleware/04.request-completed')
 
     const event = makeEvent({ 'x-trace-id': 'trace-info-test' }, '/api/recipes', 'GET')
     await traceContext(event)
@@ -405,7 +405,7 @@ describe('Logging V2 integration — request_completed (INFO)', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+    const { default: requestCompleted } = await import('../../server/middleware/04.request-completed')
 
     const event = makeEvent({ 'x-trace-id': 'trace-merged' }, '/api/plans', 'POST')
     await traceContext(event)
@@ -424,7 +424,7 @@ describe('Logging V2 integration — request_completed (INFO)', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+    const { default: requestCompleted } = await import('../../server/middleware/04.request-completed')
 
     const event = makeEvent({}, '/health', 'GET')
     await traceContext(event)
@@ -442,7 +442,7 @@ describe('Logging V2 integration — request_completed (INFO)', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+    const { default: requestCompleted } = await import('../../server/middleware/04.request-completed')
 
     const event = makeEvent({ 'x-trace-id': 'trace-debug' }, '/api/recipes', 'GET')
     await traceContext(event)
@@ -460,7 +460,7 @@ describe('Logging V2 integration — request_completed (INFO)', () => {
     vi.resetModules()
 
     const { default: traceContext } = await import('../../server/middleware/01.trace-context')
-    const { default: requestCompleted } = await import('../../server/middleware/03.request-completed')
+    const { default: requestCompleted } = await import('../../server/middleware/04.request-completed')
 
     const event = makeEvent(
       { 'x-trace-id': 'trace-ua', 'user-agent': 'IntegrationBot/2.0' },

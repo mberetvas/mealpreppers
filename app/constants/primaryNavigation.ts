@@ -10,6 +10,7 @@ export const PRIMARY_NAV_PAGE_FILES = {
   '/saved-weekplans': 'saved-weekplans.vue',
   '/shopping-list': 'shopping-list.vue',
   '/add-recipe': 'add-recipe.vue',
+  '/settings': 'settings.vue',
   '/more': 'more.vue',
 } as const
 
@@ -22,6 +23,7 @@ export const topNavItems = [
   { label: 'Saved Weekplans', to: '/saved-weekplans' },
   { label: 'Shopping List', to: '/shopping-list' },
   { label: 'Add Recipe', to: '/add-recipe' },
+  { label: 'Settings', to: '/settings' },
 ] as const satisfies ReadonlyArray<{ label: string; to: PrimaryNavResolvedPath }>
 
 /** Mobile bottom bar outer tabs (center FAB uses `primaryNavFabTo`). */

@@ -40,9 +40,6 @@ vi.mock('../../server/utils/logger', () => ({
 
 const runtimeConfigMock = vi.hoisted(() => ({
   openrouterApiKey: '',
-  supabaseUrl: 'http://localhost',
-  supabaseServiceRoleKey: 'test-key',
-  savedWeekplansIdlePurgeSecret: '',
 }))
 
 vi.stubGlobal('useRuntimeConfig', () => runtimeConfigMock)
@@ -50,11 +47,10 @@ vi.stubGlobal('useRuntimeConfig', () => runtimeConfigMock)
 const mocks = vi.hoisted(() => ({
   getSavedWeekplanById: vi.fn(),
   listRecipes: vi.fn(),
-  getSupabaseServerClient: vi.fn(() => ({})),
 }))
 
-vi.mock('../../server/db/supabaseClient', () => ({
-  getSupabaseServerClient: mocks.getSupabaseServerClient,
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: vi.fn(() => ({})),
 }))
 
 vi.mock('../../server/services/planning/savedWeekplansRepository', async (importOriginal) => {
@@ -72,6 +68,12 @@ vi.mock('../../server/services/recipe-catalog/recipeRepository', async (importOr
     listRecipes: mocks.listRecipes,
   }
 })
+
+vi.mock('../../server/services/settings/installSettingsRepository', () => ({
+  getInstallSettings: vi.fn(() => ({
+    openrouterShoppingListModel: 'deepseek/deepseek-v4-flash',
+  })),
+}))
 
 // --- Test helpers ---
 

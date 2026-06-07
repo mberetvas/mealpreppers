@@ -1,13 +1,17 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const isStaticDesktopClientBuild = process.env.MEALPREPPER_STATIC_CLIENT_BUILD === '1'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  /**
+   * Desktop-only product: all pages render client-side.
+   * Static build (`nuxt generate`) produces a pure HTML/JS bundle served by the Tauri
+   * WebView via frontendDist; the Rust Axum server handles all `/api/v1` traffic.
+   */
+  ssr: false,
   devtools: { enabled: true },
 
   runtimeConfig: {
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    /** Bearer secret for POST /api/v1/internal/saved-weekplans/purge-idle-anonymous (cron / batch). */
-    savedWeekplansIdlePurgeSecret: process.env.SAVED_WEEKPLANS_IDLE_PURGE_SECRET,
     /** OpenRouter API key for AI shopping list polish (server-only). */
     openrouterApiKey: process.env.OPENROUTER_API_KEY,
     /** OpenRouter model for shopping list polish (default: deepseek/deepseek-v4-flash). */
@@ -28,20 +32,17 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
   ],
 
-  css: ['~/assets/css/tailwind.css'],
-
-  app: {
-    head: {
-      link: [
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Plus+Jakarta+Sans:wght@200..800&display=swap',
-        },
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap',
-        },
-      ],
+  nitro: {
+    externals: {
+      traceInclude: ['better-sqlite3', 'bindings'],
+    },
+    prerender: {
+      crawlLinks: false,
+      /** SPA shell only — Tauri loads `index.html`; no Nitro/SQLite during prerender. */
+      routes: [],
+      ...(isStaticDesktopClientBuild ? { failOnError: false } : {}),
     },
   },
+
+  css: ['~/assets/css/tailwind.css'],
 })

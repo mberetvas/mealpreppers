@@ -1,10 +1,14 @@
 # Electron Migration Strategy
 
+> **Superseded.** Decisions have moved to
+> [tauri-sqlite-migration-strategy.md](./tauri-sqlite-migration-strategy.md) (Tauri,
+> SQLite, desktop-only). This file is kept for historical comparison only.
+
 Strategy for packaging the Mealprepper Nuxt application as a cross-platform Electron
 desktop app installable on Windows, Linux, and macOS.
 
-> Status: proposal for implementation. This document defines decisions and sequencing.
-> It does not change application code.
+> Status: **superseded** — not targeted for implementation.
+> See [tauri-sqlite-migration-strategy.md](./tauri-sqlite-migration-strategy.md).
 
 ---
 

@@ -6,6 +6,7 @@ import { previewRecipeFromUrl } from '../../server/services/recipe-ingestion/rec
 import { parseRecipeHtml } from '../../server/services/recipe-ingestion/recipeScraper'
 import {
   RecipePageFetchError,
+  RecipePageParseError,
   RecipePublisherAuthWallError,
   UnsupportedRecipeSourceError,
 } from '../../server/services/recipe-ingestion/recipePreview/recipePreviewErrors'
@@ -35,6 +36,18 @@ describe('previewRecipeFromUrl', () => {
         }),
       }),
     ).rejects.toBeInstanceOf(RecipePageFetchError)
+  })
+
+  it('fails when parsed draft has no title or ingredients', async () => {
+    await expect(
+      previewRecipeFromUrl('https://15gram.be/recepten/demo', {
+        fetchRecipePage: async () => ({
+          html: '<html><head><title>Empty</title></head><body></body></html>',
+          finalUrl: 'https://15gram.be/recepten/demo',
+          status: 200,
+        }),
+      }),
+    ).rejects.toBeInstanceOf(RecipePageParseError)
   })
 
   it('fails on publisher auth wall HTML', async () => {

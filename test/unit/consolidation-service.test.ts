@@ -3,7 +3,6 @@
  * Tests the service with stubbed dependencies and polish port.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredLogger } from '../../server/utils/structuredLogger'
 import type { ShoppingListPolishPort } from '../../server/services/shopping-list/polishPort'
 import type { PlanningPrincipal } from '../../server/services/planning/planningPrincipal'
@@ -24,6 +23,10 @@ vi.mock('../../server/services/recipe-catalog/recipeRepository', () => ({
   listRecipes: mocks.listRecipes,
 }))
 
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: vi.fn(() => ({})),
+}))
+
 // --- Test helpers ---
 
 const PLAN_ID = 'plan-123'
@@ -39,7 +42,7 @@ function makeLogger(): StructuredLogger {
 }
 
 function makePrincipal(): PlanningPrincipal {
-  return { kind: 'anonymous', sessionId: '550e8400-e29b-41d4-a716-446655440000' }
+  return { kind: 'user', userId: '550e8400-e29b-41d4-a716-446655440000' }
 }
 
 function makeWeekPlanBody() {
@@ -111,7 +114,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -137,7 +139,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -165,7 +166,6 @@ describe('consolidateShoppingList service', () => {
 
     it('returns ai_skipped when openrouterApiKey is undefined', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -178,7 +178,6 @@ describe('consolidateShoppingList service', () => {
 
     it('returns ai_skipped when openrouterApiKey is empty string (falsy)', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -190,7 +189,6 @@ describe('consolidateShoppingList service', () => {
 
     it('logs consolidate_start and polish_skipped events', async () => {
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -207,7 +205,6 @@ describe('consolidateShoppingList service', () => {
 
     it('logs consolidate_complete with latency and line counts', async () => {
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -237,7 +234,6 @@ describe('consolidateShoppingList service', () => {
 
     it('returns ai_skipped when API key is set but polishPort is null', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -262,7 +258,6 @@ describe('consolidateShoppingList service', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -289,7 +284,6 @@ describe('consolidateShoppingList service', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -316,7 +310,6 @@ describe('consolidateShoppingList service', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -333,7 +326,6 @@ describe('consolidateShoppingList service', () => {
 
     it('returns sourceFingerprint in result', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -357,7 +349,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -379,7 +370,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -401,7 +391,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -427,7 +416,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -448,7 +436,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -470,7 +457,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -500,7 +486,6 @@ describe('consolidateShoppingList service', () => {
       mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -519,7 +504,6 @@ describe('consolidateShoppingList service', () => {
       mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -539,7 +523,6 @@ describe('consolidateShoppingList service', () => {
       mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -558,7 +541,6 @@ describe('consolidateShoppingList service', () => {
       mocks.listRecipes.mockResolvedValue({ ok: true, value: [] })
 
       await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -577,7 +559,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       await expect(consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -592,7 +573,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       await expect(consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -608,7 +588,6 @@ describe('consolidateShoppingList service', () => {
       })
 
       await expect(consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -636,7 +615,6 @@ describe('consolidateShoppingList service', () => {
 
     it('ai_skipped: returns empty consolidatedLines', async () => {
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: null,
@@ -653,7 +631,6 @@ describe('consolidateShoppingList service', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,
@@ -679,7 +656,6 @@ describe('consolidateShoppingList service', () => {
       }
 
       const result = await consolidateShoppingList(PLAN_ID, {
-        supabaseClient: {} as unknown as SupabaseClient,
         principal: makePrincipal(),
         logger,
         polishPort: mockPort,

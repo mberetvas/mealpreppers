@@ -12,6 +12,21 @@ format:
 test:
 	bun run test
 
+# Full Tauri release build: static Nuxt client (`build:desktop`) then `tauri build`.
+# Usage: `just desktop-build`
+desktop-build:
+	bun run desktop:build
+
+# Run the compiled release binary from `src-tauri/target/release/`.
+# Usage: `just desktop-run`
+desktop-run:
+	bun run desktop:run:prod
+
+# Same as desktop-run with MEALPREPPER_CONSOLE=1 (stderr + Windows AllocConsole).
+# Usage: `just desktop-run-console`
+desktop-run-console:
+	bun run desktop:run:prod -- --console
+
 # Bump semver in package.json, commit, and create an annotated git tag.
 bump level='patch':
 	bun pm version {{level}}

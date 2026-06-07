@@ -45,7 +45,7 @@ describe('request-completed middleware', () => {
 
   it('emits INFO request_completed for a normal route at info log level', async () => {
     mockLogLevel = 'info'
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -69,7 +69,7 @@ describe('request-completed middleware', () => {
   })
 
   it('emits INFO request_completed for a POST route', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'POST')
@@ -85,7 +85,7 @@ describe('request-completed middleware', () => {
   })
 
   it('does NOT emit INFO request_completed for GET /health', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/health', 'GET')
@@ -97,7 +97,7 @@ describe('request-completed middleware', () => {
 
   it('does NOT emit INFO when log level is debug', async () => {
     mockLogLevel = 'debug'
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -109,7 +109,7 @@ describe('request-completed middleware', () => {
 
   it('does emit INFO when log level is warn', async () => {
     mockLogLevel = 'warn'
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -121,7 +121,7 @@ describe('request-completed middleware', () => {
 
   it('does emit INFO when log level is error', async () => {
     mockLogLevel = 'error'
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -132,7 +132,7 @@ describe('request-completed middleware', () => {
   })
 
   it('uses only the pathname, not query string', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/search?q=pasta&limit=10', 'GET')
@@ -145,7 +145,7 @@ describe('request-completed middleware', () => {
   })
 
   it('includes trace_id from event context when set by trace-context middleware', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'POST')
@@ -158,7 +158,7 @@ describe('request-completed middleware', () => {
   })
 
   it('uses empty traceId when event context has no traceId', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent()
@@ -170,7 +170,7 @@ describe('request-completed middleware', () => {
   })
 
   it('includes user_agent when User-Agent header is present', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET', { 'user-agent': 'TestBot/1.0' })
@@ -182,7 +182,7 @@ describe('request-completed middleware', () => {
   })
 
   it('omits user_agent when User-Agent header is absent', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -194,7 +194,7 @@ describe('request-completed middleware', () => {
   })
 
   it('emits exactly one INFO event per request (not multiple)', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'GET')
@@ -206,7 +206,7 @@ describe('request-completed middleware', () => {
   })
 
   it('context from request A does not leak into request B', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const eventA = makeEvent('/api/recipes', 'GET')
@@ -231,7 +231,7 @@ describe('request-completed middleware', () => {
   })
 
   it('does not POST /health emit INFO — only GET /health is excluded from INFO', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/health', 'POST')
@@ -242,7 +242,7 @@ describe('request-completed middleware', () => {
   })
 
   it('does not include request or response body in the log entry', async () => {
-    const { default: middleware } = await import('../../server/middleware/03.request-completed')
+    const { default: middleware } = await import('../../server/middleware/04.request-completed')
     const { appLogger } = await import('../../server/utils/logger')
 
     const event = makeEvent('/api/recipes', 'POST')

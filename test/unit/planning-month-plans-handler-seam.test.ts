@@ -34,11 +34,11 @@ const mocks = vi.hoisted(() => ({
   updateMonthPlan: vi.fn(),
   assertRecipeIdsExist: vi.fn(),
   collectRecipeIdsFromMonthPlan: vi.fn(() => []),
-  getSupabaseServerClient: vi.fn(() => ({})),
+  getDb: vi.fn(() => ({})),
 }))
 
-vi.mock('../../server/db/supabaseClient', () => ({
-  getSupabaseServerClient: mocks.getSupabaseServerClient,
+vi.mock('../../server/db/sqlite', () => ({
+  getDb: mocks.getDb,
 }))
 
 vi.mock('../../server/services/planning/planningRepository', async (importOriginal) => {
