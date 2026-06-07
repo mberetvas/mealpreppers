@@ -93,13 +93,16 @@ jobs:
           "name=$($installer.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Authenticode sign (optional)
-        if: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
           WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
         run: |
+          if (-not $env:WINDOWS_CERTIFICATE) {
+            Write-Host 'Skipping Authenticode signing: WINDOWS_CERTIFICATE secret not configured'
+            exit 0
+          }
           $certPath = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
           [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
           $timestamp = if ($env:WINDOWS_TIMESTAMP_URL) { $env:WINDOWS_TIMESTAMP_URL } else { 'http://timestamp.digicert.com' }

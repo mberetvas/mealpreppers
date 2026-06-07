@@ -172,7 +172,7 @@ pub fn build_router(state: AppState) -> Router {
             get(list_recipes_handler).post(create_recipe_handler),
         )
         .route(
-            "/v1/recipes/:id",
+            "/v1/recipes/{id}",
             get(get_recipe_handler).put(update_recipe_handler),
         )
         // Planning — Saved Weekplans (principal-scoped)
@@ -181,7 +181,7 @@ pub fn build_router(state: AppState) -> Router {
             get(list_saved_weekplans_handler).post(create_saved_weekplan_handler),
         )
         .route(
-            "/v1/saved-weekplans/:id",
+            "/v1/saved-weekplans/{id}",
             get(get_saved_weekplan_handler)
                 .patch(patch_saved_weekplan_handler)
                 .delete(delete_saved_weekplan_handler),
@@ -192,7 +192,7 @@ pub fn build_router(state: AppState) -> Router {
             get(list_month_plans_handler).post(create_month_plan_handler),
         )
         .route(
-            "/v1/planning/month-plans/:id",
+            "/v1/planning/month-plans/{id}",
             get(get_month_plan_handler)
                 .patch(patch_month_plan_handler)
                 .delete(delete_month_plan_handler),
@@ -205,11 +205,11 @@ pub fn build_router(state: AppState) -> Router {
         // Recipe Ingestion + Shopping List — static sub-paths before parameterised routes
         .route("/v1/recipes/preview", post(preview_recipe_handler))
         .route(
-            "/v1/saved-weekplans/:id/consolidate-shopping-list",
+            "/v1/saved-weekplans/{id}/consolidate-shopping-list",
             post(consolidate_shopping_list_handler),
         )
         .route(
-            "/v1/saved-weekplans/:id/consolidated-shopping-list",
+            "/v1/saved-weekplans/{id}/consolidated-shopping-list",
             get(get_consolidated_shopping_list_handler).put(put_consolidated_shopping_list_handler),
         )
         .route_layer(middleware::from_fn_with_state(state.clone(), token_gate));
@@ -217,7 +217,7 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health_handler))
         // Unauthenticated image serve route — outside the token-gated /api nest
-        .route("/recipe-images/:filename", get(serve_image_handler))
+        .route("/recipe-images/{filename}", get(serve_image_handler))
         .nest("/api", api_routes)
         // request_context_layer runs on every route (including /health) so Trace ID is always set
         .layer(middleware::from_fn_with_state(
