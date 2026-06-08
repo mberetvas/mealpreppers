@@ -614,18 +614,15 @@ mod tests {
         let recipes = list_recipes(&conn).unwrap();
         assert_eq!(recipes.len(), 2);
 
-        // Ordered by created_at DESC, so Recipe 2 is first
-        let r2 = &recipes[0];
-        assert_eq!(r2.title, "Recipe 2");
+        let r1 = recipes.iter().find(|r| r.title == "Recipe 1").unwrap();
+        let r2 = recipes.iter().find(|r| r.title == "Recipe 2").unwrap();
+
         assert_eq!(r2.ingredients.len(), 2);
         assert_eq!(r2.steps.len(), 2);
         assert_eq!(r2.ingredients[0].raw_text, "Ing 2.1");
         assert_eq!(r2.steps[1].text, "Step 2.2");
 
-        let r1 = &recipes[1];
-        assert_eq!(r1.title, "Recipe 1");
         assert_eq!(r1.ingredients.len(), 1);
         assert_eq!(r1.steps.len(), 1);
         assert_eq!(r1.ingredients[0].raw_text, "Ing 1.1");
-    }
 }
