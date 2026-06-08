@@ -193,7 +193,9 @@ fn load_ingredients_batched(
     let mut map = HashMap::new();
     for row in rows {
         let (recipe_id, ingredient) = row?;
-        map.entry(recipe_id).or_insert_with(Vec::new).push(ingredient);
+        map.entry(recipe_id)
+            .or_insert_with(Vec::new)
+            .push(ingredient);
     }
     Ok(map)
 }
@@ -532,8 +534,9 @@ mod tests {
                 text TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(recipe_id) REFERENCES recipes(id)
-            );"
-        ).unwrap();
+            );",
+        )
+        .unwrap();
         conn
     }
 
@@ -555,12 +558,16 @@ mod tests {
             difficulty: None,
             categories: vec!["Cat1".to_string()],
             tags: vec!["Tag1".to_string()],
-            ingredients: vec![
-                IngredientInput { raw_text: "Ing 1.1".to_string(), name: "Ing 1.1".to_string(), quantity: None, unit: None },
-            ],
-            steps: vec![
-                StepInput { position: Some(1), text: "Step 1.1".to_string() },
-            ],
+            ingredients: vec![IngredientInput {
+                raw_text: "Ing 1.1".to_string(),
+                name: "Ing 1.1".to_string(),
+                quantity: None,
+                unit: None,
+            }],
+            steps: vec![StepInput {
+                position: Some(1),
+                text: "Step 1.1".to_string(),
+            }],
         };
         let p2 = RecipeCreatePayload {
             title: "Recipe 2".to_string(),
@@ -576,12 +583,28 @@ mod tests {
             categories: vec!["Cat2".to_string()],
             tags: vec!["Tag2".to_string()],
             ingredients: vec![
-                IngredientInput { raw_text: "Ing 2.1".to_string(), name: "Ing 2.1".to_string(), quantity: None, unit: None },
-                IngredientInput { raw_text: "Ing 2.2".to_string(), name: "Ing 2.2".to_string(), quantity: None, unit: None },
+                IngredientInput {
+                    raw_text: "Ing 2.1".to_string(),
+                    name: "Ing 2.1".to_string(),
+                    quantity: None,
+                    unit: None,
+                },
+                IngredientInput {
+                    raw_text: "Ing 2.2".to_string(),
+                    name: "Ing 2.2".to_string(),
+                    quantity: None,
+                    unit: None,
+                },
             ],
             steps: vec![
-                StepInput { position: Some(1), text: "Step 2.1".to_string() },
-                StepInput { position: Some(2), text: "Step 2.2".to_string() },
+                StepInput {
+                    position: Some(1),
+                    text: "Step 2.1".to_string(),
+                },
+                StepInput {
+                    position: Some(2),
+                    text: "Step 2.2".to_string(),
+                },
             ],
         };
 
