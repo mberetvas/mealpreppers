@@ -7,6 +7,8 @@
 //! **categories / tags** are stored as JSON text arrays (matching Drizzle's `{ mode: 'json' }`
 //! column type), e.g. `["Lunch","Italian"]`.
 
+use std::collections::HashMap;
+
 use rusqlite::{params, Connection};
 use uuid::Uuid;
 
@@ -116,6 +118,9 @@ fn load_steps(conn: &Connection, recipe_id: &str) -> Result<Vec<RecipeStep>, Rep
 // ---------------------------------------------------------------------------
 
 /// Lists all recipes ordered by `created_at DESC` with their ingredients and steps.
+///
+/// **Optimization:** Fetches all ingredients and steps in two batched queries instead of
+/// N+1 queries to avoid database round-trip overhead.
 pub fn list_recipes(conn: &Connection) -> Result<Vec<RecipeCatalogItem>, RepoError> {
     let mut stmt = conn.prepare(
         "SELECT id, title, description, source_url, source_host, image_url, \
@@ -124,25 +129,113 @@ pub fn list_recipes(conn: &Connection) -> Result<Vec<RecipeCatalogItem>, RepoErr
          FROM recipes ORDER BY created_at DESC",
     )?;
 
-    let recipe_ids_and_rows: Vec<(String, RecipeCatalogItem)> = {
-        let mut items: Vec<(String, RecipeCatalogItem)> = Vec::new();
-        let mut rows = stmt.query([])?;
-        while let Some(row) = rows.next()? {
-            let id: String = row.get("id")?;
-            let item = row_to_item(row, vec![], vec![]).map_err(RepoError::from)?;
-            items.push((id, item));
-        }
-        items
-    };
+    let mut recipes: Vec<RecipeCatalogItem> = Vec::new();
+    let mut recipe_ids: Vec<String> = Vec::new();
 
-    let mut result = Vec::with_capacity(recipe_ids_and_rows.len());
-    for (id, mut item) in recipe_ids_and_rows {
-        item.ingredients = load_ingredients(conn, &id)?;
-        item.steps = load_steps(conn, &id)?;
-        result.push(item);
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let id: String = row.get("id")?;
+        recipe_ids.push(id.clone());
+        let item = row_to_item(row, vec![], vec![]).map_err(RepoError::from)?;
+        recipes.push(item);
     }
 
-    Ok(result)
+    if recipes.is_empty() {
+        return Ok(recipes);
+    }
+
+    let mut ingredients_map = load_ingredients_batched(conn, &recipe_ids)?;
+    let mut steps_map = load_steps_batched(conn, &recipe_ids)?;
+
+    for recipe in &mut recipes {
+        recipe.ingredients = ingredients_map.remove(&recipe.id).unwrap_or_default();
+        recipe.steps = steps_map.remove(&recipe.id).unwrap_or_default();
+    }
+
+    Ok(recipes)
+}
+
+fn load_ingredients_batched(
+    conn: &Connection,
+    recipe_ids: &[String],
+) -> Result<HashMap<String, Vec<RecipeIngredient>>, RepoError> {
+    if recipe_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let placeholders: String = recipe_ids
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 1))
+        .collect::<Vec<_>>()
+        .join(",");
+
+    let sql = format!(
+        "SELECT recipe_id, id, position, raw_text, name, quantity, unit \
+         FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY position",
+        placeholders
+    );
+
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(rusqlite::params_from_iter(recipe_ids), |row| {
+        let recipe_id: String = row.get(0)?;
+        let ingredient = RecipeIngredient {
+            id: row.get(1)?,
+            position: row.get(2)?,
+            raw_text: row.get(3)?,
+            name: row.get(4)?,
+            quantity: row.get(5)?,
+            unit: row.get(6)?,
+        };
+        Ok((recipe_id, ingredient))
+    })?;
+
+    let mut map = HashMap::new();
+    for row in rows {
+        let (recipe_id, ingredient) = row?;
+        map.entry(recipe_id).or_insert_with(Vec::new).push(ingredient);
+    }
+    Ok(map)
+}
+
+fn load_steps_batched(
+    conn: &Connection,
+    recipe_ids: &[String],
+) -> Result<HashMap<String, Vec<RecipeStep>>, RepoError> {
+    if recipe_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let placeholders: String = recipe_ids
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 1))
+        .collect::<Vec<_>>()
+        .join(",");
+
+    let sql = format!(
+        "SELECT recipe_id, id, position, text \
+         FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY position",
+        placeholders
+    );
+
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(rusqlite::params_from_iter(recipe_ids), |row| {
+        let recipe_id: String = row.get(0)?;
+        let step = RecipeStep {
+            id: row.get(1)?,
+            position: row.get(2)?,
+            text: row.get(3)?,
+        };
+        Ok((recipe_id, step))
+    })?;
+
+    let mut map = HashMap::new();
+    for row in rows {
+        let (recipe_id, step) = row?;
+        map.entry(recipe_id).or_insert_with(Vec::new).push(step);
+    }
+    Ok(map)
 }
 
 /// Returns a single recipe with ingredients and steps, or `RepoError::NotFound`.
@@ -394,4 +487,122 @@ pub fn list_stored_options(conn: &Connection) -> Result<(Vec<String>, Vec<String
     }
 
     Ok((categories.into_iter().collect(), tags.into_iter().collect()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shadow_server::recipe_catalog::models::{IngredientInput, StepInput};
+
+    fn setup_test_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE recipes (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                source_url TEXT,
+                source_host TEXT,
+                image_url TEXT,
+                servings INTEGER,
+                prep_time_minutes INTEGER,
+                cook_time_minutes INTEGER,
+                total_time_minutes INTEGER,
+                difficulty TEXT,
+                categories TEXT NOT NULL,
+                tags TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE recipe_ingredients (
+                id TEXT PRIMARY KEY,
+                recipe_id TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                raw_text TEXT NOT NULL,
+                name TEXT NOT NULL,
+                quantity REAL,
+                unit TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(recipe_id) REFERENCES recipes(id)
+            );
+            CREATE TABLE recipe_steps (
+                id TEXT PRIMARY KEY,
+                recipe_id TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(recipe_id) REFERENCES recipes(id)
+            );"
+        ).unwrap();
+        conn
+    }
+
+    #[test]
+    fn test_list_recipes_batched() {
+        let mut conn = setup_test_db();
+
+        // Create two recipes
+        let p1 = RecipeCreatePayload {
+            title: "Recipe 1".to_string(),
+            description: None,
+            source_url: None,
+            source_host: None,
+            image_url: None,
+            servings: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            total_time_minutes: None,
+            difficulty: None,
+            categories: vec!["Cat1".to_string()],
+            tags: vec!["Tag1".to_string()],
+            ingredients: vec![
+                IngredientInput { raw_text: "Ing 1.1".to_string(), name: "Ing 1.1".to_string(), quantity: None, unit: None },
+            ],
+            steps: vec![
+                StepInput { position: Some(1), text: "Step 1.1".to_string() },
+            ],
+        };
+        let p2 = RecipeCreatePayload {
+            title: "Recipe 2".to_string(),
+            description: None,
+            source_url: None,
+            source_host: None,
+            image_url: None,
+            servings: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            total_time_minutes: None,
+            difficulty: None,
+            categories: vec!["Cat2".to_string()],
+            tags: vec!["Tag2".to_string()],
+            ingredients: vec![
+                IngredientInput { raw_text: "Ing 2.1".to_string(), name: "Ing 2.1".to_string(), quantity: None, unit: None },
+                IngredientInput { raw_text: "Ing 2.2".to_string(), name: "Ing 2.2".to_string(), quantity: None, unit: None },
+            ],
+            steps: vec![
+                StepInput { position: Some(1), text: "Step 2.1".to_string() },
+                StepInput { position: Some(2), text: "Step 2.2".to_string() },
+            ],
+        };
+
+        create_recipe(&mut conn, p1).unwrap();
+        create_recipe(&mut conn, p2).unwrap();
+
+        let recipes = list_recipes(&conn).unwrap();
+        assert_eq!(recipes.len(), 2);
+
+        // Ordered by created_at DESC, so Recipe 2 is first
+        let r2 = &recipes[0];
+        assert_eq!(r2.title, "Recipe 2");
+        assert_eq!(r2.ingredients.len(), 2);
+        assert_eq!(r2.steps.len(), 2);
+        assert_eq!(r2.ingredients[0].raw_text, "Ing 2.1");
+        assert_eq!(r2.steps[1].text, "Step 2.2");
+
+        let r1 = &recipes[1];
+        assert_eq!(r1.title, "Recipe 1");
+        assert_eq!(r1.ingredients.len(), 1);
+        assert_eq!(r1.steps.len(), 1);
+        assert_eq!(r1.ingredients[0].raw_text, "Ing 1.1");
+    }
 }
