@@ -16,6 +16,8 @@ use crate::shadow_server::platform::RepoError;
 
 use super::models::*;
 
+const SQLITE_IN_QUERY_BATCH_SIZE: usize = 900;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -42,6 +44,13 @@ fn serialize_json_list(values: &[String]) -> String {
 
 fn deserialize_json_list(s: &str) -> Vec<String> {
     serde_json::from_str(s).unwrap_or_default()
+}
+
+fn in_query_placeholders(param_count: usize) -> String {
+    (1..=param_count)
+        .map(|i| format!("?{i}"))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 // ---------------------------------------------------------------------------
@@ -163,39 +172,34 @@ fn load_ingredients_batched(
         return Ok(HashMap::new());
     }
 
-    let placeholders: String = recipe_ids
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("?{}", i + 1))
-        .collect::<Vec<_>>()
-        .join(",");
-
-    let sql = format!(
-        "SELECT recipe_id, id, position, raw_text, name, quantity, unit \
-         FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY position",
-        placeholders
-    );
-
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(rusqlite::params_from_iter(recipe_ids), |row| {
-        let recipe_id: String = row.get(0)?;
-        let ingredient = RecipeIngredient {
-            id: row.get(1)?,
-            position: row.get(2)?,
-            raw_text: row.get(3)?,
-            name: row.get(4)?,
-            quantity: row.get(5)?,
-            unit: row.get(6)?,
-        };
-        Ok((recipe_id, ingredient))
-    })?;
-
     let mut map = HashMap::new();
-    for row in rows {
-        let (recipe_id, ingredient) = row?;
-        map.entry(recipe_id)
-            .or_insert_with(Vec::new)
-            .push(ingredient);
+    for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
+        let sql = format!(
+            "SELECT recipe_id, id, position, raw_text, name, quantity, unit \
+             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY position",
+            in_query_placeholders(recipe_id_batch.len())
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(recipe_id_batch.iter()), |row| {
+            let recipe_id: String = row.get(0)?;
+            let ingredient = RecipeIngredient {
+                id: row.get(1)?,
+                position: row.get(2)?,
+                raw_text: row.get(3)?,
+                name: row.get(4)?,
+                quantity: row.get(5)?,
+                unit: row.get(6)?,
+            };
+            Ok((recipe_id, ingredient))
+        })?;
+
+        for row in rows {
+            let (recipe_id, ingredient) = row?;
+            map.entry(recipe_id)
+                .or_insert_with(Vec::new)
+                .push(ingredient);
+        }
     }
     Ok(map)
 }
@@ -208,34 +212,29 @@ fn load_steps_batched(
         return Ok(HashMap::new());
     }
 
-    let placeholders: String = recipe_ids
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("?{}", i + 1))
-        .collect::<Vec<_>>()
-        .join(",");
-
-    let sql = format!(
-        "SELECT recipe_id, id, position, text \
-         FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY position",
-        placeholders
-    );
-
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(rusqlite::params_from_iter(recipe_ids), |row| {
-        let recipe_id: String = row.get(0)?;
-        let step = RecipeStep {
-            id: row.get(1)?,
-            position: row.get(2)?,
-            text: row.get(3)?,
-        };
-        Ok((recipe_id, step))
-    })?;
-
     let mut map = HashMap::new();
-    for row in rows {
-        let (recipe_id, step) = row?;
-        map.entry(recipe_id).or_insert_with(Vec::new).push(step);
+    for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
+        let sql = format!(
+            "SELECT recipe_id, id, position, text \
+             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY position",
+            in_query_placeholders(recipe_id_batch.len())
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(recipe_id_batch.iter()), |row| {
+            let recipe_id: String = row.get(0)?;
+            let step = RecipeStep {
+                id: row.get(1)?,
+                position: row.get(2)?,
+                text: row.get(3)?,
+            };
+            Ok((recipe_id, step))
+        })?;
+
+        for row in rows {
+            let (recipe_id, step) = row?;
+            map.entry(recipe_id).or_insert_with(Vec::new).push(step);
+        }
     }
     Ok(map)
 }
@@ -625,4 +624,32 @@ mod tests {
         assert_eq!(r1.ingredients.len(), 1);
         assert_eq!(r1.steps.len(), 1);
         assert_eq!(r1.ingredients[0].raw_text, "Ing 1.1");
+    }
+
+    #[test]
+    fn test_list_recipes_batches_large_recipe_catalog() {
+        let conn = setup_test_db();
+
+        for i in 0..1000 {
+            conn.execute(
+                "INSERT INTO recipes
+                 (id, title, description, source_url, source_host, image_url,
+                  servings, prep_time_minutes, cook_time_minutes, total_time_minutes,
+                  difficulty, categories, tags, created_at, updated_at)
+                 VALUES (?1, ?2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?3, ?4, ?5, ?5)",
+                params![
+                    format!("recipe-{i}"),
+                    format!("Recipe {i}"),
+                    "[]",
+                    "[]",
+                    format!("2026-01-01T00:00:{:02}.000Z", i % 60),
+                ],
+            )
+            .unwrap();
+        }
+
+        let recipes = list_recipes(&conn).unwrap();
+
+        assert_eq!(recipes.len(), 1000);
+    }
 }
