@@ -22,6 +22,6 @@ export function sortSavedWeekplanListItems(
     copy.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
     return copy
   }
-  copy.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  copy.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   return copy
 }

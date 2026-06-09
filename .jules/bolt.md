@@ -1,5 +1,5 @@
-## 2025-05-22 - [N+1 Query Optimization in Recipe Repository]
+## 2025-05-23 - [Optimizing List Sorting and Filtering]
 
-**Learning:** The `list_recipes` implementation in `src-tauri/src/shadow_server/recipe_catalog/repository.rs` followed a classic N+1 query pattern, fetching ingredients and steps one-by-one for each recipe. This is particularly costly in a local database context where many small queries add up, especially if the library grows large.
+**Learning:** Sorting large lists by ISO 8601 date strings in the frontend using `new Date().getTime()` is inefficient because it triggers thousands of temporary `Date` object allocations and expensive string parsing on every filter update (e.g., every keystroke in search). Since ISO 8601 strings are lexicographically sortable, direct string comparison is a much faster and lower-allocation alternative.
 
-**Action:** Prefer batched queries using `IN` clauses and memory-side grouping with `HashMap` to fetch related entities in bulk. This reduces database round-trips from `1 + 2N` to exactly 3.
+**Action:** Replace `new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()` with string comparison in `utils/recipeFiltering.ts` and `utils/savedWeekplansListSort.ts`. Consolidate duplicated filtering logic in `app/pages/recipes/index.vue` to use the optimized shared utility.

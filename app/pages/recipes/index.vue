@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RecipeCatalogItem } from '~~/types/recipe-catalog-item'
+import { filterRecipes } from '~~/utils/recipeFiltering'
 
 const searchQuery = ref('')
 const selectedCategory = ref('')
@@ -45,46 +46,12 @@ const { data: recipeOptions } = await useFetch<{ categories: string[], tags: str
 
 const hasAnyRecipes = computed(() => recipes.value.length > 0)
 
-const filteredRecipes = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
-  const category = selectedCategory.value
-  const tag = selectedTag.value
-
-  let results = recipes.value
-
-  if (query) {
-    results = results.filter((recipe) => {
-      const searchableText = [
-        recipe.title,
-        recipe.description,
-        recipe.difficulty,
-        ...recipe.categories,
-        ...recipe.tags,
-        ...recipe.ingredients.map(ingredient => ingredient.rawText),
-      ].filter(Boolean).join(' ').toLowerCase()
-
-      return searchableText.includes(query)
-    })
-  }
-
-  if (category) {
-    results = results.filter(r => r.categories.includes(category))
-  }
-
-  if (tag) {
-    results = results.filter(r => r.tags.includes(tag))
-  }
-
-  // Sort
-  if (sortBy.value === 'title') {
-    results = [...results].sort((a, b) => a.title.localeCompare(b.title))
-  }
-  else {
-    results = [...results].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-  }
-
-  return results
-})
+const filteredRecipes = computed(() => filterRecipes(recipes.value, {
+  query: searchQuery.value,
+  category: selectedCategory.value,
+  tag: selectedTag.value,
+  sortBy: sortBy.value,
+}))
 
 function clearFilters(): void {
   searchQuery.value = ''
