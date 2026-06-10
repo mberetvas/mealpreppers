@@ -24,6 +24,12 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
   planLoaded: boolean
   planError: boolean
   failedRecipeCount: number
+  consolidating: boolean
+  consolidatedLines: unknown[]
+  consolidationError: string | null
+  polishStatus: string | null
+  hasConsolidated: boolean
+  reviewLines: unknown[]
 }> = {}) {
   const state = {
     loading: ref(overrides.loading ?? false),
@@ -32,22 +38,30 @@ function setupGlobals(query: Record<string, string>, overrides: Partial<{
     planLoaded: ref(overrides.planLoaded ?? false),
     planError: ref(overrides.planError ?? false),
     failedRecipeCount: ref(overrides.failedRecipeCount ?? 0),
+    shoppingListCopiedFromMatch: ref(false),
     load: vi.fn(),
   }
 
   const consolidatedState = {
-    consolidating: ref(false),
-    consolidatedLines: ref([]),
-    consolidationError: ref(null),
-    polishStatus: ref(null),
+    consolidating: ref(overrides.consolidating ?? false),
+    consolidatedLines: ref(overrides.consolidatedLines ?? []),
+    consolidationError: ref(overrides.consolidationError ?? null),
+    polishStatus: ref(overrides.polishStatus ?? null),
     warnings: ref([]),
     baselineLines: ref([]),
     changes: ref([]),
-    hasConsolidated: ref(false),
+    hints: ref([]),
+    reviewLines: ref(overrides.reviewLines ?? []),
+    hasConsolidated: ref(overrides.hasConsolidated ?? false),
     shoppingListDeprecated: ref(false),
     savedListHydrationSettled: ref(true),
     savedList: ref<unknown>(null),
+    saving: ref(false),
+    saveError: ref(null),
     consolidate: vi.fn(),
+    editSaved: vi.fn(),
+    updateReviewLine: vi.fn(),
+    confirmReview: vi.fn(),
     reset: vi.fn(),
   }
 
@@ -137,5 +151,85 @@ describe('shopping-list page: partial recipe-resolution failure', () => {
     })
     const wrapper = mount(ShoppingListPage, mountOptions)
     expect(wrapper.text()).not.toContain('Could not load any recipes for this plan')
+  })
+})
+
+describe('shopping-list page: Print button', () => {
+  const sectionsFixture = [
+    { recipeId: 'r1', recipeTitle: 'Pasta', occurrenceCount: 1, ingredients: [{ name: 'Spaghetti' }] },
+  ]
+  const linesFixture = [
+    { id: 'l1', name: 'Milk', quantity: 1, unit: 'l' },
+  ]
+
+  function printButton(wrapper: ReturnType<typeof mount>) {
+    return wrapper.get('[data-testid="print-btn"]')
+  }
+
+  it('is enabled in sections view when the plan loaded with sections', () => {
+    setupGlobals({ plan: 'plan-1' }, { planLoaded: true, sections: sectionsFixture })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeUndefined()
+  })
+
+  it('is disabled while loading', () => {
+    setupGlobals({ plan: 'plan-1' }, { loading: true })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('is disabled on plan error', () => {
+    setupGlobals({ plan: 'plan-1' }, { planError: true })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('is disabled when the plan has no sections', () => {
+    setupGlobals({ plan: 'plan-1' }, { planLoaded: true, sections: [] })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('is disabled in consolidated view while consolidating', () => {
+    setupGlobals({ plan: 'plan-1', view: 'consolidated' }, {
+      planLoaded: true,
+      sections: sectionsFixture,
+      consolidating: true,
+    })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('is enabled in consolidated view with a polished list', () => {
+    setupGlobals({ plan: 'plan-1', view: 'consolidated' }, {
+      planLoaded: true,
+      sections: sectionsFixture,
+      hasConsolidated: true,
+      polishStatus: 'polished',
+      consolidatedLines: linesFixture,
+    })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeUndefined()
+  })
+
+  it('is enabled in consolidated view during pending review with review lines', () => {
+    setupGlobals({ plan: 'plan-1', view: 'consolidated' }, {
+      planLoaded: true,
+      sections: sectionsFixture,
+      hasConsolidated: true,
+      polishStatus: 'pending_review',
+      reviewLines: linesFixture,
+    })
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    expect(printButton(wrapper).attributes('disabled')).toBeUndefined()
+  })
+
+  it('calls window.print once when clicked while enabled', async () => {
+    setupGlobals({ plan: 'plan-1' }, { planLoaded: true, sections: sectionsFixture })
+    const printSpy = vi.fn()
+    vi.stubGlobal('print', printSpy)
+    const wrapper = mount(ShoppingListPage, mountOptions)
+    await printButton(wrapper).trigger('click')
+    expect(printSpy).toHaveBeenCalledTimes(1)
   })
 })
