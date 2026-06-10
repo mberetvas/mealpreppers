@@ -55,6 +55,9 @@
     "vue-router": "^5.1.0",
     "zod": "^4.4.3"
   },
+  "overrides": {
+    "estree-walker": "2.0.2"
+  },
   "trustedDependencies": [
     "@parcel/watcher",
     "better-sqlite3",
