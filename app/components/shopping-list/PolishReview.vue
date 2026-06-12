@@ -55,7 +55,7 @@ function handleConfirm(): void {
 <template>
   <div
     data-testid="polish-review"
-    class="grid gap-6 lg:grid-cols-2"
+    class="grid gap-6 lg:grid-cols-2 print:block"
   >
     <!-- Reference panel: aisle-grouped view or recipe sections depending on prop -->
     <section
@@ -86,7 +86,7 @@ function handleConfirm(): void {
     </section>
 
     <!-- Editable AI column -->
-    <section class="space-y-4">
+    <section class="space-y-4 print:hidden">
       <h3 class="text-sm font-semibold text-atelier-heading">
         AI-suggested list (editable)
       </h3>

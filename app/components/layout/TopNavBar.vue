@@ -12,7 +12,7 @@ function isActive(to: string): boolean {
 
 <template>
   <nav
-    class="fixed top-0 w-full z-50 bg-atelier-parchment/80 backdrop-blur-sm sm:backdrop-blur-md shadow-sm h-20 flex justify-between items-center px-8"
+    class="fixed top-0 w-full z-50 bg-atelier-parchment/80 backdrop-blur-sm sm:backdrop-blur-md shadow-sm h-20 flex justify-between items-center px-8 print:hidden"
   >
     <NuxtLink
       :to="primaryNavBrandTo"

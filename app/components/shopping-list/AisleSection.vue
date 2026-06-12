@@ -31,7 +31,7 @@ const effectiveChangedIds = computed(() => props.changedLineIds)
     <p
       v-if="isLegacyFlat"
       data-testid="legacy-flat-banner"
-      class="rounded-2xl bg-atelier-chip/40 px-5 py-3 text-sm text-atelier-description"
+      class="rounded-2xl bg-atelier-chip/40 px-5 py-3 text-sm text-atelier-description print:hidden"
       role="status"
     >
       Re-consolidate to group by supermarket aisle.
@@ -53,12 +53,12 @@ const effectiveChangedIds = computed(() => props.changedLineIds)
         <input
           v-if="!readonly"
           type="checkbox"
-          class="size-4 shrink-0 rounded border-outline-variant/40 accent-primary"
+          class="size-4 shrink-0 rounded border-outline-variant/40 accent-primary print:hidden"
           :aria-label="`Check off ${line.name}`"
         >
         <span
           v-if="effectiveChangedIds.has(line.id)"
-          class="material-symbols-outlined text-[16px] text-primary"
+          class="material-symbols-outlined text-[16px] text-primary print:hidden"
           aria-hidden="true"
         >auto_fix_high</span>
         <span class="flex-1 text-sm text-atelier-heading">
@@ -95,12 +95,12 @@ const effectiveChangedIds = computed(() => props.changedLineIds)
           <input
             v-if="!readonly"
             type="checkbox"
-            class="size-4 shrink-0 rounded border-outline-variant/40 accent-primary"
+            class="size-4 shrink-0 rounded border-outline-variant/40 accent-primary print:hidden"
             :aria-label="`Check off ${line.name}`"
           >
           <span
             v-if="effectiveChangedIds.has(line.id)"
-            class="material-symbols-outlined text-[16px] text-primary"
+            class="material-symbols-outlined text-[16px] text-primary print:hidden"
             aria-hidden="true"
           >auto_fix_high</span>
           <span class="flex-1 text-sm text-atelier-heading">

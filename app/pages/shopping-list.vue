@@ -117,6 +117,24 @@ const showChanges = computed(() => {
   return changes.value.length > 0
 })
 
+/** True when the active view holds printable list content. */
+const canPrint = computed(() => {
+  if (loading.value || planError.value || !planLoaded.value) return false
+
+  if (viewMode.value === 'sections') {
+    return sections.value.length > 0
+  }
+
+  if (desktopCutover.value || consolidating.value || consolidationError.value) return false
+  if (polishStatus.value === 'polished' && displayLines.value.length > 0) return true
+  if (polishStatus.value === 'pending_review' && reviewLines.value.length > 0) return true
+  return false
+})
+
+function printList(): void {
+  window.print()
+}
+
 useHead(() => ({
   title: planName.value ? `Shopping list — ${planName.value}` : 'Shopping list',
 }))
@@ -128,7 +146,7 @@ useHead(() => ({
     <header class="space-y-4">
       <NuxtLink
         to="/saved-weekplans"
-        class="inline-flex items-center gap-1.5 text-sm font-medium text-atelier-neutral-action transition hover:text-primary"
+        class="inline-flex items-center gap-1.5 text-sm font-medium text-atelier-neutral-action transition hover:text-primary print:hidden"
         aria-label="Back to Saved Weekplans"
       >
         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
@@ -145,16 +163,29 @@ useHead(() => ({
           </p>
         </div>
 
-        <button
-          type="button"
-          class="inline-flex min-h-touch min-w-touch shrink-0 items-center gap-2 self-start rounded-xl bg-atelier-chip px-4 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
-          :disabled="loading"
-          aria-label="Refresh shopping list"
-          @click="load"
-        >
-          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
-          Refresh
-        </button>
+        <div class="flex flex-col gap-3 self-start print:hidden sm:flex-row sm:items-center">
+          <button
+            type="button"
+            data-testid="print-btn"
+            class="inline-flex min-h-touch min-w-touch shrink-0 items-center gap-2 self-start rounded-xl bg-atelier-chip px-4 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            :disabled="!canPrint"
+            aria-label="Print shopping list"
+            @click="printList"
+          >
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">print</span>
+            Print
+          </button>
+          <button
+            type="button"
+            class="inline-flex min-h-touch min-w-touch shrink-0 items-center gap-2 self-start rounded-xl bg-atelier-chip px-4 text-sm font-semibold text-atelier-heading transition hover:bg-atelier-chip-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            :disabled="loading"
+            aria-label="Refresh shopping list"
+            @click="load"
+          >
+            <span class="material-symbols-outlined text-[20px]" aria-hidden="true">refresh</span>
+            Refresh
+          </button>
+        </div>
       </div>
     </header>
 
@@ -280,12 +311,13 @@ useHead(() => ({
       <!-- Copy-on-match notice: shown once when list was inherited from a matching week -->
       <ShoppingListConsolidatedListCopyNotice
         v-if="shoppingListCopiedFromMatch"
+        class="print:hidden"
         :plan-id="planId"
         :shopping-list-copied-from-match="shoppingListCopiedFromMatch"
       />
 
       <!-- View mode toggle -->
-      <nav data-testid="view-mode-toggle" class="flex gap-1 rounded-xl bg-atelier-chip/50 p-1" aria-label="Shopping list view mode">
+      <nav data-testid="view-mode-toggle" class="flex gap-1 rounded-xl bg-atelier-chip/50 p-1 print:hidden" aria-label="Shopping list view mode">
         <button
           type="button"
           data-testid="view-mode-sections"
@@ -406,7 +438,7 @@ useHead(() => ({
           <details
             v-if="deprecatedPreviousLines.length > 0"
             data-testid="previous-list"
-            class="rounded-2xl bg-atelier-parchment ring-1 ring-primary/10"
+            class="rounded-2xl bg-atelier-parchment ring-1 ring-primary/10 print:hidden"
           >
             <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-atelier-description">
               Previous list
@@ -524,7 +556,7 @@ useHead(() => ({
           <details
             v-if="deprecatedPreviousLines.length > 0"
             data-testid="previous-list"
-            class="rounded-2xl bg-atelier-parchment ring-1 ring-primary/10"
+            class="rounded-2xl bg-atelier-parchment ring-1 ring-primary/10 print:hidden"
           >
             <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-atelier-description">
               Previous list
@@ -556,7 +588,7 @@ useHead(() => ({
 
           <details
             data-testid="previous-list"
-            class="rounded-2xl bg-atelier-parchment ring-1 ring-primary/10"
+            class="rounded-2xl bg-atelier-parchment ring-1 ring-primary/10 print:hidden"
           >
             <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-atelier-description">
               Previous list
@@ -572,7 +604,7 @@ useHead(() => ({
             </ul>
           </details>
 
-          <div class="flex justify-center">
+          <div class="flex justify-center print:hidden">
             <button
               type="button"
               data-testid="consolidate-btn"
@@ -610,7 +642,7 @@ useHead(() => ({
             :changed-line-ids="changedLineIds"
             show-legacy-banner
           />
-          <div class="flex justify-center gap-3">
+          <div class="flex justify-center gap-3 print:hidden">
             <button
               v-if="savedList && !shoppingListDeprecated"
               type="button"
