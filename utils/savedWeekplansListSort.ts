@@ -22,6 +22,7 @@ export function sortSavedWeekplanListItems(
     copy.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
     return copy
   }
-  copy.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  // Optimization: Lexicographical comparison of ISO 8601 strings avoids Date parsing and allocation overhead
+  copy.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   return copy
 }

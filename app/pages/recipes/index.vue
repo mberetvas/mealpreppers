@@ -46,14 +46,14 @@ const { data: recipeOptions } = await useFetch<{ categories: string[], tags: str
 
 const hasAnyRecipes = computed(() => recipes.value.length > 0)
 
-const filteredRecipes = computed(() =>
-  filterRecipes(recipes.value, {
+const filteredRecipes = computed(() => {
+  return filterRecipes(recipes.value, {
     query: searchQuery.value,
     category: selectedCategory.value,
     tag: selectedTag.value,
     sortBy: sortBy.value,
-  }),
-)
+  })
+})
 
 function clearFilters(): void {
   searchQuery.value = ''
