@@ -41,6 +41,13 @@ ci-full: ci ci-desktop ci-rust-integration
 desktop-build:
 	bun run desktop:build
 
+# Fedora/Linux desktop release build (Homebrew pkg-config + linuxdeploy AppImage).
+# PKG_CONFIG_PATH — linuxbrew pkg-config misses /usr/lib64/pkgconfig (e.g. dbus-1).
+# NO_STRIP — linuxdeploy strip fails on modern ELF (.relr.dyn) on Fedora.
+# Usage: `just desktop-build-fedora`
+desktop-build-fedora:
+	NO_STRIP=true PKG_CONFIG_PATH="/usr/lib64/pkgconfig:/usr/share/pkgconfig" bun run desktop:build
+
 # Run the compiled release binary from `src-tauri/target/release/`.
 # Usage: `just desktop-run`
 desktop-run:

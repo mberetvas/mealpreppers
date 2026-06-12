@@ -48,12 +48,15 @@
     "better-sqlite3": "^12.10.0",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.2",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.1",
     "nuxt": "^4.4.7",
     "playwright": "^1.60.0",
     "vue": "^3.5.35",
     "vue-router": "^5.1.0",
     "zod": "^4.4.3"
+  },
+  "overrides": {
+    "estree-walker": "2.0.2"
   },
   "trustedDependencies": [
     "@parcel/watcher",
@@ -66,8 +69,8 @@
     "@vitest/coverage-v8": "^4.1.8",
     "@vue/test-utils": "^2.4.11",
     "drizzle-kit": "^0.31.10",
-    "happy-dom": "^20.9.0",
+    "happy-dom": "^20.10.2",
     "magic-string": "^0.30.21",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.8"
   }
 }

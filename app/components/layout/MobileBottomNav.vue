@@ -17,7 +17,7 @@ function isActive(to: string): boolean {
     in the same vertical band and clicks on flex gaps do nothing.
   -->
   <div
-    class="pointer-events-none fixed bottom-0 z-50 flex w-full items-center justify-around border-t border-outline-variant/10 bg-surface-container-lowest px-6 py-4 md:hidden"
+    class="pointer-events-none fixed bottom-0 z-50 flex w-full items-center justify-around border-t border-outline-variant/10 bg-surface-container-lowest px-6 py-4 md:hidden print:hidden"
   >
     <NuxtLink
       v-for="tab in tabs.slice(0, 2)"
