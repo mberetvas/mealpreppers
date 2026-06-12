@@ -53,7 +53,7 @@ export function filterRecipes(recipes: RecipeCatalogItem[], options: RecipeFilte
   }
   else {
     // Recently updated first: DESC sort on ISO 8601 strings
-    results = [...results].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    results = [...results].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
   }
 
   return results
