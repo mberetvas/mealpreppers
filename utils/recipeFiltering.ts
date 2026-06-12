@@ -52,8 +52,8 @@ export function filterRecipes(recipes: RecipeCatalogItem[], options: RecipeFilte
     results = [...results].sort((a, b) => a.title.localeCompare(b.title))
   }
   else {
-    // Recently updated first: DESC sort on ISO 8601 strings
-    results = [...results].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+    // Optimization: Lexicographical comparison of ISO 8601 strings avoids Date parsing and allocation overhead
+    results = [...results].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   }
 
   return results
@@ -100,8 +100,8 @@ export function filterRecipesForPlanner(recipes: RecipeCatalogItem[], options: R
     results = [...results].sort((a, b) => a.title.localeCompare(b.title))
   }
   else {
-    // Recently updated first: DESC sort on ISO 8601 strings
-    results = [...results].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+    // Optimization: Lexicographical comparison of ISO 8601 strings avoids Date parsing and allocation overhead
+    results = [...results].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   }
 
   return results
