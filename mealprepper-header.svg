@@ -1,0 +1,94 @@
+<svg viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background -->
+  <rect width="1200" height="300" fill="#FAFAF8"/>
+
+  <!-- Subtle grid structure -->
+  <g opacity="0.08">
+    <line x1="120" y1="60" x2="120" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="240" y1="60" x2="240" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="360" y1="60" x2="360" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="480" y1="60" x2="480" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="600" y1="60" x2="600" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="720" y1="60" x2="720" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="840" y1="60" x2="840" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+    <line x1="960" y1="60" x2="960" y2="240" stroke="#5A7A4F" stroke-width="1"/>
+  </g>
+
+  <!-- Left vertical accent -->
+  <rect x="40" y="60" width="3" height="180" fill="#6B4423"/>
+
+  <!-- Day columns (weekly structure) -->
+
+  <!-- Mon -->
+  <rect x="60" y="100" width="50" height="8" fill="#8B7355" opacity="0.6"/>
+  <rect x="60" y="120" width="50" height="8" fill="#5A7A4F" opacity="0.5"/>
+  <rect x="60" y="140" width="35" height="8" fill="#C8956F" opacity="0.4"/>
+
+  <!-- Tue -->
+  <rect x="130" y="100" width="50" height="8" fill="#8B7355" opacity="0.5"/>
+  <rect x="130" y="120" width="50" height="8" fill="#5A7A4F" opacity="0.6"/>
+  <rect x="130" y="140" width="42" height="8" fill="#C8956F" opacity="0.5"/>
+
+  <!-- Wed -->
+  <rect x="200" y="100" width="50" height="8" fill="#5A7A4F" opacity="0.6"/>
+  <rect x="200" y="120" width="50" height="8" fill="#C8956F" opacity="0.4"/>
+  <rect x="200" y="140" width="38" height="8" fill="#8B7355" opacity="0.5"/>
+
+  <!-- Thu -->
+  <rect x="270" y="100" width="50" height="8" fill="#C8956F" opacity="0.5"/>
+  <rect x="270" y="120" width="50" height="8" fill="#8B7355" opacity="0.6"/>
+  <rect x="270" y="140" width="45" height="8" fill="#5A7A4F" opacity="0.4"/>
+
+  <!-- Fri -->
+  <rect x="340" y="100" width="50" height="8" fill="#8B7355" opacity="0.4"/>
+  <rect x="340" y="120" width="50" height="8" fill="#5A7A4F" opacity="0.5"/>
+  <rect x="340" y="140" width="50" height="8" fill="#C8956F" opacity="0.6"/>
+
+  <!-- Sat -->
+  <rect x="410" y="100" width="50" height="8" fill="#5A7A4F" opacity="0.5"/>
+  <rect x="410" y="120" width="50" height="8" fill="#C8956F" opacity="0.6"/>
+  <rect x="410" y="140" width="40" height="8" fill="#8B7355" opacity="0.4"/>
+
+  <!-- Sun -->
+  <rect x="480" y="100" width="50" height="8" fill="#C8956F" opacity="0.6"/>
+  <rect x="480" y="120" width="50" height="8" fill="#8B7355" opacity="0.4"/>
+  <rect x="480" y="140" width="48" height="8" fill="#5A7A4F" opacity="0.5"/>
+
+  <!-- Ingredient cluster visualization (right side) -->
+
+  <!-- Vegetable cluster -->
+  <circle cx="620" cy="85" r="12" fill="#5A7A4F" opacity="0.5"/>
+  <circle cx="650" cy="80" r="10" fill="#5A7A4F" opacity="0.6"/>
+  <circle cx="635" cy="105" r="11" fill="#5A7A4F" opacity="0.4"/>
+
+  <!-- Grain/carb cluster -->
+  <circle cx="720" cy="95" r="13" fill="#C8956F" opacity="0.5"/>
+  <circle cx="750" cy="90" r="10" fill="#C8956F" opacity="0.6"/>
+  <circle cx="740" cy="120" r="11" fill="#C8956F" opacity="0.4"/>
+
+  <!-- Protein cluster -->
+  <circle cx="820" cy="85" r="12" fill="#8B7355" opacity="0.5"/>
+  <circle cx="850" cy="80" r="10" fill="#8B7355" opacity="0.6"/>
+  <circle cx="835" cy="110" r="11" fill="#8B7355" opacity="0.4"/>
+
+  <!-- Ingredient organization lines -->
+  <line x1="620" y1="200" x2="620" y2="220" stroke="#6B4423" stroke-width="1" opacity="0.2"/>
+  <line x1="720" y1="200" x2="720" y2="220" stroke="#6B4423" stroke-width="1" opacity="0.2"/>
+  <line x1="820" y1="200" x2="820" y2="220" stroke="#6B4423" stroke-width="1" opacity="0.2"/>
+
+  <!-- Right vertical accent -->
+  <rect x="957" y="60" width="3" height="180" fill="#6B4423"/>
+
+  <!-- Main title -->
+  <text x="40" y="270" font-family="Georgia, serif" font-size="24" font-weight="600" fill="#2C2C2C" letter-spacing="-0.5">Mealprepper</text>
+
+  <!-- Descriptive labels -->
+  <text x="620" y="235" font-family="Arial, sans-serif" font-size="11" font-weight="300" fill="#6B4423" opacity="0.7" text-anchor="middle">organize</text>
+  <text x="720" y="235" font-family="Arial, sans-serif" font-size="11" font-weight="300" fill="#6B4423" opacity="0.7" text-anchor="middle">prepare</text>
+  <text x="820" y="235" font-family="Arial, sans-serif" font-size="11" font-weight="300" fill="#6B4423" opacity="0.7" text-anchor="middle">gather</text>
+
+  <!-- Metadata -->
+  <text x="1160" y="295" font-family="Arial, sans-serif" font-size="9" font-weight="300" fill="#999" text-anchor="end" opacity="0.5">systematic nourishment</text>
+
+</svg>

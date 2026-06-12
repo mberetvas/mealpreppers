@@ -1,5 +1,7 @@
 # Mealprepper
 
+![Mealprepper](mealprepper-header.svg)
+
 Recipe catalog, weekly meal planning, and shopping lists — packaged as a Nuxt web app and a Tauri desktop app for Windows. Core flows work offline; AI shopping-list polish and recipe URL import need network access.
 
 ## Features
