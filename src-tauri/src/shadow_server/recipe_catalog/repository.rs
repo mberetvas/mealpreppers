@@ -176,7 +176,7 @@ fn load_ingredients_batched(
     for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
         let sql = format!(
             "SELECT recipe_id, id, position, raw_text, name, quantity, unit \
-             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY position",
+             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY recipe_id, position",
             in_query_placeholders(recipe_id_batch.len())
         );
 
@@ -216,7 +216,7 @@ fn load_steps_batched(
     for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
         let sql = format!(
             "SELECT recipe_id, id, position, text \
-             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY position",
+             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY recipe_id, position",
             in_query_placeholders(recipe_id_batch.len())
         );
 
@@ -466,28 +466,21 @@ pub fn delete_recipes_by_ids(conn: &Connection, ids: &[String]) -> Result<usize,
 }
 
 /// Returns the distinct `categories` and `tags` that exist across all stored recipes.
+///
+/// **Optimization:** Uses SQLite's `json_each` virtual table to extract unique values
+/// directly in the database, avoiding O(N) string parsing and allocations in Rust.
 pub fn list_stored_options(conn: &Connection) -> Result<(Vec<String>, Vec<String>), RepoError> {
-    let mut stmt = conn.prepare("SELECT categories, tags FROM recipes")?;
-    let mut categories: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut tags: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut cat_stmt = conn.prepare("SELECT DISTINCT value FROM recipes, json_each(categories)")?;
+    let categories = cat_stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
 
-    let rows = stmt.query_map([], |row| {
-        let cats: String = row.get(0)?;
-        let tgs: String = row.get(1)?;
-        Ok((cats, tgs))
-    })?;
+    let mut tag_stmt = conn.prepare("SELECT DISTINCT value FROM recipes, json_each(tags)")?;
+    let tags = tag_stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
 
-    for row in rows {
-        let (cats_json, tags_json) = row.map_err(RepoError::from)?;
-        for c in deserialize_json_list(&cats_json) {
-            categories.insert(c);
-        }
-        for t in deserialize_json_list(&tags_json) {
-            tags.insert(t);
-        }
-    }
-
-    Ok((categories.into_iter().collect(), tags.into_iter().collect()))
+    Ok((categories, tags))
 }
 
 #[cfg(test)]
