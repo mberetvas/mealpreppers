@@ -466,28 +466,27 @@ pub fn delete_recipes_by_ids(conn: &Connection, ids: &[String]) -> Result<usize,
 }
 
 /// Returns the distinct `categories` and `tags` that exist across all stored recipes.
+///
+/// **Optimization:** Uses SQLite's `json_each` and `DISTINCT` to offload de-duplication
+/// and avoid O(N) JSON parsing and string allocations in Rust.
 pub fn list_stored_options(conn: &Connection) -> Result<(Vec<String>, Vec<String>), RepoError> {
-    let mut stmt = conn.prepare("SELECT categories, tags FROM recipes")?;
-    let mut categories: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut tags: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut cats_stmt = conn.prepare(
+        "SELECT DISTINCT json_each.value FROM recipes, json_each(categories) \
+         WHERE json_each.value IS NOT NULL AND json_each.value != ''",
+    )?;
+    let categories = cats_stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
 
-    let rows = stmt.query_map([], |row| {
-        let cats: String = row.get(0)?;
-        let tgs: String = row.get(1)?;
-        Ok((cats, tgs))
-    })?;
+    let mut tags_stmt = conn.prepare(
+        "SELECT DISTINCT json_each.value FROM recipes, json_each(tags) \
+         WHERE json_each.value IS NOT NULL AND json_each.value != ''",
+    )?;
+    let tags = tags_stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
 
-    for row in rows {
-        let (cats_json, tags_json) = row.map_err(RepoError::from)?;
-        for c in deserialize_json_list(&cats_json) {
-            categories.insert(c);
-        }
-        for t in deserialize_json_list(&tags_json) {
-            tags.insert(t);
-        }
-    }
-
-    Ok((categories.into_iter().collect(), tags.into_iter().collect()))
+    Ok((categories, tags))
 }
 
 #[cfg(test)]
@@ -537,6 +536,70 @@ mod tests {
         )
         .unwrap();
         conn
+    }
+
+    #[test]
+    fn test_list_stored_options() {
+        let mut conn = setup_test_db();
+
+        let p1 = RecipeCreatePayload {
+            title: "R1".into(),
+            description: None,
+            source_url: None,
+            source_host: None,
+            image_url: None,
+            servings: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            total_time_minutes: None,
+            difficulty: None,
+            categories: vec!["A".into(), "B".into()],
+            tags: vec!["X".into()],
+            ingredients: vec![IngredientInput {
+                raw_text: "i".into(),
+                name: "i".into(),
+                quantity: None,
+                unit: None,
+            }],
+            steps: vec![StepInput {
+                position: Some(1),
+                text: "s".into(),
+            }],
+        };
+        let p2 = RecipeCreatePayload {
+            title: "R2".into(),
+            description: None,
+            source_url: None,
+            source_host: None,
+            image_url: None,
+            servings: None,
+            prep_time_minutes: None,
+            cook_time_minutes: None,
+            total_time_minutes: None,
+            difficulty: None,
+            categories: vec!["B".into(), "C".into()],
+            tags: vec!["X".into(), "Y".into()],
+            ingredients: vec![IngredientInput {
+                raw_text: "i".into(),
+                name: "i".into(),
+                quantity: None,
+                unit: None,
+            }],
+            steps: vec![StepInput {
+                position: Some(1),
+                text: "s".into(),
+            }],
+        };
+
+        create_recipe(&mut conn, p1).unwrap();
+        create_recipe(&mut conn, p2).unwrap();
+
+        let (mut cats, mut tags) = list_stored_options(&conn).unwrap();
+        cats.sort();
+        tags.sort();
+
+        assert_eq!(cats, vec!["A", "B", "C"]);
+        assert_eq!(tags, vec!["X", "Y"]);
     }
 
     #[test]
