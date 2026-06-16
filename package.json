@@ -41,7 +41,7 @@
     "@fontsource/material-symbols-outlined": "^5.2.8",
     "@langchain/core": "^1.1.49",
     "@langchain/openrouter": "^0.3.0",
-    "@nuxt/eslint": "1.15.2",
+    "@nuxt/eslint": "1.16.0",
     "@nuxt/test-utils": "4.0.3",
     "@nuxtjs/tailwindcss": "6.14.0",
     "@tauri-apps/api": "^2.9.1",
