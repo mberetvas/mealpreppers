@@ -229,11 +229,15 @@ export async function listStoredRecipeOptions(db: RecipeCatalogDb): Promise<Reci
     const tags = new Set<string>()
 
     for (const row of rows) {
-      for (const category of row.categories) {
-        categories.add(category)
+      if (Array.isArray(row.categories)) {
+        for (const category of row.categories) {
+          categories.add(category)
+        }
       }
-      for (const tag of row.tags) {
-        tags.add(tag)
+      if (Array.isArray(row.tags)) {
+        for (const tag of row.tags) {
+          tags.add(tag)
+        }
       }
     }
 

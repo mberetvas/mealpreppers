@@ -23,9 +23,11 @@ export function isDesktopTokenProtectedPath(pathname: string): boolean {
 
 /** Timing-safe comparison of desktop tokens. */
 export function desktopTokensMatch(provided: string, expected: string): boolean {
-  const providedBuf = Buffer.from(provided)
   const expectedBuf = Buffer.from(expected)
+  const providedBuf = Buffer.from(provided)
   if (providedBuf.length !== expectedBuf.length) {
+    // Perform a dummy compare against expectedBuf to avoid leaking length info via timing
+    timingSafeEqual(expectedBuf, expectedBuf)
     return false
   }
   return timingSafeEqual(providedBuf, expectedBuf)
