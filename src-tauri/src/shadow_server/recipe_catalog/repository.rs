@@ -176,7 +176,7 @@ fn load_ingredients_batched(
     for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
         let sql = format!(
             "SELECT recipe_id, id, position, raw_text, name, quantity, unit \
-             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY position",
+             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY recipe_id, position",
             in_query_placeholders(recipe_id_batch.len())
         );
 
@@ -216,7 +216,7 @@ fn load_steps_batched(
     for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
         let sql = format!(
             "SELECT recipe_id, id, position, text \
-             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY position",
+             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY recipe_id, position",
             in_query_placeholders(recipe_id_batch.len())
         );
 
