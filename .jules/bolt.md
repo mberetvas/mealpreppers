@@ -18,12 +18,6 @@
 
 ## 2025-05-25 - [Indexing Optimization for Batched Component Loading]
 
-**Learning:** When using SQLite  clauses to fetch related entities (like ingredients or steps for multiple recipes),  causes a  sort because the database cannot guarantee the global order across different parent IDs using the  index. Changing the clause to  allows SQLite to satisfy the sort entirely via the composite index.
-
-**Action:** Always include the grouping key () in the  clause of batched relationship queries to leverage composite indices and avoid temporary sort tables.
-
-## 2025-05-25 - [Indexing Optimization for Batched Component Loading]
-
 **Learning:** When using SQLite `IN` clauses to fetch related entities (like ingredients or steps for multiple recipes), `ORDER BY position` causes a `TEMP B-TREE` sort because the database cannot guarantee the global order across different parent IDs using the `(recipe_id, position)` index. Changing the clause to `ORDER BY recipe_id, position` allows SQLite to satisfy the sort entirely via the composite index.
 
 **Action:** Always include the grouping key (`recipe_id`) in the `ORDER BY` clause of batched relationship queries to leverage composite indices and avoid temporary sort tables.
