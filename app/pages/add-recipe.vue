@@ -91,10 +91,6 @@ async function importRecipe(): Promise<void> {
     importSuccessMessage.value = 'Recipe imported from the URL. Review the form below, then save.'
   }
   catch (error) {
-    // #region agent log
-    const errObj = error as { statusCode?: number, statusMessage?: string, data?: { statusMessage?: string, statusCode?: number } }
-    fetch('http://127.0.0.1:7634/ingest/aa664fed-3c0e-4c5e-bb22-561d3d504744', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fafd41' }, body: JSON.stringify({ sessionId: 'fafd41', hypothesisId: 'E', location: 'add-recipe.vue:importRecipe', message: 'import failed', data: { statusCode: errObj.statusCode, statusMessage: errObj.statusMessage, dataStatusMessage: errObj.data?.statusMessage, dataStatusCode: errObj.data?.statusCode, hasBootstrap: typeof window !== 'undefined' && !!window.__MEALPREPPER_DESKTOP__ }, timestamp: Date.now() }) }).catch(() => {})
-    // #endregion
     errorMessage.value = toErrorMessage(error, 'Recipe could not be imported.')
   }
   finally {
