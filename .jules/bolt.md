@@ -15,3 +15,9 @@
 **Learning:** While `localeCompare` is faster than `Date` parsing, it is still significantly slower than direct string operators (`>` and `<`) for ISO 8601 strings because it performs locale-aware collation. For 10,000 items, `localeCompare` took ~180ms in Node.js while string operators took ~8ms (~22x faster).
 
 **Action:** Use `(b > a ? 1 : b < a ? -1 : 0)` instead of `b.localeCompare(a)` for hot-path sorting of ISO 8601 strings in the frontend.
+
+## 2025-05-25 - [Indexing Optimization for Batched Component Loading]
+
+**Learning:** When using SQLite `IN` clauses to fetch related entities (like ingredients or steps for multiple recipes), `ORDER BY position` causes a `TEMP B-TREE` sort because the database cannot guarantee the global order across different parent IDs using the `(recipe_id, position)` index. Changing the clause to `ORDER BY recipe_id, position` allows SQLite to satisfy the sort entirely via the composite index.
+
+**Action:** Always include the grouping key (`recipe_id`) in the `ORDER BY` clause of batched relationship queries to leverage composite indices and avoid temporary sort tables.
