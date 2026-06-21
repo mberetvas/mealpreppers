@@ -40,7 +40,7 @@
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@fontsource/material-symbols-outlined": "^5.2.8",
     "@langchain/core": "^1.1.49",
-    "@langchain/openrouter": "^0.3.0",
+    "@langchain/openrouter": "^0.4.1",
     "@nuxt/eslint": "1.16.0",
     "@nuxt/test-utils": "4.0.3",
     "@nuxtjs/tailwindcss": "6.14.0",
