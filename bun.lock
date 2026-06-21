@@ -8,7 +8,7 @@
         "@fontsource-variable/newsreader": "^5.2.8",
         "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
         "@fontsource/material-symbols-outlined": "^5.2.8",
-        "@langchain/core": "^1.1.49",
+        "@langchain/core": "^1.2.0",
         "@langchain/openrouter": "^0.3.0",
         "@nuxt/eslint": "1.16.0",
         "@nuxt/test-utils": "4.0.3",
@@ -253,7 +253,7 @@
 
     "@kwsites/promise-deferred": ["@kwsites/promise-deferred@1.1.1", "", {}, "sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw=="],
 
-    "@langchain/core": ["@langchain/core@1.1.49", "", { "dependencies": { "@cfworker/json-schema": "^4.0.2", "@standard-schema/spec": "^1.1.0", "js-tiktoken": "^1.0.12", "langsmith": ">=0.5.0 <1.0.0", "mustache": "^4.2.0", "p-queue": "^6.6.2", "zod": "^3.25.76 || ^4" } }, "sha512-7wkN3Qv/qZqsY0p3h48CNu6E6y5GMYatYxj+JrX4uVNBiqIVQm1Z528QrmayJWVW9SQTQicqRNoyTCzl+K9F8Q=="],
+    "@langchain/core": ["@langchain/core@1.2.0", "", { "dependencies": { "@cfworker/json-schema": "^4.0.2", "@standard-schema/spec": "^1.1.0", "js-tiktoken": "^1.0.12", "langsmith": ">=0.5.0 <1.0.0", "mustache": "^4.2.0", "p-queue": "^6.6.2", "zod": "^3.25.76 || ^4" } }, "sha512-nXmyH0FbcsASlRmC9sbqX0gjQdxgB9KcS13vkw9PMaH0zzylwZkGFU9sY0XCPa2/AokmaNTU9DOW3IUDfAtQow=="],
 
     "@langchain/openai": ["@langchain/openai@1.4.7", "", { "dependencies": { "js-tiktoken": "^1.0.12", "openai": "^6.37.0", "zod": "^3.25.76 || ^4" }, "peerDependencies": { "@langchain/core": "^1.1.48" } }, "sha512-i1YLV4pWbGC6W8m0ZNpLObJuf1nyU4o8aWyX4AF9fHn7eM67HfIJWQ5n5XzcCpuSa41otrxA9jvH5XRKwI1qDA=="],
 
