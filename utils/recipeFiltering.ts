@@ -16,6 +16,29 @@ export interface RecipePlannerFilterOptions {
 }
 
 /**
+ * Cache for lowercased searchable text to avoid repeated joins/lowercasing on every keystroke.
+ * WeakMap ensures we don't leak memory if recipes are removed or the catalog is refreshed.
+ */
+const searchCache = new WeakMap<RecipeCatalogItem, string>()
+
+function getSearchableText(recipe: RecipeCatalogItem): string {
+  let text = searchCache.get(recipe)
+  if (text !== undefined) return text
+
+  text = [
+    recipe.title,
+    recipe.description,
+    recipe.difficulty,
+    ...recipe.categories,
+    ...recipe.tags,
+    ...recipe.ingredients.map(ingredient => ingredient.rawText),
+  ].filter(Boolean).join(' ').toLowerCase()
+
+  searchCache.set(recipe, text)
+  return text
+}
+
+/**
  * Filters and sorts recipes based on search query, category, tag, and sort preference.
  * Pure function — easy to test without Vue reactivity.
  */
@@ -27,16 +50,7 @@ export function filterRecipes(recipes: RecipeCatalogItem[], options: RecipeFilte
 
   if (normalizedQuery) {
     results = results.filter((recipe) => {
-      const searchableText = [
-        recipe.title,
-        recipe.description,
-        recipe.difficulty,
-        ...recipe.categories,
-        ...recipe.tags,
-        ...recipe.ingredients.map(ingredient => ingredient.rawText),
-      ].filter(Boolean).join(' ').toLowerCase()
-
-      return searchableText.includes(normalizedQuery)
+      return getSearchableText(recipe).includes(normalizedQuery)
     })
   }
 
@@ -70,16 +84,7 @@ export function filterRecipesForPlanner(recipes: RecipeCatalogItem[], options: R
 
   if (normalizedQuery) {
     results = results.filter((recipe) => {
-      const searchableText = [
-        recipe.title,
-        recipe.description,
-        recipe.difficulty,
-        ...recipe.categories,
-        ...recipe.tags,
-        ...recipe.ingredients.map(ingredient => ingredient.rawText),
-      ].filter(Boolean).join(' ').toLowerCase()
-
-      return searchableText.includes(normalizedQuery)
+      return getSearchableText(recipe).includes(normalizedQuery)
     })
   }
 
