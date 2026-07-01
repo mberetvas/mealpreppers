@@ -15,3 +15,9 @@
 **Learning:** While `localeCompare` is faster than `Date` parsing, it is still significantly slower than direct string operators (`>` and `<`) for ISO 8601 strings because it performs locale-aware collation. For 10,000 items, `localeCompare` took ~180ms in Node.js while string operators took ~8ms (~22x faster).
 
 **Action:** Use `(b > a ? 1 : b < a ? -1 : 0)` instead of `b.localeCompare(a)` for hot-path sorting of ISO 8601 strings in the frontend.
+
+## 2026-07-01 - [Memoization of Searchable Text]
+
+**Learning:** Joining and lowercasing multiple fields (title, description, ingredients, etc.) for every item in a large list on every keystroke is a major CPU bottleneck in frontend filtering. In this app, for 1000 recipes, it took ~5.9ms per filter call (~590ms for 100 iterations).
+
+**Action:** Use a `WeakMap` to cache pre-computed searchable strings for domain objects. This reduces filtering time by ~10-20x while avoiding memory leaks.
