@@ -15,6 +15,27 @@ export interface RecipePlannerFilterOptions {
   sortBy: 'updatedAt' | 'title'
 }
 
+const searchableTextCache = new WeakMap<RecipeCatalogItem, { text: string, updatedAt: string }>()
+
+function getSearchableText(recipe: RecipeCatalogItem): string {
+  const cached = searchableTextCache.get(recipe)
+  if (cached !== undefined && cached.updatedAt === recipe.updatedAt) {
+    return cached.text
+  }
+
+  const text = [
+    recipe.title,
+    recipe.description,
+    recipe.difficulty,
+    ...recipe.categories,
+    ...recipe.tags,
+    ...recipe.ingredients.map(ingredient => ingredient.rawText),
+  ].filter(Boolean).join(' ').toLowerCase()
+
+  searchableTextCache.set(recipe, { text, updatedAt: recipe.updatedAt })
+  return text
+}
+
 /**
  * Filters and sorts recipes based on search query, category, tag, and sort preference.
  * Pure function — easy to test without Vue reactivity.
@@ -27,16 +48,7 @@ export function filterRecipes(recipes: RecipeCatalogItem[], options: RecipeFilte
 
   if (normalizedQuery) {
     results = results.filter((recipe) => {
-      const searchableText = [
-        recipe.title,
-        recipe.description,
-        recipe.difficulty,
-        ...recipe.categories,
-        ...recipe.tags,
-        ...recipe.ingredients.map(ingredient => ingredient.rawText),
-      ].filter(Boolean).join(' ').toLowerCase()
-
-      return searchableText.includes(normalizedQuery)
+      return getSearchableText(recipe).includes(normalizedQuery)
     })
   }
 
@@ -70,16 +82,7 @@ export function filterRecipesForPlanner(recipes: RecipeCatalogItem[], options: R
 
   if (normalizedQuery) {
     results = results.filter((recipe) => {
-      const searchableText = [
-        recipe.title,
-        recipe.description,
-        recipe.difficulty,
-        ...recipe.categories,
-        ...recipe.tags,
-        ...recipe.ingredients.map(ingredient => ingredient.rawText),
-      ].filter(Boolean).join(' ').toLowerCase()
-
-      return searchableText.includes(normalizedQuery)
+      return getSearchableText(recipe).includes(normalizedQuery)
     })
   }
 
