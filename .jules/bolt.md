@@ -15,3 +15,9 @@
 **Learning:** While `localeCompare` is faster than `Date` parsing, it is still significantly slower than direct string operators (`>` and `<`) for ISO 8601 strings because it performs locale-aware collation. For 10,000 items, `localeCompare` took ~180ms in Node.js while string operators took ~8ms (~22x faster).
 
 **Action:** Use `(b > a ? 1 : b < a ? -1 : 0)` instead of `b.localeCompare(a)` for hot-path sorting of ISO 8601 strings in the frontend.
+
+## 2025-05-25 - [Frontend Search Optimization: WeakMap Caching]
+
+**Learning:** Searchable text construction (concatenating title, description, ingredients, etc.) and lowercasing for 1,000+ items on every keystroke causes noticeable main-thread lag. `WeakMap` is ideal for caching these pre-computed strings because it uses the recipe object itself as a key and doesn't prevent garbage collection.
+
+**Action:** Use `WeakMap<RecipeCatalogItem, { text: string, updatedAt: string }>` to cache searchable text. Always include a version check (like `updatedAt`) to ensure the cache is invalidated if the underlying data changes without the object reference being replaced.
