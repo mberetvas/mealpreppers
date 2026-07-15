@@ -110,7 +110,7 @@ export async function consolidateShoppingList(
   let consolidatedLines: MergedLine[] = []
   let baselineLines: MergedLine[] = fallbackBaseline.lines
   let changes: PolishResponseChange[] = []
-  let polishStatus: PolishStatus = 'ai_skipped'
+  let polishStatus: PolishStatus
   let polishResponse: PolishResponse | undefined
   let hints: PolishHint[] | undefined
   const sourceFingerprint = computeSourceFingerprint(plan.body)
