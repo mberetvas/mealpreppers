@@ -1467,7 +1467,7 @@ fn recipe_preview_post_includes_cors_for_tauri_webview_origin() {
         .http_status_as_error(false)
         .build()
         .into();
-    let mut resp = agent
+    let resp = agent
         .post(&srv.url("/api/v1/recipes/preview"))
         .header("content-type", "application/json")
         .header("x-desktop-token", "cors-token")
