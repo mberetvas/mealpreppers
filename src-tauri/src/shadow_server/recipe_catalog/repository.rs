@@ -47,10 +47,11 @@ fn deserialize_json_list(s: &str) -> Vec<String> {
 }
 
 fn in_query_placeholders(param_count: usize) -> String {
-    (1..=param_count)
-        .map(|i| format!("?{i}"))
-        .collect::<Vec<_>>()
-        .join(",")
+    if param_count == 0 {
+        return String::new();
+    }
+    let placeholders = vec!["?"; param_count];
+    placeholders.join(",")
 }
 
 // ---------------------------------------------------------------------------
@@ -62,27 +63,27 @@ fn row_to_item(
     ingredients: Vec<RecipeIngredient>,
     steps: Vec<RecipeStep>,
 ) -> Result<RecipeCatalogItem, rusqlite::Error> {
-    let categories_json: String = row.get("categories")?;
-    let tags_json: String = row.get("tags")?;
+    let categories_json: String = row.get(11)?;
+    let tags_json: String = row.get(12)?;
 
     Ok(RecipeCatalogItem {
-        id: row.get("id")?,
-        title: row.get("title")?,
-        description: row.get("description")?,
-        source_url: row.get("source_url")?,
-        source_host: row.get("source_host")?,
-        image_url: row.get("image_url")?,
-        servings: row.get("servings")?,
-        prep_time_minutes: row.get("prep_time_minutes")?,
-        cook_time_minutes: row.get("cook_time_minutes")?,
-        total_time_minutes: row.get("total_time_minutes")?,
-        difficulty: row.get("difficulty")?,
+        id: row.get(0)?,
+        title: row.get(1)?,
+        description: row.get(2)?,
+        source_url: row.get(3)?,
+        source_host: row.get(4)?,
+        image_url: row.get(5)?,
+        servings: row.get(6)?,
+        prep_time_minutes: row.get(7)?,
+        cook_time_minutes: row.get(8)?,
+        total_time_minutes: row.get(9)?,
+        difficulty: row.get(10)?,
         categories: deserialize_json_list(&categories_json),
         tags: deserialize_json_list(&tags_json),
         ingredients,
         steps,
-        created_at: row.get("created_at")?,
-        updated_at: row.get("updated_at")?,
+        created_at: row.get(13)?,
+        updated_at: row.get(14)?,
     })
 }
 
@@ -143,9 +144,8 @@ pub fn list_recipes(conn: &Connection) -> Result<Vec<RecipeCatalogItem>, RepoErr
 
     let mut rows = stmt.query([])?;
     while let Some(row) = rows.next()? {
-        let id: String = row.get("id")?;
-        recipe_ids.push(id.clone());
         let item = row_to_item(row, vec![], vec![]).map_err(RepoError::from)?;
+        recipe_ids.push(item.id.clone());
         recipes.push(item);
     }
 
@@ -176,7 +176,7 @@ fn load_ingredients_batched(
     for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
         let sql = format!(
             "SELECT recipe_id, id, position, raw_text, name, quantity, unit \
-             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY position",
+             FROM recipe_ingredients WHERE recipe_id IN ({}) ORDER BY recipe_id, position",
             in_query_placeholders(recipe_id_batch.len())
         );
 
@@ -216,7 +216,7 @@ fn load_steps_batched(
     for recipe_id_batch in recipe_ids.chunks(SQLITE_IN_QUERY_BATCH_SIZE) {
         let sql = format!(
             "SELECT recipe_id, id, position, text \
-             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY position",
+             FROM recipe_steps WHERE recipe_id IN ({}) ORDER BY recipe_id, position",
             in_query_placeholders(recipe_id_batch.len())
         );
 

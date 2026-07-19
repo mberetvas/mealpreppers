@@ -110,7 +110,7 @@ export async function consolidateShoppingList(
   let consolidatedLines: MergedLine[] = []
   let baselineLines: MergedLine[] = fallbackBaseline.lines
   let changes: PolishResponseChange[] = []
-  let polishStatus: PolishStatus
+  let polishStatus: PolishStatus = 'ai_skipped'
   let polishResponse: PolishResponse | undefined
   let hints: PolishHint[] | undefined
   const sourceFingerprint = computeSourceFingerprint(plan.body)
@@ -123,12 +123,10 @@ export async function consolidateShoppingList(
   if (!openrouterApiKey) {
     logger.info('shopping_list.polish_skipped', { reason: 'missing_api_key' })
     warnings.push(AI_REQUIRED_WARNING)
-    polishStatus = 'ai_skipped'
   }
   else if (!polishPort) {
     logger.info('shopping_list.polish_skipped', { reason: 'no_polish_port' })
     warnings.push(AI_REQUIRED_WARNING)
-    polishStatus = 'ai_skipped'
   }
   else {
     try {
