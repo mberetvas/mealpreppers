@@ -16,6 +16,11 @@
 
 **Action:** Use `(b > a ? 1 : b < a ? -1 : 0)` instead of `b.localeCompare(a)` for hot-path sorting of ISO 8601 strings in the frontend.
 
+## 2025-05-25 - [Frontend Search Optimization: WeakMap Caching]
+
+**Learning:** Searchable text construction (concatenating title, description, ingredients, etc.) and lowercasing for 1,000+ items on every keystroke causes noticeable main-thread lag. `WeakMap` is ideal for caching these pre-computed strings because it uses the recipe object itself as a key and doesn't prevent garbage collection.
+
+**Action:** Use `WeakMap<RecipeCatalogItem, { text: string, updatedAt: string }>` to cache searchable text. Always include a version check (like `updatedAt`) to ensure the cache is invalidated if the underlying data changes without the object reference being replaced.
 ## 2025-05-25 - [SQLite Query and Hydration Micro-optimizations]
 
 **Learning:** SQLite performance in Rust can be improved by leveraging indices in `ORDER BY` clauses during batched queries. Using `ORDER BY recipe_id, position` instead of just `ORDER BY position` when querying with an `IN (recipe_id...)` clause allows SQLite to satisfy the sort using the existing composite index `(recipe_id, position)`, avoiding a `TEMP B-TREE` sort. Additionally, `rusqlite`'s `row.get(index)` is faster than `row.get("name")` as it avoids name-to-index resolution on every row.
