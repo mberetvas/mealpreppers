@@ -15,3 +15,9 @@
 **Learning:** While `localeCompare` is faster than `Date` parsing, it is still significantly slower than direct string operators (`>` and `<`) for ISO 8601 strings because it performs locale-aware collation. For 10,000 items, `localeCompare` took ~180ms in Node.js while string operators took ~8ms (~22x faster).
 
 **Action:** Use `(b > a ? 1 : b < a ? -1 : 0)` instead of `b.localeCompare(a)` for hot-path sorting of ISO 8601 strings in the frontend.
+
+## 2025-05-25 - [SQLite Query and Hydration Micro-optimizations]
+
+**Learning:** SQLite performance in Rust can be improved by leveraging indices in `ORDER BY` clauses during batched queries. Using `ORDER BY recipe_id, position` instead of just `ORDER BY position` when querying with an `IN (recipe_id...)` clause allows SQLite to satisfy the sort using the existing composite index `(recipe_id, position)`, avoiding a `TEMP B-TREE` sort. Additionally, `rusqlite`'s `row.get(index)` is faster than `row.get("name")` as it avoids name-to-index resolution on every row.
+
+**Action:** Always include the primary/foreign key in the `ORDER BY` clause when performing batched lookups with `IN` clauses. Use numeric indices for column access in high-volume hydration paths.
