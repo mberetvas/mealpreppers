@@ -131,8 +131,11 @@ fn simple_regex_match_iso_duration(normalized: &str) -> Option<u32> {
     }
     let after_p = &normalized[1..];
     // Skip optional days part
-    let t_pos = after_p.find('t')?;
-    let after_d = &after_p[t_pos + 1..];
+    let after_d = if let Some(t_pos) = after_p.find('t') {
+        &after_p[t_pos + 1..]
+    } else {
+        return None;
+    };
 
     let hours = if let Some(h_pos) = after_d.find('h') {
         let h_str: String = after_d[..h_pos]
