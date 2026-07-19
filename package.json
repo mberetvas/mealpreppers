@@ -71,6 +71,6 @@
     "drizzle-kit": "^0.31.10",
     "happy-dom": "^20.10.6",
     "magic-string": "^0.30.21",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }
