@@ -26,3 +26,9 @@
 **Learning:** SQLite performance in Rust can be improved by leveraging indices in `ORDER BY` clauses during batched queries. Using `ORDER BY recipe_id, position` instead of just `ORDER BY position` when querying with an `IN (recipe_id...)` clause allows SQLite to satisfy the sort using the existing composite index `(recipe_id, position)`, avoiding a `TEMP B-TREE` sort. Additionally, `rusqlite`'s `row.get(index)` is faster than `row.get("name")` as it avoids name-to-index resolution on every row.
 
 **Action:** Always include the primary/foreign key in the `ORDER BY` clause when performing batched lookups with `IN` clauses. Use numeric indices for column access in high-volume hydration paths.
+
+## 2025-05-26 - [Rust Placeholder String Construction Allocation Optimization]
+
+**Learning:** In SQLite queries that use `IN` clauses with multiple query parameters (e.g. batched recipes hydration), building the list of query placeholder strings (like `"?,?,?"`) dynamically using helper vectors and `join(",")` generates unnecessary heap allocations. Using pre-allocated capacity `param_count * 2 - 1` and appending `'?'` and `','` characters with simple `.push()` calls minimizes memory overhead down to exactly one heap allocation and eliminates `Vec` instantiation.
+
+**Action:** Prefer exact capacity pre-allocation and character-based string construction over `vec!["?"; n].join(",")` inside database and query helper code in Rust.

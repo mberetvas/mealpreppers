@@ -50,8 +50,15 @@ fn in_query_placeholders(param_count: usize) -> String {
     if param_count == 0 {
         return String::new();
     }
-    let placeholders = vec!["?"; param_count];
-    placeholders.join(",")
+    // Optimization: Pre-allocate precise capacity to avoid intermediate vector
+    // and multiple string re-allocations during joins.
+    let mut s = String::with_capacity(param_count * 2 - 1);
+    s.push('?');
+    for _ in 1..param_count {
+        s.push(',');
+        s.push('?');
+    }
+    s
 }
 
 // ---------------------------------------------------------------------------
@@ -536,6 +543,14 @@ mod tests {
         )
         .unwrap();
         conn
+    }
+
+    #[test]
+    fn test_in_query_placeholders_values() {
+        assert_eq!(in_query_placeholders(0), "");
+        assert_eq!(in_query_placeholders(1), "?");
+        assert_eq!(in_query_placeholders(2), "?,?");
+        assert_eq!(in_query_placeholders(5), "?,?,?,?,?");
     }
 
     #[test]
