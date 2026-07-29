@@ -50,8 +50,15 @@ fn in_query_placeholders(param_count: usize) -> String {
     if param_count == 0 {
         return String::new();
     }
-    let placeholders = vec!["?"; param_count];
-    placeholders.join(",")
+    // Optimization: Pre-allocate precise capacity (param_count '?' characters + param_count - 1 ',' characters)
+    // and push characters directly, completely avoiding vector allocations and joins.
+    let mut s = String::with_capacity(param_count * 2 - 1);
+    s.push('?');
+    for _ in 1..param_count {
+        s.push(',');
+        s.push('?');
+    }
+    s
 }
 
 // ---------------------------------------------------------------------------
