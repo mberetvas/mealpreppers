@@ -457,12 +457,7 @@ pub fn delete_recipes_by_ids(conn: &Connection, ids: &[String]) -> Result<usize,
 
     // Build parameterised IN clause; rusqlite doesn't support dynamic binding natively
     // so we build the SQL string. IDs are UUID strings so no injection risk.
-    let placeholders: String = ids
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("?{}", i + 1))
-        .collect::<Vec<_>>()
-        .join(",");
+    let placeholders = in_query_placeholders(ids.len());
 
     let sql = format!("DELETE FROM recipes WHERE id IN ({placeholders})");
     let count = conn
