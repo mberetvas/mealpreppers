@@ -16,7 +16,7 @@ use uuid::Uuid;
 use crate::shadow_server::platform::RepoError;
 
 use super::models::{
-    DayMeals, MonthPlanListItem, MonthPlanRow, MonthPlanV1, RecipeIdSlot, SavedWeekplanListItem,
+    DayMeals, MonthPlanListItem, MonthPlanRow, MonthPlanV1, SavedWeekplanListItem,
     SavedWeekplanRow, WeekPlanV1,
 };
 
@@ -65,11 +65,16 @@ pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
     let mut first = true;
 
     for day in ["1", "2", "3", "4", "5", "6", "7"] {
-        let day_meals = body.days.get(day);
-        for (meal, get_slot) in [
-            ("breakfast", |dm: &DayMeals| &dm.breakfast),
-            ("lunch", |dm: &DayMeals| &dm.lunch),
-            ("dinner", |dm: &DayMeals| &dm.dinner),
+        let empty = DayMeals {
+            breakfast: super::models::RecipeIdSlot { recipe_id: None },
+            lunch: super::models::RecipeIdSlot { recipe_id: None },
+            dinner: super::models::RecipeIdSlot { recipe_id: None },
+        };
+        let d = body.days.get(day).unwrap_or(&empty);
+        for (meal, slot) in [
+            ("breakfast", &d.breakfast),
+            ("lunch", &d.lunch),
+            ("dinner", &d.dinner),
         ] {
             if first {
                 first = false;
@@ -80,16 +85,18 @@ pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
             hasher.update(b".");
             hasher.update(meal.as_bytes());
             hasher.update(b"=");
-            if let Some(slot) = day_meals.map(get_slot) {
-                if let Some(ref id) = slot.recipe_id {
-                    hasher.update(id.as_bytes());
-                }
+            if let Some(ref id) = slot.recipe_id {
+                hasher.update(id.as_bytes());
             }
         }
     }
 
     let hash = hasher.finalize();
-    format!("{hash:x}")
+    hash.iter().fold(String::with_capacity(64), |mut s, b| {
+        use std::fmt::Write;
+        let _ = write!(s, "{b:02x}");
+        s
+    })
 }
 
 /// Computes `hasSavedShoppingList` and `shoppingListDeprecated` from the raw
