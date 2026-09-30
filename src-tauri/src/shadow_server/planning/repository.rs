@@ -38,6 +38,19 @@ fn now_iso() -> String {
         .to_string()
 }
 
+fn in_query_placeholders(param_count: usize) -> String {
+    if param_count == 0 {
+        return String::new();
+    }
+    let mut s = String::with_capacity(param_count * 2 - 1);
+    s.push('?');
+    for _ in 1..param_count {
+        s.push(',');
+        s.push('?');
+    }
+    s
+}
+
 // ---------------------------------------------------------------------------
 // Shopping list flags
 // ---------------------------------------------------------------------------
@@ -45,35 +58,38 @@ fn now_iso() -> String {
 /// Computes the canonical source fingerprint for a `WeekPlanV1` body.
 ///
 /// Mirrors `computeSourceFingerprint` in `sourceFingerprint.ts`:
-/// iterates days 1–7 × breakfast/lunch/dinner in fixed order, builds
-/// `"d.meal=recipeId|..."`, then SHA-256 hex-encodes.
+/// iterates days 1–7 × breakfast/lunch/dinner in fixed order, streams
+/// `"d.meal=recipeId|..."` directly into the SHA-256 hasher state to avoid intermediate string allocations.
 pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
-    let mut parts: Vec<String> = Vec::with_capacity(21);
+    let mut hasher = Sha256::new();
+    let mut first = true;
+
     for day in ["1", "2", "3", "4", "5", "6", "7"] {
-        let empty = DayMeals {
-            breakfast: RecipeIdSlot { recipe_id: None },
-            lunch: RecipeIdSlot { recipe_id: None },
-            dinner: RecipeIdSlot { recipe_id: None },
-        };
-        let d = body.days.get(day).unwrap_or(&empty);
-        for (meal, slot) in [
-            ("breakfast", &d.breakfast),
-            ("lunch", &d.lunch),
-            ("dinner", &d.dinner),
+        let day_meals = body.days.get(day);
+        for (meal, get_slot) in [
+            ("breakfast", |dm: &DayMeals| &dm.breakfast),
+            ("lunch", |dm: &DayMeals| &dm.lunch),
+            ("dinner", |dm: &DayMeals| &dm.dinner),
         ] {
-            parts.push(format!(
-                "{day}.{meal}={}",
-                slot.recipe_id.as_deref().unwrap_or("")
-            ));
+            if first {
+                first = false;
+            } else {
+                hasher.update(b"|");
+            }
+            hasher.update(day.as_bytes());
+            hasher.update(b".");
+            hasher.update(meal.as_bytes());
+            hasher.update(b"=");
+            if let Some(slot) = day_meals.map(get_slot) {
+                if let Some(ref id) = slot.recipe_id {
+                    hasher.update(id.as_bytes());
+                }
+            }
         }
     }
-    let canonical = parts.join("|");
-    let hash = Sha256::digest(canonical.as_bytes());
-    hash.iter().fold(String::with_capacity(64), |mut s, b| {
-        use std::fmt::Write;
-        let _ = write!(s, "{b:02x}");
-        s
-    })
+
+    let hash = hasher.finalize();
+    format!("{hash:x}")
 }
 
 /// Computes `hasSavedShoppingList` and `shoppingListDeprecated` from the raw
@@ -135,12 +151,7 @@ pub fn assert_recipe_ids_exist(conn: &Connection, recipe_ids: &[String]) -> Resu
         return Ok(());
     }
 
-    let placeholders: String = recipe_ids
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("?{}", i + 1))
-        .collect::<Vec<_>>()
-        .join(",");
+    let placeholders = in_query_placeholders(recipe_ids.len());
     let sql = format!("SELECT id FROM recipes WHERE id IN ({placeholders})");
     let mut stmt = conn.prepare(&sql).map_err(RepoError::from)?;
     let found: std::collections::HashSet<String> = stmt

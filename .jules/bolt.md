@@ -32,3 +32,9 @@
 **Learning:** In SQLite queries that use `IN` clauses with multiple query parameters (e.g. batched recipes hydration), building the list of query placeholder strings (like `"?,?,?"`) dynamically using helper vectors and `join(",")` generates unnecessary heap allocations. Using pre-allocated capacity `param_count * 2 - 1` and appending `'?'` and `','` characters with simple `.push()` calls minimizes memory overhead down to exactly one heap allocation and eliminates `Vec` instantiation.
 
 **Action:** Prefer exact capacity pre-allocation and character-based string construction over `vec!["?"; n].join(",")` inside database and query helper code in Rust.
+
+## 2025-05-27 - [Rust Digest Streaming Optimization for Plan Fingerprints]
+
+**Learning:** Constructing canonical representations for hashing (such as week plan source fingerprints) using `format!`, intermediate `Vec<String>`, and `join("|")` results in 24 heap allocations per week plan. Streaming bytes directly into `sha2::Sha256::new()` (`hasher.update(...)`) eliminates all intermediate string allocations, reducing memory overhead to a single `String` allocation for the finalized hex digest output without changing the output string.
+
+**Action:** Stream data bytes directly into `Hasher::update()` rather than allocating intermediate formatted strings or string buffers when generating cryptographic hashes in Rust hot paths.
