@@ -73,7 +73,6 @@ struct Accumulator {
 
 /// Groups ingredients from all `sections` by name+unit, sums quantities, assigns L-IDs.
 pub fn exact_merge(sections: &[ShoppingListSection]) -> PolishBaseline {
-    let mut order: Vec<String> = Vec::new();
     let mut map: IndexMap<String, Accumulator> = IndexMap::new();
     let mut next_id: u32 = 1;
 
@@ -101,7 +100,6 @@ pub fn exact_merge(sections: &[ShoppingListSection]) -> PolishBaseline {
                 let id = format!("L{next_id}");
                 next_id += 1;
                 let quantity_sum = ingredient.quantity.map(|q| q * occurrence_multiplier);
-                order.push(key.clone());
                 map.insert(
                     key,
                     Accumulator {
@@ -116,9 +114,10 @@ pub fn exact_merge(sections: &[ShoppingListSection]) -> PolishBaseline {
         }
     }
 
-    let lines: Vec<MergedLine> = order
-        .into_iter()
-        .filter_map(|k| map.shift_remove(&k))
+    // IndexMap preserves insertion order natively, so map.into_values() iterates
+    // in order without needing extra key cloning or shift_remove lookups.
+    let lines: Vec<MergedLine> = map
+        .into_values()
         .map(|acc| MergedLine {
             id: acc.id,
             name: acc.name,
