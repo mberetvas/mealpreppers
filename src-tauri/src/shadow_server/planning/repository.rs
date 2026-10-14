@@ -14,6 +14,7 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 use crate::shadow_server::platform::RepoError;
+use crate::shadow_server::recipe_catalog::repository::in_query_placeholders;
 
 use super::models::{
     DayMeals, MonthPlanListItem, MonthPlanRow, MonthPlanV1, RecipeIdSlot, SavedWeekplanListItem,
@@ -135,12 +136,7 @@ pub fn assert_recipe_ids_exist(conn: &Connection, recipe_ids: &[String]) -> Resu
         return Ok(());
     }
 
-    let placeholders: String = recipe_ids
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("?{}", i + 1))
-        .collect::<Vec<_>>()
-        .join(",");
+    let placeholders = in_query_placeholders(recipe_ids.len());
     let sql = format!("SELECT id FROM recipes WHERE id IN ({placeholders})");
     let mut stmt = conn.prepare(&sql).map_err(RepoError::from)?;
     let found: std::collections::HashSet<String> = stmt
