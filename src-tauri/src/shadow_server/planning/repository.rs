@@ -46,10 +46,13 @@ fn now_iso() -> String {
 /// Computes the canonical source fingerprint for a `WeekPlanV1` body.
 ///
 /// Mirrors `computeSourceFingerprint` in `sourceFingerprint.ts`:
-/// iterates days 1–7 × breakfast/lunch/dinner in fixed order, builds
-/// `"d.meal=recipeId|..."`, then SHA-256 hex-encodes.
+/// iterates days 1–7 × breakfast/lunch/dinner in fixed order, streams
+/// `"d.meal=recipeId|..."` directly into the SHA-256 hasher state to avoid
+/// intermediate string allocations.
 pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
-    let mut parts: Vec<String> = Vec::with_capacity(21);
+    let mut hasher = Sha256::new();
+    let mut first = true;
+
     for day in ["1", "2", "3", "4", "5", "6", "7"] {
         let empty = DayMeals {
             breakfast: RecipeIdSlot { recipe_id: None },
@@ -62,14 +65,22 @@ pub fn compute_source_fingerprint(body: &WeekPlanV1) -> String {
             ("lunch", &d.lunch),
             ("dinner", &d.dinner),
         ] {
-            parts.push(format!(
-                "{day}.{meal}={}",
-                slot.recipe_id.as_deref().unwrap_or("")
-            ));
+            if first {
+                first = false;
+            } else {
+                hasher.update(b"|");
+            }
+            hasher.update(day.as_bytes());
+            hasher.update(b".");
+            hasher.update(meal.as_bytes());
+            hasher.update(b"=");
+            if let Some(ref id) = slot.recipe_id {
+                hasher.update(id.as_bytes());
+            }
         }
     }
-    let canonical = parts.join("|");
-    let hash = Sha256::digest(canonical.as_bytes());
+
+    let hash = hasher.finalize();
     hash.iter().fold(String::with_capacity(64), |mut s, b| {
         use std::fmt::Write;
         let _ = write!(s, "{b:02x}");
