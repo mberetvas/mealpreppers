@@ -38,3 +38,9 @@
 **Learning:** When using `indexmap::IndexMap` to group items while preserving insertion order, keeping a separate tracking vector and iterating over it with `shift_remove(&key)` causes unnecessary string cloning per insertion and $O(N^2)$ total line removal overhead (since `shift_remove` shifts remaining elements in $O(N)$ time). `IndexMap` inherently maintains insertion order, so `map.into_values()` directly yields all values in insertion order in $O(N)$ time with zero key cloning or shifting.
 
 **Action:** Consume `IndexMap` values directly using `.into_values()` when processing ordered grouped results instead of maintaining external key vectors or calling `shift_remove`.
+
+## 2025-05-27 - [Rust Digest Streaming Optimization for Plan Fingerprints]
+
+**Learning:** Constructing canonical representations for hashing (such as week plan source fingerprints) using `format!`, intermediate `Vec<String>`, and `join("|")` results in 24 heap allocations per week plan. Streaming bytes directly into `sha2::Sha256::new()` (`hasher.update(...)`) eliminates all intermediate string allocations, reducing memory overhead to a single `String` allocation for the finalized hex digest output without changing the output string.
+
+**Action:** Stream data bytes directly into `Hasher::update()` rather than allocating intermediate formatted strings or string buffers when generating cryptographic hashes in Rust hot paths.
