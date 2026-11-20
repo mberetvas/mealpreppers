@@ -32,3 +32,9 @@
 **Learning:** In SQLite queries that use `IN` clauses with multiple query parameters (e.g. batched recipes hydration), building the list of query placeholder strings (like `"?,?,?"`) dynamically using helper vectors and `join(",")` generates unnecessary heap allocations. Using pre-allocated capacity `param_count * 2 - 1` and appending `'?'` and `','` characters with simple `.push()` calls minimizes memory overhead down to exactly one heap allocation and eliminates `Vec` instantiation.
 
 **Action:** Prefer exact capacity pre-allocation and character-based string construction over `vec!["?"; n].join(",")` inside database and query helper code in Rust.
+
+## 2025-05-27 - [IndexMap into_values vs shift_remove Iteration]
+
+**Learning:** When using `indexmap::IndexMap` to group items while preserving insertion order, keeping a separate tracking vector and iterating over it with `shift_remove(&key)` causes unnecessary string cloning per insertion and $O(N^2)$ total line removal overhead (since `shift_remove` shifts remaining elements in $O(N)$ time). `IndexMap` inherently maintains insertion order, so `map.into_values()` directly yields all values in insertion order in $O(N)$ time with zero key cloning or shifting.
+
+**Action:** Consume `IndexMap` values directly using `.into_values()` when processing ordered grouped results instead of maintaining external key vectors or calling `shift_remove`.
