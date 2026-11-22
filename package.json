@@ -53,7 +53,7 @@
     "playwright": "^1.60.0",
     "vue": "^3.5.40",
     "vue-router": "^5.1.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "overrides": {
     "estree-walker": "2.0.2"
